@@ -166,7 +166,7 @@ const recentActivities = ref([
     </div>
 
     <!-- 欢迎卡片 -->
-    <el-card class="welcome-card" v-if="stats[0].value === '0'">
+    <el-card class="welcome-card" v-if="stats[0]?.value === '0'">
       <div class="welcome-content">
         <div class="welcome-icon">👋</div>
         <h2>欢迎使用 AnswerMe</h2>
@@ -187,28 +187,29 @@ const recentActivities = ref([
 
 /* 统计卡片 */
 .stats-row {
-  margin-bottom: 24px;
+  margin-bottom: 1.5rem;
 }
 
 .stat-card {
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .stat-content {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .stat-icon {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,89 +221,91 @@ const recentActivities = ref([
 }
 
 .stat-value {
-  font-size: 28px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 4px;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #073642;
+  margin-bottom: 0.25rem;
 }
 
 .stat-title {
-  font-size: 14px;
-  color: #909399;
+  font-size: 0.875rem;
+  color: #586E75;
+  font-weight: 500;
 }
 
 /* 区块 */
 .section {
-  margin-bottom: 24px;
+  margin-bottom: 1.5rem;
 }
 
 .section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0 0 16px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #073642;
+  margin: 0 0 1rem;
 }
 
 /* 快捷操作 */
 .action-card {
   cursor: pointer;
   text-align: center;
-  transition: all 0.3s;
-  padding: 24px;
+  transition: all 0.2s;
+  padding: 1.5rem;
+  height: 100%;
 }
 
 .action-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .action-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
   width: 80px;
   height: 80px;
   line-height: 80px;
   border-radius: 50%;
-  margin: 0 auto 12px;
+  margin: 0 auto 0.75rem;
 }
 
 .action-title {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
-  color: #303133;
-  margin-bottom: 8px;
+  color: #073642;
+  margin-bottom: 0.5rem;
 }
 
 .action-description {
-  font-size: 13px;
-  color: #909399;
+  font-size: 0.8125rem;
+  color: #586E75;
   line-height: 1.5;
 }
 
 /* 活动卡片 */
 .activity-card {
-  background: #fff;
+  background: #FFFFFF;
 }
 
 .activity-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .activity-text {
-  font-size: 14px;
-  color: #606266;
+  font-size: 0.875rem;
+  color: #657B83;
 }
 
 /* 欢迎卡片 */
 .welcome-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #268BD2 0%, #2AA198 100%);
   border: none;
 }
 
 .welcome-card :deep(.el-card__body) {
-  padding: 48px;
+  padding: 3rem;
 }
 
 .welcome-content {
@@ -310,19 +313,20 @@ const recentActivities = ref([
 }
 
 .welcome-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
+  font-size: 4rem;
+  margin-bottom: 1rem;
 }
 
 .welcome-content h2 {
-  margin: 0 0 12px;
-  font-size: 28px;
-  color: #fff;
+  margin: 0 0 0.75rem;
+  font-size: 1.75rem;
+  color: #FFFFFF;
+  font-weight: 700;
 }
 
 .welcome-content p {
-  margin: 0 0 24px;
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 1.5rem;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.95);
 }
 </style>

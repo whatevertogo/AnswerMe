@@ -31,7 +31,7 @@ const fetchQuestionBanks = async (reset = false) => {
   try {
     await questionBankStore.fetchQuestionBanks({
       search: searchKeyword.value || undefined,
-      pageSize: 20
+      pageSize: 100
     })
   } catch {
     ElMessage.error('获取题库列表失败')
@@ -79,10 +79,7 @@ const handleDelete = async (bank: QuestionBank) => {
     )
     await questionBankStore.deleteQuestionBank(bank.id)
     ElMessage.success('删除成功')
-    // 如果列表为空，重新获取
-    if (questionBankStore.questionBanks.length === 0) {
-      await fetchQuestionBanks(true)
-    }
+    await fetchQuestionBanks(true)
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')
@@ -102,22 +99,54 @@ const handleFormClose = () => {
   formDialogVisible.value = false
   currentBank.value = null
 }
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const getDifficultyColor = (difficulty: string) => {
+  switch (difficulty) {
+    case 'easy': return 'success'
+    case 'medium': return 'warning'
+    case 'hard': return 'danger'
+    default: return 'info'
+  }
+}
+
+const getDifficultyLabel = (difficulty: string) => {
+  switch (difficulty) {
+    case 'easy': return '简单'
+    case 'medium': return '中等'
+    case 'hard': return '困难'
+    default: return '未知'
+  }
+}
 </script>
 
 <template>
   <div class="question-banks-view">
-    <div class="header-actions">
-      <h2>我的题库</h2>
-      <el-button type="primary" :icon="Plus" @click="handleCreate">创建题库</el-button>
+    <!-- 页面标题和操作 -->
+    <div class="page-header">
+      <div class="header-content">
+        <h2 class="page-title">题库管理</h2>
+        <p class="page-subtitle">管理你的题库,创建和编辑题目</p>
+      </div>
+      <el-button type="primary" :icon="Plus" @click="handleCreate">
+        创建题库
+      </el-button>
     </div>
-
-    <el-divider />
 
     <!-- 搜索和筛选 -->
     <div class="filter-bar">
       <el-input
         v-model="searchKeyword"
-        placeholder="搜索题库名称..."
+        placeholder="搜索题库名称或描述..."
         :prefix-icon="Search"
         clearable
         class="search-input"
@@ -126,55 +155,92 @@ const handleFormClose = () => {
       <el-button :icon="Refresh" @click="fetchQuestionBanks(true)">刷新</el-button>
     </div>
 
-    <div v-loading="loading" class="content">
-      <el-empty
-        v-if="!loading && questionBankStore.questionBanks.length === 0"
-        description="暂无题库"
+    <!-- 题库表格 -->
+    <el-card class="table-card" shadow="never">
+      <el-table
+        v-loading="loading"
+        :data="questionBankStore.questionBanks"
+        style="width: 100%"
+        stripe
       >
-        <el-button type="primary" @click="handleCreate">创建第一个题库</el-button>
-      </el-empty>
-
-      <el-row v-else :gutter="20">
-        <el-col
-          v-for="bank in questionBankStore.questionBanks"
-          :key="bank.id"
-          :xs="24"
-          :sm="12"
-          :md="8"
-          :lg="6"
-        >
-          <el-card class="bank-card" shadow="hover">
-            <div class="bank-header">
-              <h3 class="bank-name" :title="bank.name">{{ bank.name }}</h3>
-              <el-tag size="small" type="info">{{ bank.questionCount }} 题</el-tag>
+        <el-table-column prop="name" label="题库名称" min-width="200">
+          <template #default="{ row }">
+            <div class="bank-name-cell">
+              <span class="bank-name" :title="row.name">{{ row.name }}</span>
+              <el-tag v-if="row.isDefault" size="small" type="primary">默认</el-tag>
             </div>
+          </template>
+        </el-table-column>
 
-            <p class="bank-description">{{ bank.description || '暂无描述' }}</p>
+        <el-table-column prop="description" label="描述" min-width="300">
+          <template #default="{ row }">
+            <span class="bank-description" :title="row.description">
+              {{ row.description || '暂无描述' }}
+            </span>
+          </template>
+        </el-table-column>
 
-            <div class="bank-meta">
-              <span class="bank-date"
-                >创建于 {{ new Date(bank.createdAt).toLocaleDateString() }}</span
-              >
-            </div>
+        <el-table-column prop="questionCount" label="题目数量" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" type="info">{{ row.questionCount }} 题</el-tag>
+          </template>
+        </el-table-column>
 
-            <div class="bank-actions">
-              <el-button type="primary" size="small" :icon="View" @click="handleView(bank.id)">
+        <el-table-column prop="difficulty" label="难度" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.difficulty"
+              :type="getDifficultyColor(row.difficulty)"
+              size="small"
+            >
+              {{ getDifficultyLabel(row.difficulty) }}
+            </el-tag>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="createdAt" label="创建时间" width="180">
+          <template #default="{ row }">
+            <span class="text-muted">{{ formatDate(row.createdAt) }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="280" fixed="right">
+          <template #default="{ row }">
+            <div class="table-actions">
+              <el-button type="primary" size="small" :icon="View" @click="handleView(row.id)">
                 查看
               </el-button>
-              <el-button size="small" :icon="Edit" @click="handleEdit(bank)">编辑</el-button>
-              <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(bank)">
+              <el-button size="small" :icon="Edit" @click="handleEdit(row)">
+                编辑
+              </el-button>
+              <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)">
                 删除
               </el-button>
             </div>
-          </el-card>
-        </el-col>
-      </el-row>
+          </template>
+        </el-table-column>
 
-      <!-- 加载更多 -->
-      <div v-if="questionBankStore.hasMore" class="load-more">
-        <el-button :loading="loading" @click="fetchQuestionBanks()">加载更多</el-button>
+        <template #empty>
+          <el-empty
+            description="暂无题库"
+            :image-size="120"
+          >
+            <el-button type="primary" @click="handleCreate">创建第一个题库</el-button>
+          </el-empty>
+        </template>
+      </el-table>
+
+      <!-- 分页 -->
+      <div v-if="questionBankStore.hasMore" class="pagination-wrapper">
+        <el-button
+          :loading="loading"
+          @click="fetchQuestionBanks()"
+        >
+          加载更多
+        </el-button>
       </div>
-    </div>
+    </el-card>
 
     <!-- 创建/编辑题库表单 -->
     <QuestionBankForm
@@ -189,97 +255,187 @@ const handleFormClose = () => {
 
 <style scoped>
 .question-banks-view {
-  background-color: #ffffff;
-  border-radius: 8px;
-  padding: 20px;
-}
-
-.header-actions {
   display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* 页面头部 */
+.page-header {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
+  gap: 1rem;
 }
 
-.header-actions h2 {
+.header-content {
+  flex: 1;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #073642;
+  margin: 0 0 0.25rem 0;
+}
+
+.dark .page-title {
+  color: #839496;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: #586E75;
   margin: 0;
-  color: #303133;
 }
 
+.dark .page-subtitle {
+  color: #93A1A1;
+}
+
+/* 筛选栏 */
 .filter-bar {
   display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .search-input {
-  max-width: 300px;
+  max-width: 400px;
 }
 
-.content {
-  min-height: 200px;
+/* 表格卡片 */
+.table-card {
+  overflow: visible;
 }
 
-.load-more {
-  text-align: center;
-  margin-top: 20px;
+.table-card :deep(.el-card__body) {
+  padding: 0;
 }
 
-.bank-card {
-  margin-bottom: 20px;
-  height: 100%;
+.bank-name-cell {
   display: flex;
-  flex-direction: column;
-}
-
-.bank-header {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  gap: 0.5rem;
 }
 
 .bank-name {
-  margin: 0;
-  font-size: 18px;
-  color: #303133;
+  font-weight: 500;
+  color: #073642;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
-  margin-right: 8px;
+}
+
+.dark .bank-name {
+  color: #839496;
 }
 
 .bank-description {
-  color: #606266;
-  font-size: 14px;
-  margin-bottom: 12px;
-  flex-grow: 1;
+  font-size: 0.875rem;
+  color: #586E75;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  min-height: 42px;
+  white-space: nowrap;
+  display: block;
 }
 
-.bank-meta {
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid #ebeef5;
+.dark .bank-description {
+  color: #93A1A1;
 }
 
-.bank-date {
-  color: #909399;
-  font-size: 12px;
+.text-muted {
+  font-size: 0.875rem;
+  color: #9ca3af;
 }
 
-.bank-actions {
+.table-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 0.5rem;
 }
 
-.bank-actions .el-button {
-  flex: 1;
+.table-actions .el-button {
+  flex-shrink: 0;
+}
+
+/* 分页 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.dark .pagination-wrapper {
+  border-top-color: #374151;
+}
+
+/* 表格样式优化 */
+:deep(.el-table) {
+  font-size: 0.875rem;
+}
+
+:deep(.el-table th.el-table__cell) {
+  background: #EEE8D5;
+  color: #073642;
+  font-weight: 600;
+}
+
+.dark :deep(.el-table th.el-table__cell) {
+  background: #073642;
+  color: #839496;
+}
+
+:deep(.el-table tr:hover > td) {
+  background: #FDF6E3 !important;
+}
+
+.dark :deep(.el-table tr:hover > td) {
+  background: #073642 !important;
+}
+
+:deep(.el-table td.el-table__cell) {
+  border-color: #E8E4CE;
+}
+
+.dark :deep(.el-table td.el-table__cell) {
+  border-color: #586E75;
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .table-actions {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  :deep(.el-table-column) {
+    padding: 0.5rem 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input {
+    max-width: none;
+  }
+
+  :deep(.el-table) {
+    font-size: 0.75rem;
+  }
+
+  .table-actions .el-button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
 }
 </style>

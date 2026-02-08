@@ -235,17 +235,20 @@ public class AIGenerationService : IAIGenerationService
         string taskId,
         CancellationToken cancellationToken = default)
     {
-        lock (_taskLock)
+        // 使用 await Task.Run 将同步锁操作包装为异步，避免阻塞线程
+        return await Task.Run(() =>
         {
-            if (_asyncTasks.TryGetValue(taskId, out var progress))
+            lock (_taskLock)
             {
-                // 返回副本避免外部修改
-                return JsonSerializer.Deserialize<AIGenerateProgressDto>(
-                    JsonSerializer.Serialize(progress));
+                if (_asyncTasks.TryGetValue(taskId, out var progress))
+                {
+                    // 返回副本避免外部修改
+                    return JsonSerializer.Deserialize<AIGenerateProgressDto>(
+                        JsonSerializer.Serialize(progress));
+                }
             }
-        }
-
-        return null;
+            return null;
+        }, cancellationToken);
     }
 
     /// <summary>

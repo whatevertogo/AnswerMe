@@ -13,13 +13,13 @@ public class AnswerMeDbContext : DbContext
     {
     }
 
-    // DbSets
-    public DbSet<User> Users { get; set; }
-    public DbSet<DataSource> DataSources { get; set; }
-    public DbSet<QuestionBank> QuestionBanks { get; set; }
-    public DbSet<Question> Questions { get; set; }
-    public DbSet<Attempt> Attempts { get; set; }
-    public DbSet<AttemptDetail> AttemptDetails { get; set; }
+    // DbSets - 使用 required 修饰符确保非空，由 EF Core 在运行时初始化
+    public required DbSet<User> Users { get; set; }
+    public required DbSet<DataSource> DataSources { get; set; }
+    public required DbSet<QuestionBank> QuestionBanks { get; set; }
+    public required DbSet<Question> Questions { get; set; }
+    public required DbSet<Attempt> Attempts { get; set; }
+    public required DbSet<AttemptDetail> AttemptDetails { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

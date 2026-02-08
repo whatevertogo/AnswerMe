@@ -50,9 +50,5 @@ export const useUserStore = defineStore('user', () => {
     logout
   }
 }, {
-  persist: {
-    key: 'answerme-user',
-    storage: localStorage,
-    pick: ['token', 'userInfo']
-  }
+  persist: true
 })

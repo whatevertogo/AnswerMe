@@ -1,0 +1,301 @@
+/*
+ * ============================================================
+ *  AnswerMe — 全局主题 (唯一全局样式入口)
+ *
+ *  组织结构:
+ *    1. 设计令牌 (CSS Variables)
+ *    2. 全局 Reset
+ *    3. 基础排版
+ *    4. 布局基础
+ *    5. 滚动条
+ *    6. 通用工具类
+ *    7. Element Plus 覆写
+ *    8. 全局过渡动画
+ * ============================================================
+ */
+
+/* ─────────────────────────────────────────────
+   1. 设计令牌 — Solarized Light 配色
+   ───────────────────────────────────────────── */
+:root {
+  /* 主色调 */
+  --color-primary: #268BD2;
+  --color-primary-hover: #1F78B4;
+  --color-primary-light: rgba(38, 139, 210, 0.1);
+
+  /* 辅助色 */
+  --color-secondary: #2AA198;
+  --color-secondary-hover: #217A7B;
+  --color-accent: #CB4B16;
+  --color-accent-hover: #BD362F;
+
+  /* 背景色 */
+  --color-bg: #FDF6E3;
+  --color-bg-secondary: #EEE8D5;
+  --color-bg-tertiary: #E8E4CE;
+  --color-white: #FFFFFF;
+
+  /* 文字颜色 */
+  --color-text-primary: #073642;
+  --color-text-secondary: #586E75;
+  --color-text-muted: #657B83;
+  --color-text-light: #839496;
+
+  /* 边框颜色 */
+  --color-border: #E8E4CE;
+  --color-border-light: #D3D7CF;
+
+  /* 功能色 */
+  --color-success: #859900;
+  --color-warning: #B58900;
+  --color-danger: #DC322F;
+  --color-info: #268BD2;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px 0 rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px 0 rgba(0, 0, 0, 0.08);
+
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* 间距 */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 0.75rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 1.5rem;
+  --spacing-2xl: 2rem;
+
+  /* 过渡 */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}
+
+/* 深色模式 */
+.dark {
+  --color-bg: #002B36;
+  --color-bg-secondary: #073642;
+  --color-bg-tertiary: #586E75;
+  --color-white: #073642;
+
+  --color-text-primary: #839496;
+  --color-text-secondary: #93A1A1;
+  --color-text-muted: #657B83;
+  --color-text-light: #586E75;
+
+  --color-border: #586E75;
+  --color-border-light: #93A1A1;
+}
+
+/* ─────────────────────────────────────────────
+   2. 全局 Reset
+   ───────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ─────────────────────────────────────────────
+   3. 基础排版
+   ───────────────────────────────────────────── */
+html {
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  font-family:
+    'Inter',
+    -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto,
+    'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  background-color: var(--color-bg);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* ─────────────────────────────────────────────
+   4. 布局基础
+   ─────────────────────────────────────────────
+   关键: #app 不设 max-width / padding / text-align
+   让各布局组件 (AuthLayout / AppLayout) 自行控制 */
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;  /* 防止双滚动条, 由布局组件管理滚动 */
+}
+
+/* ─────────────────────────────────────────────
+   5. 滚动条
+   ───────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D3D7CF;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #93A1A1;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #D3D7CF transparent;
+}
+
+/* ─────────────────────────────────────────────
+   6. 通用工具类
+   ───────────────────────────────────────────── */
+.card {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.text-primary  { color: var(--color-primary); }
+.text-success  { color: var(--color-success); }
+.text-warning  { color: var(--color-warning); }
+.text-danger   { color: var(--color-danger); }
+.text-muted    { color: var(--color-text-muted); }
+
+.bg-primary    { background: var(--color-primary); }
+.bg-secondary  { background: var(--color-bg-secondary); }
+
+/* 页面容器 — 用于 AppLayout 内的内容页 */
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-2xl);
+}
+
+/* ─────────────────────────────────────────────
+   7. Element Plus 覆写
+   ───────────────────────────────────────────── */
+
+/* 卡片 */
+.el-card {
+  border-radius: var(--radius-lg);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 表格 */
+.el-table {
+  --el-table-border-color: var(--color-border);
+  --el-table-bg-color: var(--color-white);
+  --el-table-header-bg-color: var(--color-bg-secondary);
+}
+
+/* 输入框 */
+.el-input__wrapper {
+  border-radius: var(--radius-md) !important;
+  transition: all var(--transition-fast);
+}
+
+.el-input__wrapper:hover {
+  border-color: var(--color-border-light) !important;
+}
+
+.el-input__wrapper.is-focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-light) !important;
+}
+
+/* 按钮 */
+.el-button {
+  border-radius: var(--radius-md) !important;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.el-button--primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.el-button--primary:hover {
+  background: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
+}
+
+/* 下拉框 */
+.el-select .el-input__wrapper {
+  border-radius: var(--radius-md) !important;
+}
+
+/* 标签 */
+.el-tag {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 500;
+}
+
+/* ─────────────────────────────────────────────
+   8. 全局过渡动画
+   ───────────────────────────────────────────── */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--transition-normal);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}

@@ -123,10 +123,11 @@ public class QuestionBankService : IQuestionBankService
             questionBank.DataSourceId = dto.DataSourceId.Value;
         }
 
-        // 更新版本号
+        // 更新版本号 - 使用 Buffer.BlockCopy 避免 CopyTo 方法二义性
         var versionBytes = questionBank.Version ?? new byte[8];
         var version = BitConverter.ToInt64(versionBytes);
-        BitConverter.GetBytes(version + 1).CopyTo(questionBank.Version);
+        var newVersionBytes = BitConverter.GetBytes(version + 1);
+        Buffer.BlockCopy(newVersionBytes, 0, questionBank.Version!, 0, newVersionBytes.Length);
 
         questionBank.UpdatedAt = DateTime.UtcNow;
 

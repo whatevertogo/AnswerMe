@@ -7,8 +7,7 @@ import {
   Setting,
   User,
   SwitchButton,
-  Expand,
-  Collapse
+  ArrowDown
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -16,8 +15,6 @@ import { useUserStore } from '@/stores/user'
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-
-const isCollapse = ref(false)
 
 const menuItems = [
   {
@@ -54,220 +51,240 @@ const handleLogout = async () => {
     // 用户取消
   }
 }
-
-const toggleCollapse = () => {
-  isCollapse.value = !isCollapse.value
-}
 </script>
 
 <template>
   <div class="app-layout">
-    <el-container class="layout-container">
-      <!-- 侧边栏 -->
-      <el-aside :width="isCollapse ? '64px' : '200px'" class="sidebar">
-        <div class="logo-container" :class="{ collapsed: isCollapse }">
+    <!-- 顶部导航栏 -->
+    <header class="app-header">
+      <div class="header-container">
+        <!-- Logo -->
+        <div class="logo-section">
           <div class="logo-icon">🎓</div>
-          <transition name="fade">
-            <span v-show="!isCollapse" class="logo-text">AnswerMe</span>
-          </transition>
+          <h1 class="logo-text">AnswerMe</h1>
         </div>
 
-        <el-menu
-          :default-active="activeMenu"
-          :collapse="isCollapse"
-          class="sidebar-menu"
-          router
-        >
-          <el-menu-item
+        <!-- 导航菜单 -->
+        <nav class="nav-menu">
+          <router-link
             v-for="item in menuItems"
             :key="item.path"
-            :index="item.path"
+            :to="item.path"
+            :class="['nav-item', { active: activeMenu.startsWith(item.path) }]"
           >
             <el-icon><component :is="item.icon" /></el-icon>
-            <template #title>{{ item.title }}</template>
-          </el-menu-item>
-        </el-menu>
-      </el-aside>
+            <span class="nav-text">{{ item.title }}</span>
+          </router-link>
+        </nav>
 
-      <!-- 主体内容 -->
-      <el-container class="main-container">
-        <!-- 顶部栏 -->
-        <el-header class="header">
-          <div class="header-left">
-            <el-button
-              :icon="isCollapse ? Expand : Collapse"
-              text
-              @click="toggleCollapse"
-            />
-          </div>
-
-          <div class="header-right">
-            <el-dropdown @command="handleLogout">
-              <span class="user-dropdown">
-                <el-avatar :size="32" class="user-avatar">
-                  <el-icon><User /></el-icon>
-                </el-avatar>
-                <span class="user-name">
-                  {{ userStore.userInfo?.username || userStore.userInfo?.email || '用户' }}
-                </span>
-                <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
+        <!-- 用户信息 -->
+        <div class="user-section">
+          <el-dropdown @command="handleLogout" trigger="click">
+            <div class="user-dropdown">
+              <el-avatar :size="36" class="user-avatar">
+                <el-icon><User /></el-icon>
+              </el-avatar>
+              <span class="user-name">
+                {{ userStore.userInfo?.username || userStore.userInfo?.email || '用户' }}
               </span>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="logout">
-                    <el-icon><SwitchButton /></el-icon>
-                    退出登录
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </el-header>
+              <el-icon class="dropdown-icon" :size="14"><ArrowDown /></el-icon>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="logout">
+                  <el-icon><SwitchButton /></el-icon>
+                  退出登录
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+      </div>
+    </header>
 
-        <!-- 内容区域 -->
-        <el-main class="main-content">
-          <router-view v-slot="{ Component }">
-            <transition name="fade" mode="out-in">
-              <component :is="Component" />
-            </transition>
-          </router-view>
-        </el-main>
-      </el-container>
-    </el-container>
+    <!-- 内容区域 -->
+    <main class="app-main">
+      <div class="content-container">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </div>
+    </main>
   </div>
 </template>
 
 <style scoped>
 .app-layout {
   min-height: 100vh;
-  background: #f0f2f5;
+  display: flex;
+  flex-direction: column;
+  background: #FDF6E3;
 }
 
-.layout-container {
-  min-height: 100vh;
+.dark .app-layout {
+  background: #002B36;
 }
 
-/* 侧边栏样式 */
-.sidebar {
-  background: linear-gradient(180deg, #001529 0%, #002140 100%);
-  transition: width 0.3s;
-  overflow: hidden;
+/* 顶部导航栏 */
+.app-header {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8E4CE;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.logo-container {
+.dark .app-header {
+  background: #073642;
+  border-bottom-color: #586E75;
+}
+
+.header-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  height: 64px;
   display: flex;
   align-items: center;
-  padding: 16px;
-  gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  justify-content: space-between;
 }
 
-.logo-container.collapsed {
-  justify-content: center;
-  padding: 16px 0;
-}
-
-.logo-icon {
-  font-size: 28px;
+/* Logo */
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   flex-shrink: 0;
 }
 
+.logo-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
 .logo-text {
-  font-size: 20px;
-  font-weight: 600;
-  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #073642;
+  margin: 0;
   white-space: nowrap;
 }
 
-.sidebar-menu {
-  border: none;
-  background: transparent;
+.dark .logo-text {
+  color: #839496;
 }
 
-.sidebar-menu:not(.el-menu--collapse) {
-  width: 200px;
-}
-
-/* 深色主题菜单 */
-:deep(.el-menu) {
-  background: transparent;
-}
-
-:deep(.el-menu-item) {
-  color: rgba(255, 255, 255, 0.85);
-  margin: 4px 8px;
-  border-radius: 8px;
-}
-
-:deep(.el-menu-item:hover) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: #fff;
-}
-
-:deep(.el-menu-item.is-active) {
-  background: #1890ff !important;
-  color: #fff;
-}
-
-:deep(.el-menu-item .el-icon) {
-  color: inherit;
-}
-
-/* 顶部栏样式 */
-.header {
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 24px;
-}
-
-.header-left {
+/* 导航菜单 */
+.nav-menu {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 0.5rem;
+  flex: 1;
+  margin: 0 3rem;
 }
 
-.header-right {
+.nav-item {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  color: #586E75;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.dark .nav-item {
+  color: #839496;
+}
+
+.nav-item:hover {
+  background: #EEE8D5;
+  color: #073642;
+}
+
+.dark .nav-item:hover {
+  background: #073642;
+  color: #FDF6E3;
+}
+
+.nav-item.active {
+  background: #268BD2;
+  color: #FFFFFF;
+}
+
+.dark .nav-item.active {
+  background: #268BD2;
+  color: #FFFFFF;
+}
+
+.nav-text {
+  white-space: nowrap;
+}
+
+/* 用户信息 */
+.user-section {
+  flex-shrink: 0;
 }
 
 .user-dropdown {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
   cursor: pointer;
-  padding: 4px 12px;
-  border-radius: 8px;
-  transition: all 0.3s;
+  transition: background 0.15s;
 }
 
 .user-dropdown:hover {
-  background: #f5f7fa;
+  background: #EEE8D5;
+}
+
+.dark .user-dropdown:hover {
+  background: #073642;
 }
 
 .user-avatar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #268BD2 0%, #2AA198 100%);
+  flex-shrink: 0;
 }
 
 .user-name {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #303133;
+  color: #073642;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .user-name {
+  color: #839496;
 }
 
 .dropdown-icon {
-  font-size: 12px;
-  color: #909399;
+  color: #9ca3af;
+  flex-shrink: 0;
 }
 
 /* 内容区域 */
-.main-content {
-  padding: 24px;
-  background: #f0f2f5;
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.content-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: calc(100vh - 64px);
 }
 
 /* 过渡动画 */
@@ -278,11 +295,46 @@ const toggleCollapse = () => {
 
 .fade-enter-from {
   opacity: 0;
-  transform: translateX(-10px);
+  transform: translateY(-10px);
 }
 
 .fade-leave-to {
   opacity: 0;
-  transform: translateX(10px);
+  transform: translateY(10px);
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .nav-menu {
+    margin: 0 1.5rem;
+  }
+
+  .user-name {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-container {
+    padding: 0 1rem;
+  }
+
+  .nav-text {
+    display: none;
+  }
+
+  .content-container {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .logo-text {
+    display: none;
+  }
+
+  .nav-menu {
+    margin: 0 0.75rem;
+  }
 }
 </style>
