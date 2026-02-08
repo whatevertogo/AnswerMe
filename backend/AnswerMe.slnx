@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="AnswerMe.API/AnswerMe.API.csproj" />
+  <Project Path="AnswerMe.Application/AnswerMe.Application.csproj" />
+  <Project Path="AnswerMe.Domain/AnswerMe.Domain.csproj" />
+  <Project Path="AnswerMe.Infrastructure/AnswerMe.Infrastructure.csproj" />
+</Solution>

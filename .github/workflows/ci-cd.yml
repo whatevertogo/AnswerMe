@@ -1,0 +1,397 @@
+# AI Question Bank CI/CD Pipeline
+# 自动化测试、构建和部署
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ created ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '18'
+
+jobs:
+  # ==========================================
+  # 代码质量检查
+  # ==========================================
+  lint:
+    name: 代码质量检查
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置.NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 安装.NET格式化工具
+        run: dotnet tool install -g dotnet-format
+
+      - name: 检查后端代码格式
+        run: |
+          dotnet-format --check --verbosity diagnostic \
+            ./backend/AIQuestionBank.API/AIQuestionBank.API.csproj
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装前端依赖
+        run: cd frontend && npm ci
+
+      - name: 检查前端代码格式
+        run: cd frontend && npm run lint:check
+
+  # ==========================================
+  # 安全扫描
+  # ==========================================
+  security:
+    name: 安全扫描
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 运行Trivy漏洞扫描
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: 上传扫描结果到GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: 检查敏感信息泄露
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+  # ==========================================
+  # 后端测试
+  # ==========================================
+  backend-test:
+    name: 后端测试
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: questionbank_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置.NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 还原依赖
+        run: |
+          cd backend
+          dotnet restore
+
+      - name: 构建项目
+        run: |
+          cd backend
+          dotnet build --no-restore -c Release
+
+      - name: 运行单元测试
+        run: |
+          cd backend
+          dotnet test --no-build -c Release \
+            --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: 上传测试结果
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: backend/TestResults/**/*.trx
+
+      - name: 上传代码覆盖率
+        uses: codecov/codecov-action@v4
+        with:
+          files: backend/TestResults/**/coverage.cobertura.xml
+          flags: backend
+          name: backend-coverage
+
+  # ==========================================
+  # 前端测试
+  # ==========================================
+  frontend-test:
+    name: 前端测试
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装依赖
+        run: |
+          cd frontend
+          npm ci
+
+      - name: 代码检查
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: 类型检查
+        run: |
+          cd frontend
+          npm run type-check
+
+      - name: 运行单元测试
+        run: |
+          cd frontend
+          npm run test:ci
+
+      - name: 上传测试覆盖率
+        uses: codecov/codecov-action@v4
+        with:
+          files: frontend/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
+
+  # ==========================================
+  # 构建Docker镜像
+  # ==========================================
+  build:
+    name: 构建Docker镜像
+    needs: [lint, security, backend-test, frontend-test]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    strategy:
+      matrix:
+        service: [backend, frontend]
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 提取元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: yourdockerhub/ai-questionbank-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+
+      - name: 构建并推送镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================
+  # E2E测试
+  # ==========================================
+  e2e-test:
+    name: E2E测试
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 启动Docker Compose
+        run: docker-compose up -d
+
+      - name: 等待服务就绪
+        run: |
+          ./scripts/wait-for-health.sh http://localhost:5000/health
+          ./scripts/wait-for-health.sh http://localhost:3000/health
+
+      - name: 安装Playwright
+        run: |
+          cd frontend
+          npx playwright install --with-deps
+
+      - name: 运行E2E测试
+        run: |
+          cd frontend
+          npm run test:e2e
+
+      - name: 上传测试报告
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-report
+          path: frontend/playwright-report/
+
+      - name: 上传测试视频
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-videos
+          path: frontend/test-results/
+
+      - name: 关闭Docker Compose
+        if: always()
+        run: docker-compose down -v
+
+  # ==========================================
+  # 部署到开发环境
+  # ==========================================
+  deploy-dev:
+    name: 部署到开发环境
+    needs: [e2e-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: development
+      url: https://dev.example.com
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 部署到开发服务器
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USERNAME }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            cd /opt/ai-questionbank
+            git pull origin develop
+            docker-compose pull
+            docker-compose up -d --build
+            docker-compose exec -T backend dotnet ef database update
+
+      - name: 健康检查
+        run: |
+          curl -f https://dev.example.com/health || exit 1
+
+      - name: 通知部署成功
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: '开发环境部署成功!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ==========================================
+  # 部署到生产环境
+  # ==========================================
+  deploy-prod:
+    name: 部署到生产环境
+    needs: [e2e-test]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    environment:
+      name: production
+      url: https://example.com
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 备份数据库
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            docker-compose exec -T db pg_dump -U postgres questionbank > backup_$(date +%Y%m%d_%H%M%S).sql
+
+      - name: 部署到生产服务器
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/ai-questionbank
+            git pull origin main
+            docker-compose pull
+            docker-compose up -d --build --force-recreate
+            docker-compose exec -T backend dotnet ef database update
+
+      - name: 健康检查
+        run: |
+          curl -f https://example.com/health || exit 1
+
+      - name: 运行冒烟测试
+        run: |
+          npm run test:smoke -- --base-url=https://example.com
+
+      - name: 通知部署成功
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: '生产环境部署成功! 🎉'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: success()
+
+      - name: 部署失败回滚
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/ai-questionbank
+            git checkout HEAD~1
+            docker-compose up -d --build

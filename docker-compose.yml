@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  db:
+    image: postgres:16-alpine
+    container_name: answerme-db
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-answermedb}
+      - POSTGRES_USER=${POSTGRES_USER:-answeruser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-answerpass123}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-answeruser} -d ${POSTGRES_DB:-answermedb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    # ✅ 安全改进: 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    # ✅ 安全改进: 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - answerme-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: answerme-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB:-answermedb};Username=${POSTGRES_USER:-answeruser};Password=${POSTGRES_PASSWORD:-answerpass123}
+      - JWT__Secret=${JWT_SECRET}
+      - JWT__ExpiryDays=${JWT_EXPIRY_DAYS:-30}
+      - JWT__Issuer=${JWT_ISSUER:-AnswerMe}
+      - JWT__Audience=${JWT_AUDIENCE:-AnswerMeUsers}
+    ports:
+      - "${BACKEND_PORT:-5000}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # ✅ 安全改进: 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # ✅ 安全改进: 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - answerme-network
+
+  # Frontend (预留,待frontend-developer完成)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: answerme-frontend
+  #   environment:
+  #     - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:5000}
+  #   ports:
+  #     - "${FRONTEND_PORT:-3000}:80"
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+  #   networks:
+  #     - answerme-network
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  answerme-network:
+    driver: bridge

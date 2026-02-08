@@ -1,0 +1,65 @@
+# .NET Docker忽略文件
+
+## 构建输出
+bin/
+obj/
+out/
+publish/
+
+## IDE文件
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## 测试
+TestResults/
+*.testlog
+*.coverage
+*.coveragexml
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+project.lock.json
+project.fragment.lock.json
+
+## 临时文件
+*.tmp
+*.temp
+*.log
+*.cache
+
+## Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+## Git
+.git/
+.gitignore
+.gitattributes
+
+## 文档
+README.md
+*.md
+docs/
+
+## 环境
+.env
+.env.*
+!.env.example
+
+## 数据库
+*.db
+*.db-shm
+*.db-wal
+
+## 其他
+.DS_Store
+Thumbs.db

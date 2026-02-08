@@ -1,0 +1,188 @@
+# ==========================================
+# AI Question Bank - Git忽略配置
+# ==========================================
+
+# 项目特定
+.claude/
+openspec/
+.kilocode/
+
+
+# ==========================================
+# OS generated files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ==========================================
+# Visual Studio / .NET
+# ==========================================
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.ncb
+*.mapper
+
+# Build output
+bin/
+obj/
+out/
+publish/
+artifacts/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+project.assets.json
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+/idea/
+
+# ==========================================
+# Database files
+# ==========================================
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+/app.db
+*.mdf
+*.ldf
+
+# 数据备份
+backup/
+backups/
+*.backup
+*.dump
+
+# ==========================================
+# User secrets / env
+# ==========================================
+secrets.json
+*.usersecrets
+.secret
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+!.env.example
+
+# SSL证书
+*.pfx
+*.pem
+*.key
+*.crt
+certs/
+https/
+
+# ==========================================
+# Logs
+# ==========================================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# Test results / coverage
+# ==========================================
+TestResults/
+test-results/
+*.trx
+coverage/
+*.lcov
+.nyc_output/
+playwright-report/
+
+# ==========================================
+# VS Code
+# ==========================================
+.vscode/
+*.code-workspace
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ==========================================
+# Node / Frontend
+# ==========================================
+node_modules/
+dist/
+build/
+.vite/
+.output/
+.cache/
+/.parcel-cache/
+
+# Frontend project-specific (monorepo paths)
+/frontend/node_modules/
+/frontend/dist/
+/AnswerMe.Frontend/node_modules/
+/AnswerMe.Frontend/dist/
+
+# ==========================================
+# Docker
+# ==========================================
+docker-compose.override.yml
+docker-compose.*.local.yml
+.docker/
+docker-volumes/
+
+# ==========================================
+# Temporary files
+# ==========================================
+*.tmp
+*.temp
+tmp/
+temp/
+*.swp
+*.swo
+*~
+
+# ==========================================
+# 压缩文件
+# ==========================================
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+!release-*.tar.gz
+
+# ==========================================
+# AI生成文件
+# ==========================================
+.ai-generated/
+DRAFT.md
+NOTES.md
+
+# ==========================================
+# Misc
+# ==========================================
+.vscode-test/
+*.db3

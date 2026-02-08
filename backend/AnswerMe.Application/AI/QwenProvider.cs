@@ -1,0 +1,221 @@
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using System.Net.Http.Json;
+
+namespace AnswerMe.Application.AI;
+
+/// <summary>
+/// 通义千问 Qwen Provider实现
+/// </summary>
+public class QwenProvider : IAIProvider
+{
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<QwenProvider> _logger;
+
+    public string ProviderName => "Qwen";
+
+    public QwenProvider(HttpClient httpClient, ILogger<QwenProvider> logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger;
+    }
+
+    public async Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
+        AIQuestionGenerateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var prompt = BuildPrompt(request);
+
+            var httpRequest = new HttpRequestMessage
+            {
+                Method = HttpMethod.Post,
+                RequestUri = new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"),
+                Headers =
+                {
+                    { "Authorization", $"Bearer {GetApiKey()}" },
+                    { "Content-Type", "application/json" }
+                },
+                Content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    model = "qwen-turbo",
+                    messages = new[]
+                    {
+                        new
+                        {
+                            role = "system",
+                            content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
+                        },
+                        new
+                        {
+                            role = "user",
+                            content = prompt
+                        }
+                    },
+                    temperature = 0.7,
+                    max_tokens = 4000
+                }))
+            };
+
+            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Qwen API错误: {StatusCode}, {Body}", response.StatusCode, responseBody);
+
+                return new AIQuestionGenerateResponse
+                {
+                    Success = false,
+                    ErrorMessage = $"Qwen API调用失败: {response.StatusCode}",
+                    ErrorCode = ((int)response.StatusCode).ToString()
+                };
+            }
+
+            var jsonDoc = JsonDocument.Parse(responseBody);
+            var content = jsonDoc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString()!;
+
+            return ParseResponse(content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "生成题目失败");
+            return new AIQuestionGenerateResponse
+            {
+                Success = false,
+                ErrorMessage = ex.Message,
+                ErrorCode = "EXCEPTION"
+            };
+        }
+    }
+
+    public async Task<bool> ValidateApiKeyAsync(string apiKey, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var httpRequest = new HttpRequestMessage
+            {
+                Method = HttpMethod.Post,
+                RequestUri = new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"),
+                Headers =
+                {
+                    { "Authorization", $"Bearer {apiKey}" }
+                },
+                Content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    model = "qwen-turbo",
+                    messages = new[]
+                    {
+                        new { role = "user", content = "hi" }
+                    },
+                    max_tokens = 5
+                }))
+            };
+
+            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private string BuildPrompt(AIQuestionGenerateRequest request)
+    {
+        var customPrompt = !string.IsNullOrEmpty(request.CustomPrompt)
+            ? $"额外要求：{request.CustomPrompt}\n"
+            : "";
+
+        var questionTypesStr = string.Join("、", request.QuestionTypes);
+
+        return $@"请生成{request.Count}道关于""{request.Subject}""的{request.Difficulty}难度题目，题型包括：{questionTypesStr}。
+
+{customPrompt}要求：
+1. 返回JSON格式
+2. 包含questionType, questionText, options（数组）, correctAnswer, explanation, difficulty
+3. 题目要符合{request.Language}语言习惯
+4. 选项要合理，干扰项要有迷惑性
+5. 解析要详细准确
+
+格式示例：
+{{
+  ""questions"": [
+    {{
+      ""questionType"": ""选择题"",
+      ""questionText"": ""以下哪个是JavaScript的基本数据类型？"",
+      ""options"": [""字符串"", ""数字"", ""布尔"", ""对象""],
+      ""correctAnswer"": ""字符串"",
+      ""explanation"": ""JavaScript的基本数据类型包括字符串、数字、布尔、Symbol、BigInt、null。对象是引用类型，不是基本数据类型。"",
+      ""difficulty"": ""easy""
+    }}
+  ]
+ }}";
+    }
+
+    private AIQuestionGenerateResponse ParseResponse(string content)
+    {
+        try
+        {
+            // 提取JSON部分
+            var jsonStart = content.IndexOf("{");
+            var jsonEnd = content.LastIndexOf("}");
+
+            if (jsonStart == -1 || jsonEnd == -1)
+            {
+                return new AIQuestionGenerateResponse
+                {
+                    Success = false,
+                    ErrorMessage = "响应中未找到有效的JSON格式",
+                    ErrorCode = "PARSE_ERROR"
+                };
+            }
+
+            var jsonContent = content.Substring(jsonStart, jsonEnd - jsonStart + 1);
+            var jsonDoc = JsonDocument.Parse(jsonContent);
+
+            var questions = new List<GeneratedQuestion>();
+
+            if (jsonDoc.RootElement.TryGetProperty("questions", out var questionsElement))
+            {
+                foreach (var q in questionsElement.EnumerateArray())
+                {
+                    questions.Add(new GeneratedQuestion
+                    {
+                        QuestionType = q.GetProperty("questionType").GetString() ?? "",
+                        QuestionText = q.GetProperty("questionText").GetString() ?? "",
+                        Options = q.GetProperty("options").EnumerateArray().Select(x => x.GetString() ?? "").ToList(),
+                        CorrectAnswer = q.GetProperty("correctAnswer").GetString() ?? "",
+                        Explanation = q.GetProperty("explanation").GetString() ?? "",
+                        Difficulty = q.GetProperty("difficulty").GetString() ?? "medium"
+                    });
+                }
+            }
+
+            return new AIQuestionGenerateResponse
+            {
+                Success = questions.Count > 0,
+                Questions = questions,
+                TokensUsed = jsonContent.Length
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "解析AI响应失败");
+            return new AIQuestionGenerateResponse
+            {
+                Success = false,
+                ErrorMessage = $"解析响应失败: {ex.Message}",
+                ErrorCode = "PARSE_ERROR"
+            };
+        }
+    }
+
+    private string GetApiKey()
+    {
+        // 这里应该从配置或数据库中获取
+        // 暂时返回占位符，实际使用时需要注入
+        return "sk-placeholder";
+    }
+}
