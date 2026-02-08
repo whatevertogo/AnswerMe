@@ -47,27 +47,13 @@ const handleLogin = async () => {
 
     <el-form :model="loginForm" class="login-form" label-position="top">
       <el-form-item label="邮箱" class="form-item">
-        <el-input
-          v-model="loginForm.email"
-          size="large"
-          placeholder="请输入邮箱"
-          :prefix-icon="User"
-          class="custom-input"
-          @keyup.enter="handleLogin"
-        />
+        <el-input v-model="loginForm.email" size="large" placeholder="请输入邮箱" :prefix-icon="User" class="custom-input"
+          @keyup.enter="handleLogin" />
       </el-form-item>
 
       <el-form-item label="密码" class="form-item">
-        <el-input
-          v-model="loginForm.password"
-          type="password"
-          size="large"
-          placeholder="请输入密码"
-          :prefix-icon="Lock"
-          show-password
-          class="custom-input"
-          @keyup.enter="handleLogin"
-        />
+        <el-input v-model="loginForm.password" type="password" size="large" placeholder="请输入密码" :prefix-icon="Lock"
+          show-password class="custom-input" @keyup.enter="handleLogin" />
       </el-form-item>
 
       <div class="options-row">
@@ -75,13 +61,7 @@ const handleLogin = async () => {
         <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
       </div>
 
-      <el-button
-        type="primary"
-        size="large"
-        :loading="loading"
-        class="login-button"
-        @click="handleLogin"
-      >
+      <el-button type="primary" size="large" :loading="loading" class="login-button" @click="handleLogin">
         登录
       </el-button>
 
@@ -105,6 +85,7 @@ const handleLogin = async () => {
     opacity: 0;
     transform: translateX(20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -117,8 +98,8 @@ const handleLogin = async () => {
 }
 
 .form-title {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 1.8rem;
+  font-weight: 1000;
   color: #073642;
   margin: 0 0 8px 0;
 }

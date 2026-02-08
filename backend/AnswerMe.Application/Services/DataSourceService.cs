@@ -112,30 +112,31 @@ public class DataSourceService : IDataSourceService
 
         var config = JsonSerializer.Deserialize<DataSourceConfig>(dataSource.Config) ?? new DataSourceConfig();
 
-        // 更新字段
+        // 更新名称
         if (!string.IsNullOrEmpty(dto.Name))
         {
             dataSource.Name = dto.Name;
         }
 
+        // 更新API Key（需要加密）
         if (!string.IsNullOrEmpty(dto.ApiKey))
         {
-            if (config == null) config = new DataSourceConfig();
             config.ApiKey = _dataProtector.Protect(dto.ApiKey);
         }
 
+        // 更新Endpoint
         if (dto.Endpoint != null)
         {
-            if (config == null) config = new DataSourceConfig();
             config.Endpoint = dto.Endpoint;
         }
 
+        // 更新Model
         if (dto.Model != null)
         {
-            if (config == null) config = new DataSourceConfig();
             config.Model = dto.Model;
         }
 
+        // 更新默认状态
         if (dto.IsDefault.HasValue && dto.IsDefault.Value)
         {
             await ClearDefaultAsync(userId, cancellationToken);
@@ -146,6 +147,7 @@ public class DataSourceService : IDataSourceService
             dataSource.IsDefault = false;
         }
 
+        // 保存更新后的配置
         dataSource.Config = JsonSerializer.Serialize(config);
         dataSource.UpdatedAt = DateTime.UtcNow;
 

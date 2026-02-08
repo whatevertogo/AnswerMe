@@ -16,6 +16,7 @@ public class AIGenerationService : IAIGenerationService
     private readonly IQuestionRepository _questionRepository;
     private readonly IQuestionBankRepository _questionBankRepository;
     private readonly IDataSourceRepository _dataSourceRepository;
+    private readonly IDataSourceService _dataSourceService;
     private readonly AIProviderFactory _aiProviderFactory;
     private readonly ILogger<AIGenerationService> _logger;
     private readonly IServiceProvider _serviceProvider;
@@ -28,6 +29,7 @@ public class AIGenerationService : IAIGenerationService
         IQuestionRepository questionRepository,
         IQuestionBankRepository questionBankRepository,
         IDataSourceRepository dataSourceRepository,
+        IDataSourceService dataSourceService,
         AIProviderFactory aiProviderFactory,
         ILogger<AIGenerationService> logger,
         IServiceProvider serviceProvider)
@@ -35,6 +37,7 @@ public class AIGenerationService : IAIGenerationService
         _questionRepository = questionRepository;
         _questionBankRepository = questionBankRepository;
         _dataSourceRepository = dataSourceRepository;
+        _dataSourceService = dataSourceService;
         _aiProviderFactory = aiProviderFactory;
         _logger = logger;
         _serviceProvider = serviceProvider;
@@ -116,8 +119,20 @@ public class AIGenerationService : IAIGenerationService
             CustomPrompt = dto.CustomPrompt
         };
 
-                // 调用AI生成（带重试机制）
-        var apiKey = ExtractApiKeyFromConfig(dataSource.Config);
+        // 调用AI生成（带重试机制）
+        // 修复P1-1: 解密API Key后再使用
+        var apiKey = await _dataSourceService.GetDecryptedApiKeyAsync(dataSource.Id, userId, cancellationToken);
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            _logger.LogError("无法获取数据源 {DataSourceId} 的解密API Key", dataSource.Id);
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "API Key解密失败，请检查数据源配置",
+                ErrorCode = "API_KEY_DECRYPTION_FAILED"
+            };
+        }
+
         var aiResponse = await CallAIWithRetryAsync(
             provider,
             apiKey,
@@ -402,32 +417,6 @@ public class AIGenerationService : IAIGenerationService
 
         await _questionBankRepository.AddAsync(questionBank, cancellationToken);
         return questionBank.Id;
-    }
-
-    /// <summary>
-    /// 从Config JSON中提取API Key
-    /// </summary>
-    private static string ExtractApiKeyFromConfig(string configJson)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(configJson))
-            {
-                return string.Empty;
-            }
-
-            var config = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(configJson);
-            if (config != null && config.TryGetValue("apiKey", out var apiKeyElement))
-            {
-                return apiKeyElement.GetString() ?? string.Empty;
-            }
-
-            return string.Empty;
-        }
-        catch
-        {
-            return string.Empty;
-        }
     }
 
     /// <summary>

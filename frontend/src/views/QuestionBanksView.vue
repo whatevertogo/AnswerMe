@@ -379,6 +379,18 @@ const getDifficultyLabel = (difficulty: string) => {
   background: #EEE8D5;
   color: #073642;
   font-weight: 600;
+  padding-left: 1.5rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+:deep(.el-table td.el-table__cell) {
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
+}
+
+:deep(.el-table td.el-table__cell:first-child) {
+  padding-left: 1.5rem;
 }
 
 .dark :deep(.el-table th.el-table__cell) {

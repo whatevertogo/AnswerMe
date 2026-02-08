@@ -57,39 +57,30 @@
 
 <style scoped>
 /*
- * AuthLayout 采用全屏双栏布局，
- * 需要跳出 #app 的 max-width / padding 约束。
+ * AuthLayout 采用全屏双栏布局
+ * 使用 vw/vh 单位确保响应式
  */
 .auth-layout {
-  /* 跳出 #app 约束，占满整个视口 */
-  position: fixed;
-  inset: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   background: #FDF6E3;
-  overflow: hidden;
 }
 
-/* ─── 左侧品牌区域 - 55% ─── */
+/* ─── 左侧品牌区域 ─── */
 .brand-card {
-  flex: 0 0 55%;
+  width: 50vw;
+  min-width: 320px;
   background: #EEE8D5;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 48px;
+  padding: 3vh 3vw;
   overflow-y: auto;
 }
 
-.brand-content {
-  width: 100%;
-  max-width: 520px;
-  background: #FFFFFF;
-  border-radius: 24px;
-  padding: 48px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-  animation: slideUp 0.6s ease-out;
-}
+
 
 @keyframes slideUp {
   from {
@@ -104,18 +95,18 @@
 
 .brand-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 4vh;
 }
 
 .logo-icon {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   background: linear-gradient(135deg, #268BD2 0%, #2AA198 100%);
-  border-radius: 20px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 20px;
+  margin: 0 auto 2vh;
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -129,20 +120,20 @@
 }
 
 .logo-emoji {
-  font-size: 40px;
+  font-size: 36px;
   filter: grayscale(0.3);
 }
 
 .brand-title {
-  font-size: 2.5rem;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
   font-weight: 800;
-  margin: 0 0 8px;
+  margin: 0 0 1vh;
   color: #073642;
   letter-spacing: -0.02em;
 }
 
 .brand-subtitle {
-  font-size: 1.125rem;
+  font-size: clamp(0.875rem, 1.2vw, 1.1rem);
   margin: 0;
   color: #586E75;
   font-weight: 500;
@@ -150,12 +141,12 @@
 
 .brand-description {
   text-align: center;
-  margin-bottom: 32px;
-  padding: 0 20px;
+  margin-bottom: 5vh;
+  padding: 0 1vw;
 }
 
 .brand-description p {
-  font-size: 1rem;
+  font-size: clamp(0.875rem, 1.1vw, 1rem);
   line-height: 1.7;
   margin: 0;
   color: #657B83;
@@ -164,17 +155,21 @@
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 32px;
+  gap: 1vw;
+  margin-bottom: 6vh;
 }
 
 .feature-box {
   background: linear-gradient(135deg, #FDF6E3 0%, #F5F0E6 100%);
-  border-radius: 16px;
-  padding: 20px 12px;
+  border-radius: 14px;
+  padding: 5vh 1vw;
   text-align: center;
   transition: all 0.3s ease;
   border: 1px solid rgba(238, 232, 213, 0.8);
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .feature-box:hover {
@@ -184,20 +179,20 @@
 }
 
 .feature-box .feature-icon {
-  font-size: 28px;
-  margin-bottom: 10px;
+  font-size: 24px;
+  margin-bottom: 1vh;
   display: block;
 }
 
 .feature-box h3 {
-  font-size: 0.875rem;
+  font-size: clamp(0.75rem, 1vw, 0.875rem);
   font-weight: 600;
-  margin: 0 0 6px;
+  margin: 0 0 0.5vh;
   color: #073642;
 }
 
 .feature-box p {
-  font-size: 0.75rem;
+  font-size: clamp(0.6875rem, 0.9vw, 0.75rem);
   margin: 0;
   color: #657B83;
   line-height: 1.4;
@@ -205,8 +200,9 @@
 
 .brand-footer {
   text-align: center;
-  padding-top: 16px;
-  border-top: 1px solid #EEE8D5;
+  padding-top: 4vh;
+  margin-top: 4vh;
+  border-top: 1px solid #D3D7CF;
 }
 
 .brand-footer p {
@@ -215,20 +211,21 @@
   margin: 0;
 }
 
-/* ─── 右侧表单区域 - 45% ─── */
+/* ─── 右侧表单区域 ─── */
 .form-card {
   flex: 1;
+  min-width: 300px;
   background: #FDF6E3;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 48px;
+  padding: 3vh 3vw;
   overflow-y: auto;
 }
 
 .form-content {
-  width: 100%;
+  width: 90%;
   max-width: 360px;
   margin: 0 auto;
 }
@@ -249,32 +246,29 @@
   transform: translateX(-10px);
 }
 
-/* ─── 响应式 - 平板 ─── */
-@media (max-width: 1200px) {
+/* ─── 响应式 - 平板 (宽度 < 1024px) ─── */
+@media (max-width: 1024px) {
   .brand-card {
-    flex: 0 0 50%;
-    padding: 32px;
+    width: 50vw;
+    padding: 2vh 2vw;
   }
 
   .brand-content {
-    padding: 36px;
-  }
-
-  .brand-title {
-    font-size: 2rem;
+    padding: 3vh 2vw;
   }
 
   .feature-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 1vh;
   }
 
   .feature-box {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     text-align: left;
-    padding: 16px;
+    padding: 1.5vh 2vw;
+    min-height: auto;
   }
 
   .feature-box .feature-icon {
@@ -283,31 +277,133 @@
   }
 
   .form-card {
-    padding: 32px;
+    padding: 2vh 2vw;
   }
 }
 
-/* ─── 响应式 - 手机 ─── */
-@media (max-width: 768px) {
+/* ─── 响应式 - 小平板 (宽度 < 900px) ─── */
+@media (max-width: 900px) {
   .auth-layout {
     flex-direction: column;
-    position: relative;
-    overflow: auto;
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
   }
 
+  .brand-card {
+    width: 100vw;
+    max-width: none;
+    min-height: auto;
+    padding: 4vh 5vw;
+  }
+
+  .brand-content {
+    max-width: 600px;
+    padding: 4vh 4vw;
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2vw;
+  }
+
+  .feature-box {
+    flex-direction: column;
+    text-align: center;
+    padding: 2vh 2vw;
+    min-height: auto;
+  }
+
+  .feature-box .feature-icon {
+    margin-bottom: 1vh;
+  }
+
+  .form-card {
+    width: 100vw;
+    min-height: 50vh;
+    padding: 4vh 5vw;
+  }
+
+  .form-content {
+    max-width: 400px;
+  }
+}
+
+/* ─── 响应式 - 手机 (宽度 < 640px) ─── */
+@media (max-width: 640px) {
   .brand-card {
     display: none;
   }
 
   .form-card {
-    flex: 1;
-    width: 100%;
-    padding: 24px;
+    width: 100vw;
     min-height: 100vh;
+    padding: 3vh 5vw;
   }
 
   .form-content {
     max-width: 100%;
+  }
+}
+
+/* ─── 超小屏幕 ─── */
+@media (max-width: 360px) {
+  .form-card {
+    padding: 2vh 4vw;
+  }
+}
+
+/* ─── 超宽屏幕优化 ─── */
+@media (min-width: 1920px) {
+  .brand-card {
+    width: 50vw;
+  }
+
+  .brand-content {
+    max-width: 560px;
+  }
+
+  .form-content {
+    max-width: 420px;
+  }
+}
+
+/* ─── 超高屏幕优化 ─── */
+@media (min-height: 1200px) {
+  .brand-content {
+    padding: 5vh 3vw;
+  }
+
+  .form-card {
+    padding: 5vh 3vw;
+  }
+}
+
+/* ─── 矮屏幕优化 ─── */
+@media (max-height: 700px) {
+  .brand-content {
+    padding: 2vh 2vw;
+  }
+
+  .brand-header {
+    margin-bottom: 2vh;
+  }
+
+  .brand-description {
+    margin-bottom: 2vh;
+  }
+
+  .feature-grid {
+    margin-bottom: 2vh;
+  }
+
+  .logo-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .logo-emoji {
+    font-size: 28px;
   }
 }
 </style>
