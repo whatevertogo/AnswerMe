@@ -164,6 +164,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IAIProvider, OpenAIProvider>();
 builder.Services.AddSingleton<IAIProvider, QwenProvider>();
 builder.Services.AddSingleton<IAIProvider, ZhipuProvider>();
+builder.Services.AddSingleton<IAIProvider, MinimaxProvider>();
 builder.Services.AddSingleton<AIProviderFactory>();
 
 // 添加API浏览器

@@ -21,6 +21,7 @@ public class QwenProvider : IAIProvider
     }
 
     public async Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
+        string apiKey,
         AIQuestionGenerateRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -34,7 +35,7 @@ public class QwenProvider : IAIProvider
                 RequestUri = new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"),
                 Headers =
                 {
-                    { "Authorization", $"Bearer {GetApiKey()}" },
+                    { "Authorization", $"Bearer {apiKey}" },
                     { "Content-Type", "application/json" }
                 },
                 Content = new StringContent(JsonSerializer.Serialize(new
@@ -210,12 +211,5 @@ public class QwenProvider : IAIProvider
                 ErrorCode = "PARSE_ERROR"
             };
         }
-    }
-
-    private string GetApiKey()
-    {
-        // 这里应该从配置或数据库中获取
-        // 暂时返回占位符，实际使用时需要注入
-        return "sk-placeholder";
     }
 }

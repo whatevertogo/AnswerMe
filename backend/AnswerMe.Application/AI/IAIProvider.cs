@@ -13,10 +13,12 @@ public interface IAIProvider
     /// <summary>
     /// 生成题目
     /// </summary>
+    /// <param name="apiKey">API密钥</param>
     /// <param name="request">生成请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>生成的题目列表</returns>
     Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
+        string apiKey,
         AIQuestionGenerateRequest request,
         CancellationToken cancellationToken = default);
 

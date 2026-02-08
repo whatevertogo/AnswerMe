@@ -5,16 +5,16 @@ using System.Net.Http.Json;
 namespace AnswerMe.Application.AI;
 
 /// <summary>
-/// OpenAI Provider实现
+/// Minimax AI Provider实现
 /// </summary>
-public class OpenAIProvider : IAIProvider
+public class MinimaxProvider : IAIProvider
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<OpenAIProvider> _logger;
+    private readonly ILogger<MinimaxProvider> _logger;
 
-    public string ProviderName => "OpenAI";
+    public string ProviderName => "Minimax";
 
-    public OpenAIProvider(HttpClient httpClient, ILogger<OpenAIProvider> logger)
+    public MinimaxProvider(HttpClient httpClient, ILogger<MinimaxProvider> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
@@ -32,7 +32,7 @@ public class OpenAIProvider : IAIProvider
             var httpRequest = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("https://api.openai.com/v1/chat/completions"),
+                RequestUri = new Uri("https://api.minimax.chat/v1/text/chatcompletion_v2"),
                 Headers =
                 {
                     { "Authorization", $"Bearer {apiKey}" },
@@ -40,7 +40,7 @@ public class OpenAIProvider : IAIProvider
                 },
                 Content = new StringContent(JsonSerializer.Serialize(new
                 {
-                    model = "gpt-4",
+                    model = "abab6.5s-chat",
                     messages = new[]
                     {
                         new
@@ -64,12 +64,12 @@ public class OpenAIProvider : IAIProvider
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("OpenAI API错误: {StatusCode}, {Body}", response.StatusCode, responseBody);
+                _logger.LogError("Minimax API错误: {StatusCode}, {Body}", response.StatusCode, responseBody);
 
                 return new AIQuestionGenerateResponse
                 {
                     Success = false,
-                    ErrorMessage = $"OpenAI API调用失败: {response.StatusCode}",
+                    ErrorMessage = $"Minimax API调用失败: {response.StatusCode}",
                     ErrorCode = ((int)response.StatusCode).ToString()
                 };
             }
@@ -97,12 +97,21 @@ public class OpenAIProvider : IAIProvider
         {
             var httpRequest = new HttpRequestMessage
             {
-                Method = HttpMethod.Get,
-                RequestUri = new Uri("https://api.openai.com/v1/models"),
+                Method = HttpMethod.Post,
+                RequestUri = new Uri("https://api.minimax.chat/v1/text/chatcompletion_v2"),
                 Headers =
                 {
                     { "Authorization", $"Bearer {apiKey}" }
-                }
+                },
+                Content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    model = "abab6.5s-chat",
+                    messages = new[]
+                    {
+                        new { role = "user", content = "hi" }
+                    },
+                    max_tokens = 5
+                }))
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
@@ -146,7 +155,7 @@ public class OpenAIProvider : IAIProvider
 }}";
     }
 
-        private AIQuestionGenerateResponse ParseResponse(string content)
+    private AIQuestionGenerateResponse ParseResponse(string content)
     {
         try
         {
