@@ -1,25 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import type {
+  Question,
+  QuestionBank,
+  QuestionBankQueryParams,
+  CreateQuestionBankDto,
+  UpdateQuestionBankDto
+} from '@/types'
+import * as questionBankApi from '@/api/questionBank'
 
-export interface Question {
-  id: string
-  content: string
-  type: 'choice' | 'multiple-choice' | 'true-false' | 'short-answer'
-  options?: string[]
-  correctAnswer: string
-  explanation?: string
-  difficulty: 'easy' | 'medium' | 'hard'
-  tags: string[]
-}
-
-export interface QuestionBank {
-  id: string
-  name: string
-  description: string
-  questionCount: number
-  createdAt: string
-  updatedAt: string
-}
+export type { QuestionBank, Question }
 
 export const useQuestionBankStore = defineStore('questionBank', () => {
   const questionBanks = ref<QuestionBank[]>([])
@@ -27,16 +17,29 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
   const questions = ref<Question[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const hasMore = ref(false)
+  const nextCursor = ref<number | undefined>(undefined)
 
-  async function fetchQuestionBanks() {
+  async function fetchQuestionBanks(params?: QuestionBankQueryParams) {
     loading.value = true
     error.value = null
     try {
-      // TODO: 实现API调用
-      // const response = await api.get('/question-banks')
-      // questionBanks.value = response.data
+      const queryParams: QuestionBankQueryParams = {
+        pageSize: params?.pageSize || 20,
+        lastId: params?.lastId,
+        search: params?.search
+      }
+      const response = await questionBankApi.getQuestionBanks(queryParams)
+      if (params?.lastId) {
+        questionBanks.value = [...questionBanks.value, ...response.data]
+      } else {
+        questionBanks.value = response.data
+      }
+      hasMore.value = response.hasMore
+      nextCursor.value = response.nextCursor
     } catch {
-      error.value = 'Failed to fetch question banks'
+      error.value = '获取题库列表失败'
+      throw error.value
     } finally {
       loading.value = false
     }
@@ -46,30 +49,97 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
     loading.value = true
     error.value = null
     try {
-      // TODO: 实现API调用
-      // const response = await api.get(`/question-banks/${id}`)
-      // currentBank.value = response.data
-      void id // 占位符，避免未使用参数警告
+      const response = await questionBankApi.getQuestionBankDetail(Number(id))
+      currentBank.value = response
+      questions.value = response.questions || []
+      return response
     } catch {
-      error.value = 'Failed to fetch question bank'
+      error.value = '获取题库详情失败'
+      throw error.value
     } finally {
       loading.value = false
     }
   }
 
-  async function fetchQuestions(bankId: string) {
+  async function createQuestionBank(data: CreateQuestionBankDto): Promise<QuestionBank> {
     loading.value = true
     error.value = null
     try {
-      // TODO: 实现API调用
-      // const response = await api.get(`/question-banks/${bankId}/questions`)
-      // questions.value = response.data
-      void bankId // 占位符，避免未使用参数警告
+      const result = await questionBankApi.createQuestionBank(data)
+      questionBanks.value.unshift(result)
+      return result
     } catch {
-      error.value = 'Failed to fetch questions'
+      error.value = '创建题库失败'
+      throw error.value
     } finally {
       loading.value = false
     }
+  }
+
+  async function updateQuestionBank(
+    id: string,
+    data: UpdateQuestionBankDto
+  ): Promise<QuestionBank> {
+    loading.value = true
+    error.value = null
+    try {
+      const result = await questionBankApi.updateQuestionBank(Number(id), data)
+      // 更新列表中的数据
+      const index = questionBanks.value.findIndex(b => b.id === id)
+      if (index !== -1) {
+        questionBanks.value[index] = result
+      }
+      // 更新当前题库数据
+      if (currentBank.value?.id === id) {
+        currentBank.value = result
+      }
+      return result
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '更新题库失败'
+      error.value = message
+      throw message
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function deleteQuestionBank(id: string): Promise<void> {
+    loading.value = true
+    error.value = null
+    try {
+      await questionBankApi.deleteQuestionBank(Number(id))
+      questionBanks.value = questionBanks.value.filter(b => b.id !== id)
+      if (currentBank.value?.id === id) {
+        currentBank.value = null
+        questions.value = []
+      }
+    } catch {
+      error.value = '删除题库失败'
+      throw error.value
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function searchQuestionBanks(searchTerm: string): Promise<QuestionBank[]> {
+    loading.value = true
+    error.value = null
+    try {
+      const results = await questionBankApi.searchQuestionBanks(searchTerm)
+      questionBanks.value = results
+      hasMore.value = false
+      return results
+    } catch {
+      error.value = '搜索题库失败'
+      throw error.value
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function clearCurrentBank() {
+    currentBank.value = null
+    questions.value = []
   }
 
   return {
@@ -78,8 +148,14 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
     questions,
     loading,
     error,
+    hasMore,
+    nextCursor,
     fetchQuestionBanks,
     fetchQuestionBank,
-    fetchQuestions
+    createQuestionBank,
+    updateQuestionBank,
+    deleteQuestionBank,
+    searchQuestionBanks,
+    clearCurrentBank
   }
 })

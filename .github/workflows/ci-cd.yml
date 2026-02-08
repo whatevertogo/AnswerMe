@@ -12,7 +12,7 @@ on:
     types: [ created ]
 
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: '10.0.x'
   NODE_VERSION: '18'
 
 jobs:
@@ -37,8 +37,8 @@ jobs:
 
       - name: 检查后端代码格式
         run: |
-          dotnet-format --check --verbosity diagnostic \
-            ./backend/AIQuestionBank.API/AIQuestionBank.API.csproj
+          cd backend
+          dotnet format --check --verbosity diagnostic
 
       - name: 设置Node.js
         uses: actions/setup-node@v4
@@ -48,10 +48,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: 安装前端依赖
-        run: cd frontend && npm ci
+        run: cd frontend/AnswerMe.Frontend && npm ci
 
       - name: 检查前端代码格式
-        run: cd frontend && npm run lint:check
+        run: cd frontend/AnswerMe.Frontend && npm run lint:check
 
   # ==========================================
   # 安全扫描
@@ -118,12 +118,12 @@ jobs:
       - name: 还原依赖
         run: |
           cd backend
-          dotnet restore
+          dotnet restore AnswerMe.slnx
 
       - name: 构建项目
         run: |
           cd backend
-          dotnet build --no-restore -c Release
+          dotnet build AnswerMe.slnx --no-restore -c Release
 
       - name: 运行单元测试
         run: |

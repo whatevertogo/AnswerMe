@@ -13,4 +13,5 @@ public interface IQuestionRepository
     Task<Question> AddAsync(Question question, CancellationToken cancellationToken = default);
     Task<Question> UpdateAsync(Question question, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -5,7 +5,10 @@ import axios, {
   type InternalAxiosRequestConfig
 } from 'axios'
 import { ElMessage } from 'element-plus'
+import router from '@/router'
+import { useUserStore } from '@/stores/user'
 
+// 开发环境使用vite代理，生产环境使用完整URL
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const instance: AxiosInstance = axios.create({
@@ -16,12 +19,17 @@ const instance: AxiosInstance = axios.create({
   }
 })
 
+// 请求拦截器
 instance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token')
+    // 从Pinia store获取token
+    const userStore = useUserStore()
+    const token = userStore.token
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
     return config
   },
   error => {
@@ -29,6 +37,7 @@ instance.interceptors.request.use(
   }
 )
 
+// 响应拦截器
 instance.interceptors.response.use(
   (response: AxiosResponse) => {
     return response.data
@@ -40,12 +49,15 @@ instance.interceptors.response.use(
     if (response) {
       switch (response.status) {
         case 400:
-          message = '请求参数错误'
+          message = response.data?.message || '请求参数错误'
           break
         case 401:
-          message = '未授权，请重新登录'
-          localStorage.removeItem('token')
-          window.location.href = '/login'
+          message = '登录已过期，请重新登录'
+          // 清除用户状态
+          const userStore = useUserStore()
+          userStore.clearAuth()
+          // 跳转到登录页
+          router.push('/login')
           break
         case 403:
           message = '拒绝访问'
@@ -61,8 +73,8 @@ instance.interceptors.response.use(
       }
     } else if (error.code === 'ECONNABORTED') {
       message = '请求超时'
-    } else {
-      message = '网络错误'
+    } else if (error.message === 'Network Error') {
+      message = '网络连接失败，请检查网络'
     }
 
     ElMessage.error(message)

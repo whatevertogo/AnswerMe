@@ -1,17 +1,449 @@
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  ArrowLeft,
+  Edit,
+  Delete,
+  Plus,
+  MagicStick,
+  Download,
+  Refresh
+} from '@element-plus/icons-vue'
+import { useQuestionBankStore } from '@/stores/questionBank'
+import QuestionBankForm from '@/components/QuestionBankForm.vue'
+import type { QuestionBank, Question } from '@/stores/questionBank'
+
+const route = useRoute()
+const router = useRouter()
+const questionBankStore = useQuestionBankStore()
+
+const loading = ref(false)
+const formDialogVisible = ref(false)
+const formMode = ref<'edit'>('edit')
+const currentBank = ref<QuestionBank | null>(null)
+
+const bankId = computed(() => route.params.id as string)
+const currentQuestionBank = computed(() => questionBankStore.currentBank)
+const questions = computed(() => questionBankStore.questions)
+
+onMounted(async () => {
+  await fetchBankDetail()
+})
+
+const fetchBankDetail = async () => {
+  loading.value = true
+  try {
+    await questionBankStore.fetchQuestionBank(bankId.value)
+  } catch {
+    ElMessage.error('获取题库详情失败')
+    router.back()
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleBack = () => {
+  router.push('/question-banks')
+}
+
+const handleEdit = () => {
+  if (currentQuestionBank.value) {
+    currentBank.value = currentQuestionBank.value
+    formMode.value = 'edit'
+    formDialogVisible.value = true
+  }
+}
+
+const handleDelete = async () => {
+  if (!currentQuestionBank.value) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除题库"${currentQuestionBank.value.name}"吗？删除后无法恢复。`,
+      '删除确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    await questionBankStore.deleteQuestionBank(currentQuestionBank.value.id)
+    ElMessage.success('删除成功')
+    router.push('/question-banks')
+  } catch {
+    // 用户取消
+  }
+}
+
+const handleGenerateQuestions = () => {
+  router.push(`/generate?bankId=${bankId.value}`)
+}
+
+const handleAddQuestion = () => {
+  ElMessage.info('手动添加题目功能开发中...')
+}
+
+const handleExport = async () => {
+  if (!currentQuestionBank.value) return
+
+  try {
+    const data = JSON.stringify(
+      {
+        bankName: currentQuestionBank.value.name,
+        description: currentQuestionBank.value.description,
+        questions: questions.value
+      },
+      null,
+      2
+    )
+
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${currentQuestionBank.value.name}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
+  }
+}
+
+const handleFormSuccess = (_bank: QuestionBank) => {
+  formDialogVisible.value = false
+  ElMessage.success('更新题库成功')
+  fetchBankDetail()
+}
+
+const handleFormClose = () => {
+  formDialogVisible.value = false
+  currentBank.value = null
+}
+
+// 题目类型标签颜色
+const getQuestionTypeTagType = (type: Question['type']): string => {
+  const typeMap: Record<string, string> = {
+    choice: 'success',
+    'multiple-choice': 'warning',
+    'true-false': 'info',
+    'short-answer': ''
+  }
+  return typeMap[type] || ''
+}
+
+// 题目难度标签颜色
+const getDifficultyTagType = (difficulty: Question['difficulty']): string => {
+  const typeMap: Record<string, string> = {
+    easy: 'success',
+    medium: 'warning',
+    hard: 'danger'
+  }
+  return typeMap[difficulty] || ''
+}
+</script>
+
 <template>
-  <div class="placeholder-view">
-    <el-result icon="info" title="题库详情页面" sub-title="功能开发中...">
-      <template #extra>
-        <el-button type="primary" @click="$router.back">返回</el-button>
+  <div v-loading="loading" class="question-bank-detail">
+    <!-- 返回按钮和标题 -->
+    <div class="page-header">
+      <el-button :icon="ArrowLeft" @click="handleBack">返回题库列表</el-button>
+      <h2 v-if="currentQuestionBank">{{ currentQuestionBank.name }}</h2>
+    </div>
+
+    <!-- 题库信息 -->
+    <el-card v-if="currentQuestionBank" class="bank-info">
+      <div class="info-header">
+        <div class="info-content">
+          <p class="description">{{ currentQuestionBank.description || '暂无描述' }}</p>
+          <div class="meta">
+            <span
+              ><el-icon><Document /></el-icon> 共 {{ currentQuestionBank.questionCount }} 道题目</span
+            >
+            <span
+              ><el-icon><Clock /></el-icon> 创建于
+              {{ new Date(currentQuestionBank.createdAt).toLocaleDateString() }}</span
+            >
+            <span
+              ><el-icon><Clock /></el-icon> 更新于
+              {{ new Date(currentQuestionBank.updatedAt).toLocaleDateString() }}</span
+            >
+          </div>
+        </div>
+        <div class="info-actions">
+          <el-button :icon="Edit" @click="handleEdit">编辑信息</el-button>
+          <el-button type="danger" :icon="Delete" @click="handleDelete">删除题库</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 操作按钮区 -->
+    <div class="action-bar">
+      <el-button type="primary" :icon="MagicStick" @click="handleGenerateQuestions">
+        AI 生成题目
+      </el-button>
+      <el-button :icon="Plus" @click="handleAddQuestion">手动添加</el-button>
+      <el-button :icon="Download" @click="handleExport">导出题库</el-button>
+      <el-button :icon="Refresh" @click="fetchBankDetail">刷新</el-button>
+    </div>
+
+    <!-- 题目列表 -->
+    <el-card class="questions-section">
+      <template #header>
+        <span>题目列表</span>
       </template>
-    </el-result>
+
+      <el-empty
+        v-if="questions.length === 0"
+        description="暂无题目"
+        :image-size="120"
+      >
+        <el-button type="primary" @click="handleGenerateQuestions">AI 生成题目</el-button>
+        <el-button @click="handleAddQuestion">手动添加</el-button>
+      </el-empty>
+
+      <div v-else class="questions-list">
+        <div
+          v-for="(question, index) in questions"
+          :key="question.id"
+          class="question-item"
+        >
+          <div class="question-header">
+            <span class="question-number">#{{ index + 1 }}</span>
+            <el-tag size="small" :type="getQuestionTypeTagType(question.type)">
+              {{ question.type === 'choice'
+                ? '单选'
+                : question.type === 'multiple-choice'
+                  ? '多选'
+                  : question.type === 'true-false'
+                    ? '判断'
+                    : '问答' }}
+            </el-tag>
+            <el-tag size="small" :type="getDifficultyTagType(question.difficulty)">
+              {{ question.difficulty === 'easy'
+                ? '简单'
+                : question.difficulty === 'medium'
+                  ? '中等'
+                  : '困难' }}
+            </el-tag>
+          </div>
+
+          <div class="question-content">
+            <p>{{ question.content }}</p>
+          </div>
+
+          <div v-if="question.options && question.options.length > 0" class="question-options">
+            <p class="options-label">选项：</p>
+            <ul>
+              <li v-for="(option, optIndex) in question.options" :key="optIndex">
+                {{ String.fromCharCode(65 + optIndex) }}. {{ option }}
+              </li>
+            </ul>
+          </div>
+
+          <div class="question-answer">
+            <span class="answer-label">答案：</span>
+            <span>{{ question.correctAnswer }}</span>
+          </div>
+
+          <div v-if="question.explanation" class="question-explanation">
+            <span class="explanation-label">解析：</span>
+            <span>{{ question.explanation }}</span>
+          </div>
+
+          <div v-if="question.tags && question.tags.length > 0" class="question-tags">
+            <el-tag
+              v-for="tag in question.tags"
+              :key="tag"
+              size="small"
+              type="info"
+            >
+              {{ tag }}
+            </el-tag>
+          </div>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 编辑题库表单 -->
+    <QuestionBankForm
+      :visible="formDialogVisible"
+      :mode="formMode"
+      :bank="currentBank"
+      @close="handleFormClose"
+      @success="handleFormSuccess"
+    />
   </div>
 </template>
 
+<script lang="ts">
+// 为了使用 Element Plus 图标，需要导入
+import { Document, Clock } from '@element-plus/icons-vue'
+export default {
+  components: {
+    Document,
+    Clock
+  }
+}
+</script>
+
 <style scoped>
-.placeholder-view {
+.question-bank-detail {
   background-color: #ffffff;
   border-radius: 8px;
   padding: 20px;
+  min-height: calc(100vh - 140px);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0;
+  color: #303133;
+}
+
+.bank-info {
+  margin-bottom: 20px;
+}
+
+.info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.description {
+  color: #606266;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.meta {
+  display: flex;
+  gap: 20px;
+  color: #909399;
+  font-size: 13px;
+}
+
+.meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.info-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.action-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+}
+
+.questions-section {
+  min-height: 200px;
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.question-item {
+  padding: 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.question-item:hover {
+  border-color: #409eff;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.question-number {
+  font-weight: bold;
+  color: #409eff;
+}
+
+.question-content {
+  font-size: 15px;
+  color: #303133;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.question-options {
+  margin-bottom: 12px;
+  padding-left: 20px;
+}
+
+.options-label {
+  color: #606266;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.question-options ul {
+  margin: 0;
+  padding-left: 0;
+  list-style-type: none;
+}
+
+.question-options li {
+  padding: 4px 0;
+  color: #606266;
+}
+
+.question-answer {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: #ecf5ff;
+  border-radius: 4px;
+}
+
+.answer-label {
+  font-weight: 500;
+  color: #409eff;
+}
+
+.question-explanation {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background-color: #fdf6ec;
+  border-radius: 4px;
+}
+
+.explanation-label {
+  font-weight: 500;
+  color: #e6a23c;
+}
+
+.question-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

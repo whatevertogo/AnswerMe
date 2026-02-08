@@ -186,3 +186,8 @@ NOTES.md
 # ==========================================
 .vscode-test/
 *.db3
+
+# Data Protection密钥文件
+keys/
+*.key
+*.xml

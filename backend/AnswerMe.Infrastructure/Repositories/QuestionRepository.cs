@@ -40,7 +40,6 @@ public class QuestionRepository : IQuestionRepository
     public async Task<Question> AddAsync(Question question, CancellationToken cancellationToken = default)
     {
         _context.Questions.Add(question);
-        await _context.SaveChangesAsync(cancellationToken);
         return question;
     }
 
@@ -64,5 +63,10 @@ public class QuestionRepository : IQuestionRepository
         _context.Questions.Remove(question);
         await _context.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.SaveChangesAsync(cancellationToken);
     }
 }

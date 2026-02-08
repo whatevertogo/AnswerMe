@@ -53,6 +53,9 @@ services:
       - JWT__Audience=${JWT_AUDIENCE:-AnswerMeUsers}
     ports:
       - "${BACKEND_PORT:-5000}:8080"
+    volumes:
+      # ✅ Data Protection密钥持久化
+      - backend-keys:/app/keys
     depends_on:
       db:
         condition: service_healthy
@@ -99,6 +102,9 @@ services:
 
 volumes:
   pgdata:
+    driver: local
+  # ✅ Data Protection密钥卷
+  backend-keys:
     driver: local
 
 networks:

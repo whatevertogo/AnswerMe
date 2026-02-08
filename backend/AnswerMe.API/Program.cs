@@ -114,7 +114,29 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // 配置Data Protection（用于加密API密钥）
-builder.Services.AddDataProtection();
+// ✅ 修复P0-4: 添加密钥持久化到文件系统，应用重启后仍可解密
+var keysDirectory = Path.Combine(Directory.GetCurrentDirectory(), "keys");
+
+// 确保keys目录存在
+if (!Directory.Exists(keysDirectory))
+{
+    try
+    {
+        Directory.CreateDirectory(keysDirectory);
+        Log.Information("创建Data Protection密钥目录: {KeysDirectory}", keysDirectory);
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "无法创建keys目录，Data Protection将使用临时密钥");
+    }
+}
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory))
+    .SetApplicationName("AnswerMe")
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
+
+Log.Information("Data Protection密钥将持久化到: {KeysDirectory}", keysDirectory);
 
 // 配置CORS
 var allowedOrigins = builder.Configuration.GetValue<string>("ALLOWED_ORIGINS") ?? "http://localhost:3000,http://localhost:5173";

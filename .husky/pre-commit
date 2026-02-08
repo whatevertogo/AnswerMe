@@ -3,6 +3,7 @@
 
 echo "🔍 Running pre-commit checks..."
 
+cd frontend
 npx lint-staged
 
 echo "✅ Pre-commit checks passed!"

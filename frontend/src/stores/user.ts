@@ -1,31 +1,42 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 export interface UserInfo {
   id: number
   username: string
-  email?: string
-  avatar?: string
+  email: string
+  createdAt?: string
 }
 
 export const useUserStore = defineStore('user', () => {
+  // State
   const token = ref<string>('')
   const userInfo = ref<UserInfo | null>(null)
-  const isLoggedIn = ref<boolean>(false)
 
+  // Getters
+  const isLoggedIn = computed<boolean>(() => !!token.value && !!userInfo.value)
+
+  // Actions
   function setToken(newToken: string) {
     token.value = newToken
-    isLoggedIn.value = !!newToken
   }
 
   function setUserInfo(info: UserInfo) {
     userInfo.value = info
   }
 
-  function logout() {
+  function setAuth(newToken: string, info: UserInfo) {
+    token.value = newToken
+    userInfo.value = info
+  }
+
+  function clearAuth() {
     token.value = ''
     userInfo.value = null
-    isLoggedIn.value = false
+  }
+
+  function logout() {
+    clearAuth()
   }
 
   return {
@@ -34,6 +45,14 @@ export const useUserStore = defineStore('user', () => {
     isLoggedIn,
     setToken,
     setUserInfo,
+    setAuth,
+    clearAuth,
     logout
+  }
+}, {
+  persist: {
+    key: 'answerme-user',
+    storage: localStorage,
+    pick: ['token', 'userInfo']
   }
 })

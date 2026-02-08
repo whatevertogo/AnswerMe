@@ -116,7 +116,7 @@ public class AIGenerationService : IAIGenerationService
             CustomPrompt = dto.CustomPrompt
         };
 
-        // 调用AI生成（带重试机制）
+                // 调用AI生成（带重试机制）
         var apiKey = ExtractApiKeyFromConfig(dataSource.Config);
         var aiResponse = await CallAIWithRetryAsync(
             provider,
@@ -156,6 +156,20 @@ public class AIGenerationService : IAIGenerationService
                 };
 
                 await _questionRepository.AddAsync(questionEntity, cancellationToken);
+
+                // 添加到已保存列表
+                savedQuestions.Add(new GeneratedQuestionDto
+                {
+                    Id = questionEntity.Id,
+                    QuestionType = question.QuestionType,
+                    QuestionText = question.QuestionText,
+                    Options = question.Options,
+                    CorrectAnswer = question.CorrectAnswer,
+                    Explanation = question.Explanation,
+                    Difficulty = question.Difficulty,
+                    QuestionBankId = questionBankId,
+                    CreatedAt = questionEntity.CreatedAt
+                });
             }
             catch (Exception ex)
             {
@@ -163,12 +177,27 @@ public class AIGenerationService : IAIGenerationService
             }
         }
 
+        // 提交事务
+        try
+        {
+            await _questionRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "提交保存题目事务失败");
+        }
+
+        // 判断是否部分成功
+        var isPartialSuccess = savedQuestions.Count > 0 && savedQuestions.Count < aiResponse.Questions.Count;
+        
         return new AIGenerateResponseDto
         {
             Success = savedQuestions.Count > 0,
             Questions = savedQuestions,
             TokensUsed = aiResponse.TokensUsed,
-            PartialSuccessCount = savedQuestions.Count < aiResponse.Questions.Count ? savedQuestions.Count : null
+            PartialSuccessCount = isPartialSuccess ? savedQuestions.Count : null,
+            ErrorMessage = isPartialSuccess ? $"成功保存 {savedQuestions.Count}/{aiResponse.Questions.Count} 道题目，部分题目保存失败" : null,
+            ErrorCode = isPartialSuccess ? "PARTIAL_SUCCESS" : null
         };
     }
 
@@ -294,9 +323,8 @@ public class AIGenerationService : IAIGenerationService
         {
             try
             {
-                // 设置API Key（这里需要在provider中支持动态设置API Key）
-                // 暂时使用provider内部实现
-                var response = await provider.GenerateQuestionsAsync(request, cancellationToken);
+                // 调用AI生成，传递apiKey
+                var response = await provider.GenerateQuestionsAsync(apiKey, request, cancellationToken);
 
                 if (response.Success)
                 {

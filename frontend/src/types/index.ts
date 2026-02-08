@@ -93,6 +93,38 @@ export interface QuestionBank {
   questionCount: number
   createdAt: string
   updatedAt: string
+  version?: string
+}
+
+/** 题库列表响应 */
+export interface QuestionBankListResponse {
+  data: QuestionBank[]
+  hasMore: boolean
+  nextCursor?: number
+}
+
+/** 题库查询参数 */
+export interface QuestionBankQueryParams {
+  search?: string
+  pageSize: number
+  lastId?: number
+}
+
+/** 创建题库请求 */
+export interface CreateQuestionBankDto {
+  name: string
+  description?: string
+  tags?: string[]
+  dataSourceId?: number
+}
+
+/** 更新题库请求 */
+export interface UpdateQuestionBankDto {
+  name?: string
+  description?: string
+  tags?: string[]
+  dataSourceId?: number
+  version?: string
 }
 
 // AI 配置相关类型
