@@ -39,19 +39,55 @@ public class CustomApiProvider : IAIProvider
 
             string NormalizeEndpoint(string ep)
             {
-                // 如果端点包含智谱的 API 路径但没有 /chat/completions，自动添加
-                if (ep.Contains("api/coding/paas/v4") || ep.Contains("api/paas/v4"))
+                // 智谱 API 需要完整路径（OpenAI 协议兼容）
+                if ((ep.Contains("api/coding/paas/v4") || ep.Contains("api/paas/v4")) &&
+                    !ep.EndsWith("/chat/completions"))
                 {
-                    if (!ep.EndsWith("/chat/completions"))
-                    {
-                        // 移除末尾的斜杠（如果有）然后添加完整路径
-                        var normalized = ep.TrimEnd('/');
-                        _logger.LogInformation("检测到智谱API端点，自动补全路径: {From} -> {To}", ep, normalized + "/chat/completions");
-                        return normalized + "/chat/completions";
-                    }
+                    var normalized = ep.TrimEnd('/');
+                    return normalized + "/chat/completions";
                 }
                 return ep;
             }
+
+            // ✅ 使用配置的模型（如果为空则使用默认模型）
+            var modelToUse = string.IsNullOrEmpty(model) ? "gpt-3.5-turbo" : model;
+
+            // ✅ 根据题目数量动态计算max_tokens
+            // 每道题平均需要约250个tokens（题目+选项+答案+解析）
+            // 加上prompt本身的tokens，留一些余量
+            var estimatedTokensPerQuestion = 250;
+            var maxTokens = Math.Max(8000, request.Count * estimatedTokensPerQuestion + 1000);
+
+            _logger.LogInformation("AI配置: Endpoint={Endpoint}, Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
+                actualEndpoint.Replace(apiKey.Substring(0, Math.Min(10, apiKey.Length)), "***"),
+                modelToUse,
+                request.Count,
+                maxTokens);
+
+            _logger.LogInformation("发送请求: Endpoint={Endpoint}, MaxTokens={MaxTokens}", actualEndpoint, maxTokens);
+
+            var requestBody = new
+            {
+                model = modelToUse,
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = prompt
+                    }
+                },
+                temperature = 0.7,
+                max_tokens = maxTokens
+            };
+
+            var requestBodyJson = JsonSerializer.Serialize(requestBody);
+            _logger.LogDebug("请求体: {RequestBody}", requestBodyJson.Substring(0, Math.Min(500, requestBodyJson.Length)) + "...");
 
             var httpRequest = new HttpRequestMessage
             {
@@ -61,25 +97,7 @@ public class CustomApiProvider : IAIProvider
                 {
                     { "Authorization", $"Bearer {apiKey}" }
                 },
-                Content = new StringContent(JsonSerializer.Serialize(new
-                {
-                    model = "gpt-3.5-turbo", // 默认模型，用户可以在 DataSource 配置中覆盖
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "system",
-                            content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
-                        },
-                        new
-                        {
-                            role = "user",
-                            content = prompt
-                        }
-                    },
-                    temperature = 0.7,
-                    max_tokens = 4000
-                }), System.Text.Encoding.UTF8, "application/json")
+                Content = new StringContent(requestBodyJson, System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);

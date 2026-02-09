@@ -35,26 +35,49 @@ public class ZhipuProvider : IAIProvider
             // 使用配置的模型，如果为空则使用默认模型 glm-4
             var modelToUse = string.IsNullOrEmpty(model) ? "glm-4" : model;
 
-            // ✅ 支持自定义端点，自动补全路径
+            // ✅ 根据题目数量动态计算max_tokens
+            var estimatedTokensPerQuestion = 250;
+            var maxTokens = Math.Max(8000, request.Count * estimatedTokensPerQuestion + 1000);
+
+            _logger.LogInformation("智谱AI配置: Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
+                modelToUse, request.Count, maxTokens);
+
+            // ✅ 智谱 codingplan API 使用 OpenAI 协议，需要 /chat/completions 路径
             var actualEndpoint = string.IsNullOrEmpty(endpoint)
                 ? "https://open.bigmodel.cn/api/paas/v4/chat/completions"  // 默认 chat 端点
-                : NormalizeEndpoint(endpoint);  // 自动补全路径
+                : NormalizeEndpoint(endpoint);
 
             string NormalizeEndpoint(string ep)
             {
-                // 如果端点包含智谱的 API 路径但没有 /chat/completions，自动添加
-                if (ep.Contains("api/coding/paas/v4") || ep.Contains("api/paas/v4"))
+                // 智谱 API 需要完整路径（OpenAI 协议兼容）
+                if ((ep.Contains("api/coding/paas/v4") || ep.Contains("api/paas/v4")) &&
+                    !ep.EndsWith("/chat/completions"))
                 {
-                    if (!ep.EndsWith("/chat/completions"))
-                    {
-                        // 移除末尾的斜杠（如果有）然后添加完整路径
-                        var normalized = ep.TrimEnd('/');
-                        _logger.LogInformation("检测到智谱API端点，自动补全路径: {From} -> {To}", ep, normalized + "/chat/completions");
-                        return normalized + "/chat/completions";
-                    }
+                    var normalized = ep.TrimEnd('/');
+                    return normalized + "/chat/completions";
                 }
                 return ep;
             }
+
+            var requestBody = new
+            {
+                model = modelToUse,
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = prompt
+                    }
+                },
+                temperature = 0.7,
+                max_tokens = maxTokens
+            };
 
             var httpRequest = new HttpRequestMessage
             {
@@ -64,25 +87,7 @@ public class ZhipuProvider : IAIProvider
                 {
                     { "Authorization", $"Bearer {apiKey}" }
                 },
-                Content = new StringContent(JsonSerializer.Serialize(new
-                {
-                    model = modelToUse,
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "system",
-                            content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
-                        },
-                        new
-                        {
-                            role = "user",
-                            content = prompt
-                        }
-                    },
-                    temperature = 0.7,
-                    max_tokens = 4000
-                }), System.Text.Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);

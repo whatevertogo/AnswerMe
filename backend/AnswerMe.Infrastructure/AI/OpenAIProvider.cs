@@ -35,11 +35,38 @@ public class OpenAIProvider : IAIProvider
             // 使用配置的模型，如果为空则使用默认模型 gpt-3.5-turbo
             var modelToUse = string.IsNullOrEmpty(model) ? "gpt-3.5-turbo" : model;
 
+            // ✅ 根据题目数量动态计算max_tokens
+            var estimatedTokensPerQuestion = 250;
+            var maxTokens = Math.Max(8000, request.Count * estimatedTokensPerQuestion + 1000);
+
+            _logger.LogInformation("OpenAI配置: Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
+                modelToUse, request.Count, maxTokens);
+
             // ✅ 支持自定义端点（如 Azure OpenAI 或其他兼容服务）
             // 如果用户提供了自定义端点则使用，否则使用 OpenAI 官方端点
             var actualEndpoint = string.IsNullOrEmpty(endpoint)
                 ? "https://api.openai.com/v1/chat/completions"  // 默认 OpenAI 端点
                 : endpoint;  // 用户自定义端点（如 Azure OpenAI）
+
+            var requestBody = new
+            {
+                model = modelToUse,
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = prompt
+                    }
+                },
+                temperature = 0.7,
+                max_tokens = maxTokens
+            };
 
             var httpRequest = new HttpRequestMessage
             {
@@ -49,25 +76,7 @@ public class OpenAIProvider : IAIProvider
                 {
                     { "Authorization", $"Bearer {apiKey}" }
                 },
-                Content = new StringContent(JsonSerializer.Serialize(new
-                {
-                    model = modelToUse,
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "system",
-                            content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
-                        },
-                        new
-                        {
-                            role = "user",
-                            content = prompt
-                        }
-                    },
-                    temperature = 0.7,
-                    max_tokens = 4000
-                }), System.Text.Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
@@ -161,28 +170,38 @@ public class OpenAIProvider : IAIProvider
     {
         try
         {
-            // 提取JSON部分
-            var jsonStart = content.IndexOf("{");
-            var jsonEnd = content.LastIndexOf("}");
+            // ✅ 支持多种JSON格式：
+            // 1. 对象格式: {"questions": [...]}
+            // 2. 数组格式: [{...}, {...}]
 
-            if (jsonStart == -1 || jsonEnd == -1)
+            var jsonDoc = JsonDocument.Parse(content);
+            var questions = new List<GeneratedQuestion>();
+            JsonElement questionsElement;
+
+            // 尝试解析为对象格式 {"questions": [...]}
+            if (jsonDoc.RootElement.ValueKind == JsonValueKind.Object &&
+                jsonDoc.RootElement.TryGetProperty("questions", out questionsElement))
+            {
+                // 对象格式
+            }
+            // 尝试解析为数组格式 [{...}, {...}]
+            else if (jsonDoc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                questionsElement = jsonDoc.RootElement;
+            }
+            else
             {
                 return new AIQuestionGenerateResponse
                 {
                     Success = false,
-                    ErrorMessage = "响应中未找到有效的JSON格式",
-                    ErrorCode = "PARSE_ERROR"
+                    ErrorMessage = "无法识别的响应格式，期望 {\"questions\": [...]} 或 [...]",
+                    ErrorCode = "INVALID_FORMAT"
                 };
             }
 
-            var jsonContent = content.Substring(jsonStart, jsonEnd - jsonStart + 1);
-            var jsonDoc = JsonDocument.Parse(jsonContent);
-
-            var questions = new List<GeneratedQuestion>();
-
-            if (jsonDoc.RootElement.TryGetProperty("questions", out var questionsElement))
+            foreach (var q in questionsElement.EnumerateArray())
             {
-                foreach (var q in questionsElement.EnumerateArray())
+                try
                 {
                     questions.Add(new GeneratedQuestion
                     {
@@ -194,13 +213,27 @@ public class OpenAIProvider : IAIProvider
                         Difficulty = q.GetProperty("difficulty").GetString() ?? "medium"
                     });
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "解析单个题目失败，跳过");
+                }
             }
 
             return new AIQuestionGenerateResponse
             {
                 Success = questions.Count > 0,
                 Questions = questions,
-                TokensUsed = jsonContent.Length
+                TokensUsed = content.Length
+            };
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "解析AI响应JSON失败");
+            return new AIQuestionGenerateResponse
+            {
+                Success = false,
+                ErrorMessage = $"JSON解析失败: {ex.Message}",
+                ErrorCode = "JSON_PARSE_ERROR"
             };
         }
         catch (Exception ex)

@@ -94,7 +94,7 @@ public class AIGenerationController : BaseApiController
 
         try
         {
-            var taskId = await _aiGenerationService.GenerateQuestionsAsyncAsync(userId, dto, cancellationToken);
+            var taskId = await _aiGenerationService.StartAsyncGeneration(userId, dto, cancellationToken);
 
             return Ok(new AIGenerateResponseDto
             {

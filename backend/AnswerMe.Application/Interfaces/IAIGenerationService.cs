@@ -21,13 +21,13 @@ public interface IAIGenerationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 生成题目（异步，>20题）
+    /// 异步生成题目（>20题）
     /// </summary>
     /// <param name="userId">用户ID</param>
     /// <param name="dto">生成请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>任务ID，用于查询进度</returns>
-    Task<string> GenerateQuestionsAsyncAsync(
+    Task<string> StartAsyncGeneration(
         int userId,
         AIGenerateRequestDto dto,
         CancellationToken cancellationToken = default);

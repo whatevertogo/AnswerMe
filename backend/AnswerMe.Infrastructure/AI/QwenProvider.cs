@@ -35,11 +35,38 @@ public class QwenProvider : IAIProvider
             // 使用配置的模型，如果为空则使用默认模型 qwen-turbo
             var modelToUse = string.IsNullOrEmpty(model) ? "qwen-turbo" : model;
 
+            // ✅ 根据题目数量动态计算max_tokens
+            var estimatedTokensPerQuestion = 250;
+            var maxTokens = Math.Max(8000, request.Count * estimatedTokensPerQuestion + 1000);
+
+            _logger.LogInformation("通义千问配置: Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
+                modelToUse, request.Count, maxTokens);
+
             // ✅ 支持自定义端点（如代理或镜像）
             // 如果用户提供了自定义端点则使用，否则使用通义千问官方端点
             var actualEndpoint = string.IsNullOrEmpty(endpoint)
                 ? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"  // 默认官方端点
                 : endpoint;  // 用户自定义端点
+
+            var requestBody = new
+            {
+                model = modelToUse,
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = prompt
+                    }
+                },
+                temperature = 0.7,
+                max_tokens = maxTokens
+            };
 
             var httpRequest = new HttpRequestMessage
             {
@@ -49,25 +76,7 @@ public class QwenProvider : IAIProvider
                 {
                     { "Authorization", $"Bearer {apiKey}" }
                 },
-                Content = new StringContent(JsonSerializer.Serialize(new
-                {
-                    model = modelToUse,
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "system",
-                            content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
-                        },
-                        new
-                        {
-                            role = "user",
-                            content = prompt
-                        }
-                    },
-                    temperature = 0.7,
-                    max_tokens = 4000
-                }), System.Text.Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);

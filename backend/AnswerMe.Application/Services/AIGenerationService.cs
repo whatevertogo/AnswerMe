@@ -219,7 +219,7 @@ public class AIGenerationService : IAIGenerationService
         };
     }
 
-    public Task<string> GenerateQuestionsAsyncAsync(
+    public Task<string> StartAsyncGeneration(
         int userId,
         AIGenerateRequestDto dto,
         CancellationToken cancellationToken = default)
