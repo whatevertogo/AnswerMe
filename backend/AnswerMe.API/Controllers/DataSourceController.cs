@@ -46,7 +46,7 @@ public class DataSourceController : BaseApiController
 
         if (dataSource == null)
         {
-            return NotFound(new { message = "数据源不存在" });
+            return NotFoundWithError("数据源不存在");
         }
 
         return Ok(dataSource);
@@ -63,7 +63,7 @@ public class DataSourceController : BaseApiController
 
         if (dataSource == null)
         {
-            return NotFound(new { message = "未设置默认数据源" });
+            return NotFoundWithError("未设置默认数据源");
         }
 
         return Ok(dataSource);
@@ -91,7 +91,7 @@ public class DataSourceController : BaseApiController
         catch (Exception ex)
         {
             _logger.LogError(ex, "创建数据源失败");
-            return BadRequest(new { message = "创建数据源失败", error = ex.Message });
+            return InternalServerError("创建数据源失败", "CREATE_FAILED");
         }
     }
 
@@ -114,7 +114,7 @@ public class DataSourceController : BaseApiController
 
         if (dataSource == null)
         {
-            return NotFound(new { message = "数据源不存在" });
+            return NotFoundWithError("数据源不存在");
         }
 
         return Ok(dataSource);
@@ -131,7 +131,7 @@ public class DataSourceController : BaseApiController
 
         if (!success)
         {
-            return NotFound(new { message = "数据源不存在" });
+            return NotFoundWithError("数据源不存在");
         }
 
         return Ok(new { message = "删除成功" });
@@ -148,7 +148,7 @@ public class DataSourceController : BaseApiController
 
         if (!success)
         {
-            return NotFound(new { message = "数据源不存在" });
+            return NotFoundWithError("数据源不存在");
         }
 
         return Ok(new { message = "已设置为默认数据源" });
@@ -165,7 +165,7 @@ public class DataSourceController : BaseApiController
 
         if (!isValid)
         {
-            return BadRequest(new { message = "API密钥无效或数据源不存在" });
+            return BadRequestWithError("API密钥无效或数据源不存在");
         }
 
         return Ok(new { message = "API密钥有效", valid = true });

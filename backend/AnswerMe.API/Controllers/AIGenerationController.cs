@@ -50,11 +50,7 @@ public class AIGenerationController : BaseApiController
 
             if (!result.Success)
             {
-                return BadRequest(new
-                {
-                    message = result.ErrorMessage,
-                    errorCode = result.ErrorCode
-                });
+                return BadRequestWithError(result.ErrorMessage ?? "生成题目失败", result.ErrorCode);
             }
 
             return Ok(result);
@@ -62,12 +58,12 @@ public class AIGenerationController : BaseApiController
         catch (InvalidOperationException ex)
         {
             _logger.LogError(ex, "生成题目失败");
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "生成题目时发生未预期错误");
-            return StatusCode(500, new { message = "服务器内部错误，请稍后重试" });
+            return InternalServerError("服务器内部错误，请稍后重试", "INTERNAL_ERROR");
         }
     }
 
@@ -89,10 +85,7 @@ public class AIGenerationController : BaseApiController
 
         if (dto.Count <= 20)
         {
-            return BadRequest(new
-            {
-                message = "异步生成适用于>20题的场景，≤20题请使用同步生成接口"
-            });
+            return BadRequestWithError("异步生成适用于>20题的场景，≤20题请使用同步生成接口");
         }
 
         var userId = GetCurrentUserId();
@@ -112,7 +105,7 @@ public class AIGenerationController : BaseApiController
         catch (Exception ex)
         {
             _logger.LogError(ex, "创建异步生成任务失败");
-            return StatusCode(500, new { message = "服务器内部错误，请稍后重试" });
+            return InternalServerError("服务器内部错误，请稍后重试", "INTERNAL_ERROR");
         }
     }
 
@@ -135,7 +128,7 @@ public class AIGenerationController : BaseApiController
 
             if (progress == null)
             {
-                return NotFound(new { message = "任务不存在" });
+                return NotFoundWithError("任务不存在");
             }
 
             return Ok(progress);
@@ -143,7 +136,7 @@ public class AIGenerationController : BaseApiController
         catch (Exception ex)
         {
             _logger.LogError(ex, "查询生成进度失败: TaskId={TaskId}", taskId);
-            return StatusCode(500, new { message = "服务器内部错误，请稍后重试" });
+            return InternalServerError("服务器内部错误，请稍后重试", "INTERNAL_ERROR");
         }
     }
 }

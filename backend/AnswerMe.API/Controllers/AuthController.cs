@@ -2,6 +2,7 @@ using AnswerMe.Application.DTOs;
 using AnswerMe.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using AnswerMe.API.DTOs;
 using System.Security.Claims;
 
 namespace AnswerMe.API.Controllers;
@@ -72,7 +73,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new ErrorResponse { Message = ex.Message, StatusCode = 400 });
         }
     }
 
@@ -91,7 +92,7 @@ public class AuthController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { message = ex.Message });
+            return Unauthorized(new ErrorResponse { Message = ex.Message, StatusCode = 401 });
         }
     }
 
@@ -106,7 +107,7 @@ public class AuthController : ControllerBase
         if (!IsLocalRequest())
         {
             _logger.LogWarning("非本地IP尝试访问本地登录端点");
-            return StatusCode(403, new { message = "本地登录仅允许从本机访问" });
+            return StatusCode(403, new ErrorResponse { Message = "本地登录仅允许从本机访问", StatusCode = 403 });
         }
 
         try
@@ -116,7 +117,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new ErrorResponse { Message = ex.Message, StatusCode = 400 });
         }
     }
 
@@ -131,13 +132,13 @@ public class AuthController : ControllerBase
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!int.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(new { message = "无效的Token" });
+            return Unauthorized(new ErrorResponse { Message = "无效的Token", StatusCode = 401 });
         }
 
         var user = await _authService.GetCurrentUserAsync(userId);
         if (user == null)
         {
-            return NotFound(new { message = "用户不存在" });
+            return NotFound(new ErrorResponse { Message = "用户不存在", StatusCode = 404 });
         }
 
         return Ok(user);

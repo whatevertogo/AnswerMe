@@ -43,12 +43,12 @@ public class AttemptsController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "开始答题失败");
-            return StatusCode(500, new { message = "开始答题失败", error = ex.Message });
+            return InternalServerError("开始答题失败", "START_FAILED");
         }
     }
 
@@ -71,12 +71,12 @@ public class AttemptsController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "提交答案失败");
-            return StatusCode(500, new { message = "提交答案失败", error = ex.Message });
+            return InternalServerError("提交答案失败", "SUBMIT_FAILED");
         }
     }
 
@@ -99,12 +99,12 @@ public class AttemptsController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "完成答题失败");
-            return StatusCode(500, new { message = "完成答题失败", error = ex.Message });
+            return InternalServerError("完成答题失败", "COMPLETE_FAILED");
         }
     }
 
@@ -120,14 +120,14 @@ public class AttemptsController : BaseApiController
             var attempt = await _attemptService.GetAttemptByIdAsync(id, userId, cancellationToken);
             if (attempt == null)
             {
-                return NotFound(new { message = "答题记录不存在" });
+                return NotFoundWithError("答题记录不存在");
             }
             return Ok(attempt);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "获取答题记录失败");
-            return StatusCode(500, new { message = "获取答题记录失败", error = ex.Message });
+            return InternalServerError("获取答题记录失败", "GET_FAILED");
         }
     }
 
@@ -145,12 +145,12 @@ public class AttemptsController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "获取答题详情失败");
-            return StatusCode(500, new { message = "获取答题详情失败", error = ex.Message });
+            return InternalServerError("获取答题详情失败", "GET_DETAILS_FAILED");
         }
     }
 
@@ -169,7 +169,7 @@ public class AttemptsController : BaseApiController
         catch (Exception ex)
         {
             _logger.LogError(ex, "获取答题统计失败");
-            return StatusCode(500, new { message = "获取答题统计失败", error = ex.Message });
+            return InternalServerError("获取答题统计失败", "GET_STATISTICS_FAILED");
         }
     }
 }

@@ -38,12 +38,12 @@ public class QuestionsController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "获取题目列表失败");
-            return StatusCode(500, new { message = "获取题目列表失败", error = ex.Message });
+            return InternalServerError("获取题目列表失败", "GET_LIST_FAILED");
         }
     }
 
@@ -55,7 +55,7 @@ public class QuestionsController : BaseApiController
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            return BadRequest(new { message = "搜索关键词不能为空" });
+            return BadRequestWithError("搜索关键词不能为空");
         }
 
         var userId = GetCurrentUserId();
@@ -66,12 +66,12 @@ public class QuestionsController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "搜索题目失败");
-            return StatusCode(500, new { message = "搜索题目失败", error = ex.Message });
+            return InternalServerError("搜索题目失败", "SEARCH_FAILED");
         }
     }
 
@@ -86,7 +86,7 @@ public class QuestionsController : BaseApiController
 
         if (question == null)
         {
-            return NotFound(new { message = "题目不存在" });
+            return NotFoundWithError("题目不存在");
         }
 
         return Ok(question);
@@ -111,12 +111,12 @@ public class QuestionsController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "创建题目失败");
-            return BadRequest(new { message = "创建题目失败", error = ex.Message });
+            return InternalServerError("创建题目失败", "CREATE_FAILED");
         }
     }
 
@@ -138,19 +138,19 @@ public class QuestionsController : BaseApiController
 
             if (question == null)
             {
-                return NotFound(new { message = "题目不存在" });
+                return NotFoundWithError("题目不存在");
             }
 
             return Ok(question);
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "更新题目失败");
-            return BadRequest(new { message = "更新题目失败", error = ex.Message });
+            return InternalServerError("更新题目失败", "UPDATE_FAILED");
         }
     }
 
@@ -165,7 +165,7 @@ public class QuestionsController : BaseApiController
 
         if (!success)
         {
-            return NotFound(new { message = "题目不存在" });
+            return NotFoundWithError("题目不存在");
         }
 
         return Ok(new { message = "删除成功" });

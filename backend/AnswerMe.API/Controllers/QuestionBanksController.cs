@@ -14,13 +14,16 @@ namespace AnswerMe.API.Controllers;
 public class QuestionBanksController : BaseApiController
 {
     private readonly IQuestionBankService _questionBankService;
+    private readonly IQuestionService _questionService;
     private readonly ILogger<QuestionBanksController> _logger;
 
     public QuestionBanksController(
         IQuestionBankService questionBankService,
+        IQuestionService questionService,
         ILogger<QuestionBanksController> logger)
     {
         _questionBankService = questionBankService;
+        _questionService = questionService;
         _logger = logger;
     }
 
@@ -43,7 +46,7 @@ public class QuestionBanksController : BaseApiController
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            return BadRequest(new { message = "搜索关键词不能为空" });
+            return BadRequestWithError("搜索关键词不能为空");
         }
 
         var userId = GetCurrentUserId();
@@ -62,7 +65,7 @@ public class QuestionBanksController : BaseApiController
 
         if (questionBank == null)
         {
-            return NotFound(new { message = "题库不存在" });
+            return NotFoundWithError("题库不存在");
         }
 
         return Ok(questionBank);
@@ -87,12 +90,12 @@ public class QuestionBanksController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "创建题库失败");
-            return BadRequest(new { message = "创建题库失败", error = ex.Message });
+            return InternalServerError("创建题库失败", "CREATE_FAILED");
         }
     }
 
@@ -114,19 +117,19 @@ public class QuestionBanksController : BaseApiController
 
             if (questionBank == null)
             {
-                return NotFound(new { message = "题库不存在" });
+                return NotFoundWithError("题库不存在");
             }
 
             return Ok(questionBank);
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequestWithError(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "更新题库失败");
-            return BadRequest(new { message = "更新题库失败", error = ex.Message });
+            return InternalServerError("更新题库失败", "UPDATE_FAILED");
         }
     }
 
@@ -141,9 +144,64 @@ public class QuestionBanksController : BaseApiController
 
         if (!success)
         {
-            return NotFound(new { message = "题库不存在" });
+            return NotFoundWithError("题库不存在");
         }
 
         return Ok(new { message = "删除成功" });
+    }
+
+    /// <summary>
+    /// 导出题库为JSON
+    /// </summary>
+    [HttpGet("{id}/export")]
+    public async Task<IActionResult> Export(int id, CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+
+        try
+        {
+            // 获取题库详情
+            var questionBank = await _questionBankService.GetByIdAsync(id, userId, cancellationToken);
+            if (questionBank == null)
+            {
+                return NotFoundWithError("题库不存在");
+            }
+
+            // 获取题库的所有题目
+            var questionsQuery = new QuestionListQueryDto
+            {
+                QuestionBankId = id,
+                PageSize = 1000, // 获取最多1000题
+                LastId = null
+            };
+            var questionsResult = await _questionService.GetListAsync(userId, questionsQuery, cancellationToken);
+
+            // 构建导出数据
+            var exportData = new
+            {
+                name = questionBank.Name,
+                description = questionBank.Description,
+                tags = questionBank.Tags,
+                questionCount = questionsResult.Total,
+                questions = questionsResult.Items,
+                exportedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                version = "0.1.0-alpha"
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(exportData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            });
+
+            var fileName = $"{questionBank.Name.Replace(" ", "_")}_{DateTime.UtcNow:yyyyMMddHHmmss}.json";
+
+            return File(System.Text.Encoding.UTF8.GetBytes(json), "application/json", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "导出题库失败");
+            return InternalServerError("导出题库失败", "EXPORT_FAILED");
+        }
     }
 }
