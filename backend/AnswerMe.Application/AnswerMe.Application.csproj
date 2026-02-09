@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\AnswerMe.Domain\AnswerMe.Domain.csproj" />
@@ -17,5 +17,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="AI\OpenAIProvider.cs" />
+    <Compile Remove="AI\QwenProvider.cs" />
+    <Compile Remove="AI\ZhipuProvider.cs" />
+    <Compile Remove="AI\MinimaxProvider.cs" />
+  </ItemGroup>
 
 </Project>

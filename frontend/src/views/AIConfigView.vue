@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { Plus, Edit, Delete, Star, CircleCheck, Connection } from '@element-plus/icons-vue'
@@ -14,6 +15,8 @@ import {
   type CreateDataSourceParams,
   type UpdateDataSourceParams
 } from '@/api/datasource'
+
+const route = useRoute()
 
 // State
 const dataSources = ref<DataSource[]>([])
@@ -34,13 +37,39 @@ const formData = ref<CreateDataSourceParams>({
   isDefault: false
 })
 
-// Provider options
+// Provider options - 所有 Provider 使用 OpenAI 兼容的 API 格式
+// endpoint 和 model 作为默认值显示，用户可以选择性覆盖
 const providerOptions = [
-  { label: 'OpenAI', value: 'openai', model: 'gpt-3.5-turbo', endpoint: '' },
-  { label: '通义千问', value: 'qwen', model: 'qwen-turbo', endpoint: '' },
-  { label: '智谱GLM', value: 'zhipu', model: 'glm-3-turbo', endpoint: '' },
-  { label: 'Minimax', value: 'minimax', model: 'abab5.5-chat', endpoint: '' },
-  { label: '自定义API', value: 'custom_api', model: '', endpoint: 'https://api.example.com' }
+  {
+    label: 'OpenAI',
+    value: 'openai',
+    model: 'gpt-3.5-turbo',
+    endpoint: 'https://api.openai.com/v1/chat/completions'
+  },
+  {
+    label: '通义千问',
+    value: 'qwen',
+    model: 'qwen-turbo',
+    endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
+  },
+  {
+    label: '智谱GLM',
+    value: 'zhipu',
+    model: 'glm-4',
+    endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+  },
+  {
+    label: 'Minimax',
+    value: 'minimax',
+    model: 'abab6.5s-chat',
+    endpoint: 'https://api.minimax.chat/v1/text/chatcompletion_v2'
+  },
+  {
+    label: '自定义API (OpenAI兼容)',
+    value: 'custom_api',
+    model: '',
+    endpoint: 'https://your-api-endpoint.com/v1/chat/completions'
+  }
 ]
 
 const formRules = {
@@ -51,7 +80,30 @@ const formRules = {
 
 onMounted(() => {
   fetchDataSources()
+  // 检查路由参数，自动触发创建/编辑对话框
+  handleRouteQuery()
 })
+
+// 监听路由查询参数变化
+watch(() => route.query, () => {
+  handleRouteQuery()
+}, { immediate: true })
+
+// 根据路由参数自动打开对话框
+function handleRouteQuery() {
+  const { action, id } = route.query
+
+  if (action === 'create') {
+    // 创建模式
+    handleAdd()
+  } else if (action === 'edit' && id) {
+    // 编辑模式
+    const dataSource = dataSources.value.find(ds => ds.id === Number(id))
+    if (dataSource) {
+      handleEdit(dataSource)
+    }
+  }
+}
 
 // Methods
 async function fetchDataSources() {
@@ -67,17 +119,26 @@ async function fetchDataSources() {
 }
 
 function handleAdd() {
+  console.log('[AIConfigView] handleAdd 被调用')
   dialogMode.value = 'create'
   currentDataSource.value = null
-  formData.value = {
-    name: '',
-    type: 'openai',
-    apiKey: '',
-    endpoint: '',
-    model: 'gpt-3.5-turbo',
-    isDefault: false
+  const defaultProvider = providerOptions[0]  // OpenAI
+  if (defaultProvider) {
+    formData.value = {
+      name: '',
+      type: 'openai',
+      apiKey: '',
+      endpoint: defaultProvider.endpoint,
+      model: defaultProvider.model,
+      isDefault: false
+    }
   }
   dialogVisible.value = true
+  console.log('[AIConfigView] dialogVisible 已设置为:', dialogVisible.value)
+  // 强制触发响应式更新
+  setTimeout(() => {
+    console.log('[AIConfigView] dialogVisible 当前值:', dialogVisible.value)
+  }, 100)
 }
 
 function handleEdit(dataSource: DataSource) {
@@ -177,18 +238,20 @@ async function handleSubmit() {
 function handleProviderChange() {
   const provider = providerOptions.find(p => p.value === formData.value.type)
   if (provider) {
-    formData.value.model = provider.model
-    formData.value.endpoint = provider.endpoint
+    // 自动填充默认端点和模型
+    formData.value.endpoint = provider.endpoint || ''
+    formData.value.model = provider.model || ''
   }
 }
 
 function handleDialogClose() {
+  const defaultProvider = providerOptions[0]
   formData.value = {
     name: '',
     type: 'openai',
     apiKey: '',
-    endpoint: '',
-    model: 'gpt-3.5-turbo',
+    endpoint: defaultProvider?.endpoint || '',
+    model: defaultProvider?.model || 'gpt-3.5-turbo',
     isDefault: false
   }
   formRef.value?.resetFields()
@@ -203,6 +266,22 @@ function getTypeLabel(type: string) {
     custom_api: '自定义API'
   }
   return typeMap[type] || type
+}
+
+function getCurrentProviderEndpoint() {
+  const provider = providerOptions.find(p => p.value === formData.value.type)
+  if (provider?.endpoint) {
+    return `默认端点: ${provider.endpoint}`
+  }
+  return '请输入自定义端点地址'
+}
+
+function getCurrentProviderModel() {
+  const provider = providerOptions.find(p => p.value === formData.value.type)
+  if (provider?.model) {
+    return `默认模型: ${provider.model}`
+  }
+  return '请输入模型名称'
 }
 
 function getTypeTagType(type: string) {
@@ -320,6 +399,9 @@ function getTypeTagType(type: string) {
       v-model="dialogVisible"
       :title="dialogMode === 'create' ? '添加AI配置' : '编辑AI配置'"
       width="600px"
+      :append-to-body="true"
+      :close-on-click-modal="false"
+      :destroy-on-close="true"
       @close="handleDialogClose"
     >
       <el-form
@@ -362,15 +444,21 @@ function getTypeTagType(type: string) {
         <el-form-item label="端点地址">
           <el-input
             v-model="formData.endpoint"
-            placeholder="自定义API端点（可选）"
+            placeholder="使用默认端点（自动填充）或输入自定义端点"
           />
+          <div class="form-tip">
+            {{ getCurrentProviderEndpoint() }}
+          </div>
         </el-form-item>
 
         <el-form-item label="模型">
           <el-input
             v-model="formData.model"
-            placeholder="模型名称（可选）"
+            placeholder="使用默认模型（自动填充）或输入自定义模型"
           />
+          <div class="form-tip">
+            {{ getCurrentProviderModel() }}
+          </div>
         </el-form-item>
 
         <el-form-item label="设为默认">
@@ -507,4 +595,28 @@ function getTypeTagType(type: string) {
 :deep(.el-form-item__label) {
   font-weight: 500;
 }
+
+/* 确保对话框正确显示 */
+:deep(.el-dialog) {
+  position: fixed !important;
+  z-index: 9999 !important;
+}
+
+:deep(.el-dialog__wrapper) {
+  position: fixed !important;
+  z-index: 9999 !important;
+}
+
+:deep(.el-overlay) {
+  position: fixed !important;
+  z-index: 9998 !important;
+}
+
+.form-tip {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
+}
+
 </style>

@@ -1,7 +1,7 @@
 # AnswerMe Backend 项目结构
 
 ## 技术栈
-- .NET 8
+- .NET 10
 - ASP.NET Core Web API
 - Entity Framework Core
 - PostgreSQL
@@ -21,13 +21,11 @@ backend/
 │   ├── Interfaces/            # 接口(如IAIProvider)
 │   ├── Services/              # 应用服务(QuestionService, AuthService等)
 │   ├── DTOs/                  # 数据传输对象
-│   ├── Validators/            # FluentValidation验证器
-│   └── Mappings/              # AutoMapper配置
+│   └── Validators/            # FluentValidation验证器
 │
 ├── AnswerMe.Infrastructure/   # 基础设施层(外部依赖)
 │   ├── Data/                  # EF Core(DbContext, Migrations)
-│   ├── AI/                    # AI Provider实现(OpenAI, Qwen等)
-│   └── Services/              # 基础设施服务(加密、邮件等)
+│   └── Repositories/          # 仓储实现
 │
 └── AnswerMe.API/              # 表现层(API端点)
     ├── Controllers/           # API控制器
@@ -46,7 +44,7 @@ API → Application → Domain
 **重要原则**:
 - ✅ Domain层不依赖任何其他层
 - ✅ Application层只依赖Domain层
-- ✅ Infrastructure层实现Application层定义的接口
+- ✅ Infrastructure层实现Domain层定义的仓储接口
 - ✅ API层协调Application和Infrastructure层
 
 ## 项目启动
@@ -87,4 +85,4 @@ dotnet ef database update --project AnswerMe.Infrastructure
 - `POST /api/questions/generate` - AI生成题目
 - `GET /health` - 健康检查
 
-详细API文档参见 `/docs/openapi/specs/` 目录
+详细API文档参见仓库 `docs/api.md` 与控制器源码

@@ -1,8 +1,9 @@
 using System.Text.Json;
+using AnswerMe.Application.AI;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
-namespace AnswerMe.Application.AI;
+namespace AnswerMe.Infrastructure.AI;
 
 /// <summary>
 /// 通义千问 Qwen Provider实现
@@ -23,24 +24,34 @@ public class QwenProvider : IAIProvider
     public async Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
         string apiKey,
         AIQuestionGenerateRequest request,
+        string? model = null,
+        string? endpoint = null,  // 忽略 endpoint 参数，Qwen 使用固定端点
         CancellationToken cancellationToken = default)
     {
         try
         {
             var prompt = BuildPrompt(request);
 
+            // 使用配置的模型，如果为空则使用默认模型 qwen-turbo
+            var modelToUse = string.IsNullOrEmpty(model) ? "qwen-turbo" : model;
+
+            // ✅ 支持自定义端点（如代理或镜像）
+            // 如果用户提供了自定义端点则使用，否则使用通义千问官方端点
+            var actualEndpoint = string.IsNullOrEmpty(endpoint)
+                ? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"  // 默认官方端点
+                : endpoint;  // 用户自定义端点
+
             var httpRequest = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"),
+                RequestUri = new Uri(actualEndpoint),
                 Headers =
                 {
-                    { "Authorization", $"Bearer {apiKey}" },
-                    { "Content-Type", "application/json" }
+                    { "Authorization", $"Bearer {apiKey}" }
                 },
                 Content = new StringContent(JsonSerializer.Serialize(new
                 {
-                    model = "qwen-turbo",
+                    model = modelToUse,
                     messages = new[]
                     {
                         new
@@ -56,7 +67,7 @@ public class QwenProvider : IAIProvider
                     },
                     temperature = 0.7,
                     max_tokens = 4000
-                }))
+                }), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);

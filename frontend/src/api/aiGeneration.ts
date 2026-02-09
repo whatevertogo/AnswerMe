@@ -75,6 +75,8 @@ export interface AIGenerateResponse {
 export interface AIGenerateProgress {
   /** 任务ID */
   taskId: string
+  /** 用户ID（后端用于权限验证） */
+  userId: number
   /** 任务状态 */
   status: TaskStatus
   /** 已生成的题目数量 */

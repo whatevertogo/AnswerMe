@@ -1,8 +1,9 @@
 using System.Text.Json;
+using AnswerMe.Application.AI;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
-namespace AnswerMe.Application.AI;
+namespace AnswerMe.Infrastructure.AI;
 
 /// <summary>
 /// Minimax AI Provider实现
@@ -23,24 +24,34 @@ public class MinimaxProvider : IAIProvider
     public async Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
         string apiKey,
         AIQuestionGenerateRequest request,
+        string? model = null,
+        string? endpoint = null,  // 忽略 endpoint 参数，Minimax 使用固定端点
         CancellationToken cancellationToken = default)
     {
         try
         {
             var prompt = BuildPrompt(request);
 
+            // 使用配置的模型，如果为空则使用默认模型 abab6.5s-chat
+            var modelToUse = string.IsNullOrEmpty(model) ? "abab6.5s-chat" : model;
+
+            // ✅ 支持自定义端点（如代理或镜像）
+            // 如果用户提供了自定义端点则使用，否则使用 Minimax 官方端点
+            var actualEndpoint = string.IsNullOrEmpty(endpoint)
+                ? "https://api.minimax.chat/v1/text/chatcompletion_v2"  // 默认官方端点
+                : endpoint;  // 用户自定义端点
+
             var httpRequest = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("https://api.minimax.chat/v1/text/chatcompletion_v2"),
+                RequestUri = new Uri(actualEndpoint),
                 Headers =
                 {
-                    { "Authorization", $"Bearer {apiKey}" },
-                    { "Content-Type", "application/json" }
+                    { "Authorization", $"Bearer {apiKey}" }
                 },
                 Content = new StringContent(JsonSerializer.Serialize(new
                 {
-                    model = "abab6.5s-chat",
+                    model = modelToUse,
                     messages = new[]
                     {
                         new
@@ -56,7 +67,7 @@ public class MinimaxProvider : IAIProvider
                     },
                     temperature = 0.7,
                     max_tokens = 4000
-                }))
+                }), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);

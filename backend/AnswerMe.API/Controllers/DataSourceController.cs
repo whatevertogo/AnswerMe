@@ -77,22 +77,9 @@ public class DataSourceController : BaseApiController
         [FromBody] CreateDataSourceDto dto,
         CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         var userId = GetCurrentUserId();
-        try
-        {
-            var dataSource = await _dataSourceService.CreateAsync(userId, dto, cancellationToken);
-            return CreatedAtAction(nameof(GetDataSource), new { id = dataSource.Id }, dataSource);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "创建数据源失败");
-            return InternalServerError("创建数据源失败", "CREATE_FAILED");
-        }
+        var dataSource = await _dataSourceService.CreateAsync(userId, dto, cancellationToken);
+        return CreatedAtAction(nameof(GetDataSource), new { id = dataSource.Id }, dataSource);
     }
 
     /// <summary>
@@ -104,11 +91,6 @@ public class DataSourceController : BaseApiController
         [FromBody] UpdateDataSourceDto dto,
         CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         var userId = GetCurrentUserId();
         var dataSource = await _dataSourceService.UpdateAsync(id, userId, dto, cancellationToken);
 

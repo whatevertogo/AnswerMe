@@ -4,13 +4,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using AnswerMe.Application;
 using AnswerMe.Application.DTOs;
-using AnswerMe.Application.Interfaces;
-using AnswerMe.Application.Services;
-using AnswerMe.Application.AI;
-using AnswerMe.Domain.Interfaces;
+using AnswerMe.Infrastructure;
 using AnswerMe.Infrastructure.Data;
-using AnswerMe.Infrastructure.Repositories;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +17,8 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Application", "AnswerMe.API")
+    // ✅ 修复P0-3: 通过配置过滤敏感信息，避免日志记录密码、API密钥等
+    // 在 appsettings.json 中配置过滤规则
     .WriteTo.Console(
         outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
     .WriteTo.File(
@@ -31,37 +30,8 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// 配置DbContext - 根据环境变量选择数据库
-var dbType = builder.Configuration.GetValue<string>("DB_TYPE") ?? "Sqlite";
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-builder.Services.AddDbContext<AnswerMeDbContext>(options =>
-{
-    if (dbType.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
-    {
-        options.UseNpgsql(connectionString);
-        Log.Information("使用PostgreSQL数据库: {ConnectionString}", connectionString);
-    }
-    else
-    {
-        // 开发环境默认使用SQLite
-        options.UseSqlite(connectionString);
-        Log.Information("使用SQLite数据库: {ConnectionString}", connectionString);
-
-        // 输出当前工作目录和数据库路径
-        var currentDir = Directory.GetCurrentDirectory();
-        var dbPath = Path.Combine(currentDir, "answerme_dev.db");
-        Log.Information("当前工作目录: {CurrentDir}", currentDir);
-        Log.Information("预期数据库路径: {DbPath}", dbPath);
-        Log.Information("数据库文件是否存在: {Exists}", File.Exists(dbPath));
-    }
-
-    // 启用开发环境下的敏感数据日志记录（仅开发环境）
-#if DEBUG
-    options.EnableSensitiveDataLogging();
-    options.EnableDetailedErrors();
-#endif
-});
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication();
 
 // 配置JWT认证
 var jwtSecretFromConfig = builder.Configuration.GetValue<string>("JWT:Secret");
@@ -174,32 +144,13 @@ builder.Services.AddControllers(options =>
 {
     // 注册全局异常处理过滤器
     options.Filters.Add<AnswerMe.API.Filters.GlobalExceptionFilter>();
-});
-
-// 注册服务
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IDataSourceRepository, DataSourceRepository>();
-builder.Services.AddScoped<IDataSourceService, DataSourceService>();
-builder.Services.AddScoped<IQuestionBankRepository, QuestionBankRepository>();
-builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
-builder.Services.AddScoped<IQuestionBankService, QuestionBankService>();
-builder.Services.AddScoped<IQuestionService, QuestionService>();
-builder.Services.AddScoped<IAttemptRepository, AttemptRepository>();
-builder.Services.AddScoped<IAttemptDetailRepository, AttemptDetailRepository>();
-builder.Services.AddScoped<IAttemptService, AttemptService>();
-builder.Services.AddScoped<IAIGenerationService, AIGenerationService>();
-
-// 注册AI Providers
-builder.Services.AddHttpClient("Default", client =>
+})
+.AddJsonOptions(options =>
 {
-    client.Timeout = TimeSpan.FromSeconds(120); // AI生成可能需要较长时间
+    // 配置 DateTime 序列化为 ISO 8601 格式（前端兼容）
+    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
-builder.Services.AddSingleton<IAIProvider, OpenAIProvider>();
-builder.Services.AddSingleton<IAIProvider, QwenProvider>();
-builder.Services.AddSingleton<IAIProvider, ZhipuProvider>();
-builder.Services.AddSingleton<IAIProvider, MinimaxProvider>();
-builder.Services.AddSingleton<AIProviderFactory>();
 
 // 添加API浏览器
 builder.Services.AddEndpointsApiExplorer();

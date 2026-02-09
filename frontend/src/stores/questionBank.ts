@@ -8,6 +8,7 @@ import type {
   UpdateQuestionBankDto
 } from '@/types'
 import * as questionBankApi from '@/api/questionBank'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 export type { QuestionBank, Question }
 
@@ -37,8 +38,8 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
       }
       hasMore.value = response.hasMore
       nextCursor.value = response.nextCursor
-    } catch {
-      error.value = '获取题库列表失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '获取题库列表失败')
       throw error.value
     } finally {
       loading.value = false
@@ -53,8 +54,8 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
       currentBank.value = response
       questions.value = response.questions || []
       return response
-    } catch {
-      error.value = '获取题库详情失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '获取题库详情失败')
       throw error.value
     } finally {
       loading.value = false
@@ -68,8 +69,8 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
       const result = await questionBankApi.createQuestionBank(data)
       questionBanks.value.unshift(result)
       return result
-    } catch {
-      error.value = '创建题库失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '创建题库失败')
       throw error.value
     } finally {
       loading.value = false
@@ -94,10 +95,9 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
         currentBank.value = result
       }
       return result
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '更新题库失败'
-      error.value = message
-      throw message
+    } catch (err) {
+      error.value = extractErrorMessage(err, '更新题库失败')
+      throw error.value
     } finally {
       loading.value = false
     }
@@ -113,8 +113,8 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
         currentBank.value = null
         questions.value = []
       }
-    } catch {
-      error.value = '删除题库失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '删除题库失败')
       throw error.value
     } finally {
       loading.value = false
@@ -129,8 +129,8 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
       questionBanks.value = results
       hasMore.value = false
       return results
-    } catch {
-      error.value = '搜索题库失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '搜索题库失败')
       throw error.value
     } finally {
       loading.value = false

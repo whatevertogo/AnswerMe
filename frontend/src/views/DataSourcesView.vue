@@ -32,12 +32,14 @@ const filteredDataSources = computed(() => {
 })
 
 const handleAdd = () => {
-  router.push('/datasources/create')
+  // 跳转到 AI 配置页面并触发创建模式
+  router.push('/ai-config?action=create')
 }
 
 const handleEdit = (dataSource: DataSource) => {
   dataSourceStore.setCurrentDataSource(dataSource)
-  router.push(`/datasources/${dataSource.id}/edit`)
+  // 跳转到 AI 配置页面并触发编辑模式
+  router.push(`/ai-config?action=edit&id=${dataSource.id}`)
 }
 
 const handleDelete = async (dataSource: DataSource) => {

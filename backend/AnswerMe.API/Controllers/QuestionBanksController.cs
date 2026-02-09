@@ -77,26 +77,9 @@ public class QuestionBanksController : BaseApiController
     [HttpPost]
     public async Task<ActionResult<QuestionBankDto>> Create([FromBody] CreateQuestionBankDto dto, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         var userId = GetCurrentUserId();
-        try
-        {
-            var questionBank = await _questionBankService.CreateAsync(userId, dto, cancellationToken);
-            return CreatedAtAction(nameof(GetById), new { id = questionBank.Id }, questionBank);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequestWithError(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "创建题库失败");
-            return InternalServerError("创建题库失败", "CREATE_FAILED");
-        }
+        var questionBank = await _questionBankService.CreateAsync(userId, dto, cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { id = questionBank.Id }, questionBank);
     }
 
     /// <summary>
@@ -105,32 +88,15 @@ public class QuestionBanksController : BaseApiController
     [HttpPut("{id}")]
     public async Task<ActionResult<QuestionBankDto>> Update(int id, [FromBody] UpdateQuestionBankDto dto, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         var userId = GetCurrentUserId();
-        try
-        {
-            var questionBank = await _questionBankService.UpdateAsync(id, userId, dto, cancellationToken);
+        var questionBank = await _questionBankService.UpdateAsync(id, userId, dto, cancellationToken);
 
-            if (questionBank == null)
-            {
-                return NotFoundWithError("题库不存在");
-            }
+        if (questionBank == null)
+        {
+            return NotFoundWithError("题库不存在");
+        }
 
-            return Ok(questionBank);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequestWithError(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "更新题库失败");
-            return InternalServerError("更新题库失败", "UPDATE_FAILED");
-        }
+        return Ok(questionBank);
     }
 
     /// <summary>
@@ -158,50 +124,42 @@ public class QuestionBanksController : BaseApiController
     {
         var userId = GetCurrentUserId();
 
-        try
+        // 获取题库详情
+        var questionBank = await _questionBankService.GetByIdAsync(id, userId, cancellationToken);
+        if (questionBank == null)
         {
-            // 获取题库详情
-            var questionBank = await _questionBankService.GetByIdAsync(id, userId, cancellationToken);
-            if (questionBank == null)
-            {
-                return NotFoundWithError("题库不存在");
-            }
-
-            // 获取题库的所有题目
-            var questionsQuery = new QuestionListQueryDto
-            {
-                QuestionBankId = id,
-                PageSize = 1000, // 获取最多1000题
-                LastId = null
-            };
-            var questionsResult = await _questionService.GetListAsync(userId, questionsQuery, cancellationToken);
-
-            // 构建导出数据
-            var exportData = new
-            {
-                name = questionBank.Name,
-                description = questionBank.Description,
-                tags = questionBank.Tags,
-                questionCount = questionsResult.TotalCount,
-                questions = questionsResult.Data,
-                exportedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                version = "0.1.0-alpha"
-            };
-
-            var json = System.Text.Json.JsonSerializer.Serialize(exportData, new System.Text.Json.JsonSerializerOptions
-            {
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            });
-
-            var fileName = $"{questionBank.Name.Replace(" ", "_")}_{DateTime.UtcNow:yyyyMMddHHmmss}.json";
-
-            return File(System.Text.Encoding.UTF8.GetBytes(json), "application/json", fileName);
+            return NotFoundWithError("题库不存在");
         }
-        catch (Exception ex)
+
+        // 获取题库的所有题目
+        var questionsQuery = new QuestionListQueryDto
         {
-            _logger.LogError(ex, "导出题库失败");
-            return InternalServerError("导出题库失败", "EXPORT_FAILED");
-        }
+            QuestionBankId = id,
+            PageSize = 1000, // 获取最多1000题
+            LastId = null
+        };
+        var questionsResult = await _questionService.GetListAsync(userId, questionsQuery, cancellationToken);
+
+        // 构建导出数据
+        var exportData = new
+        {
+            name = questionBank.Name,
+            description = questionBank.Description,
+            tags = questionBank.Tags,
+            questionCount = questionsResult.TotalCount,
+            questions = questionsResult.Data,
+            exportedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            version = "0.1.0-alpha"
+        };
+
+        var json = System.Text.Json.JsonSerializer.Serialize(exportData, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
+
+        var fileName = $"{questionBank.Name.Replace(" ", "_")}_{DateTime.UtcNow:yyyyMMddHHmmss}.json";
+
+        return File(System.Text.Encoding.UTF8.GetBytes(json), "application/json", fileName);
     }
 }

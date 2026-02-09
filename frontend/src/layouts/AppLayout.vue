@@ -28,7 +28,7 @@ const menuItems = [
     title: '题库管理'
   },
   {
-    path: '/data-sources',
+    path: '/ai-config',
     icon: Setting,
     title: 'AI配置'
   }

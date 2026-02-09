@@ -1,8 +1,9 @@
 using System.Text.Json;
+using AnswerMe.Application.AI;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
-namespace AnswerMe.Application.AI;
+namespace AnswerMe.Infrastructure.AI;
 
 /// <summary>
 /// OpenAI Provider实现
@@ -23,24 +24,34 @@ public class OpenAIProvider : IAIProvider
     public async Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
         string apiKey,
         AIQuestionGenerateRequest request,
+        string? model = null,
+        string? endpoint = null,  // 忽略 endpoint 参数，OpenAI 使用固定端点
         CancellationToken cancellationToken = default)
     {
         try
         {
             var prompt = BuildPrompt(request);
 
+            // 使用配置的模型，如果为空则使用默认模型 gpt-3.5-turbo
+            var modelToUse = string.IsNullOrEmpty(model) ? "gpt-3.5-turbo" : model;
+
+            // ✅ 支持自定义端点（如 Azure OpenAI 或其他兼容服务）
+            // 如果用户提供了自定义端点则使用，否则使用 OpenAI 官方端点
+            var actualEndpoint = string.IsNullOrEmpty(endpoint)
+                ? "https://api.openai.com/v1/chat/completions"  // 默认 OpenAI 端点
+                : endpoint;  // 用户自定义端点（如 Azure OpenAI）
+
             var httpRequest = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("https://api.openai.com/v1/chat/completions"),
+                RequestUri = new Uri(actualEndpoint),
                 Headers =
                 {
-                    { "Authorization", $"Bearer {apiKey}" },
-                    { "Content-Type", "application/json" }
+                    { "Authorization", $"Bearer {apiKey}" }
                 },
                 Content = new StringContent(JsonSerializer.Serialize(new
                 {
-                    model = "gpt-4",
+                    model = modelToUse,
                     messages = new[]
                     {
                         new
@@ -56,7 +67,7 @@ public class OpenAIProvider : IAIProvider
                     },
                     temperature = 0.7,
                     max_tokens = 4000
-                }))
+                }), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);

@@ -25,15 +25,7 @@ const handleLogin = async () => {
   loading.value = true
   try {
     const response = await authApi.login(loginForm.value)
-
-    // 同时更新两个 store
-    authStore.setToken(response.token)
-    authStore.setUser(response.user)
-
-    // 更新 userStore 以便路由守卫检查
-    authStore.setToken(response.token)
-    authStore.setUserInfo(response.user)
-
+    authStore.setAuth(response.token, response.user)
     ElMessage.success('登录成功')
     router.push('/home')
   } catch (error: any) {
@@ -48,15 +40,7 @@ const handleLocalLogin = async () => {
   loading.value = true
   try {
     const response = await authApi.localLogin()
-
-    // 同时更新两个 store
-    authStore.setToken(response.token)
-    authStore.setUser(response.user)
-
-    // 更新 userStore 以便路由守卫检查
-    authStore.setToken(response.token)
-    authStore.setUserInfo(response.user)
-
+    authStore.setAuth(response.token, response.user)
     ElMessage.success('本地登录成功')
     router.push('/home')
   } catch (error: any) {
@@ -88,7 +72,8 @@ const handleLocalLogin = async () => {
 
       <div class="options-row">
         <el-checkbox>记住我</el-checkbox>
-        <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
+        <!-- MVP 版本暂不支持忘记密码功能 -->
+        <!-- <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link> -->
       </div>
 
       <el-button type="primary" size="large" :loading="loading" class="login-button" @click="handleLogin">

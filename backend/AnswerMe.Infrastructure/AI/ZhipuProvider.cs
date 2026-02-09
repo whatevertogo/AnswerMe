@@ -1,8 +1,9 @@
 using System.Text.Json;
+using AnswerMe.Application.AI;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
-namespace AnswerMe.Application.AI;
+namespace AnswerMe.Infrastructure.AI;
 
 /// <summary>
 /// 智谱 AI (Zhipu AI/ChatGLM) Provider实现
@@ -23,24 +24,49 @@ public class ZhipuProvider : IAIProvider
     public async Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
         string apiKey,
         AIQuestionGenerateRequest request,
+        string? model = null,
+        string? endpoint = null,  // 忽略用户配置的 endpoint，使用智谱官方固定端点
         CancellationToken cancellationToken = default)
     {
         try
         {
             var prompt = BuildPrompt(request);
 
+            // 使用配置的模型，如果为空则使用默认模型 glm-4
+            var modelToUse = string.IsNullOrEmpty(model) ? "glm-4" : model;
+
+            // ✅ 支持自定义端点，自动补全路径
+            var actualEndpoint = string.IsNullOrEmpty(endpoint)
+                ? "https://open.bigmodel.cn/api/paas/v4/chat/completions"  // 默认 chat 端点
+                : NormalizeEndpoint(endpoint);  // 自动补全路径
+
+            string NormalizeEndpoint(string ep)
+            {
+                // 如果端点包含智谱的 API 路径但没有 /chat/completions，自动添加
+                if (ep.Contains("api/coding/paas/v4") || ep.Contains("api/paas/v4"))
+                {
+                    if (!ep.EndsWith("/chat/completions"))
+                    {
+                        // 移除末尾的斜杠（如果有）然后添加完整路径
+                        var normalized = ep.TrimEnd('/');
+                        _logger.LogInformation("检测到智谱API端点，自动补全路径: {From} -> {To}", ep, normalized + "/chat/completions");
+                        return normalized + "/chat/completions";
+                    }
+                }
+                return ep;
+            }
+
             var httpRequest = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("https://open.bigmodel.cn/api/paas/v4/chat/completions"),
+                RequestUri = new Uri(actualEndpoint),
                 Headers =
                 {
-                    { "Authorization", $"Bearer {apiKey}" },
-                    { "Content-Type", "application/json" }
+                    { "Authorization", $"Bearer {apiKey}" }
                 },
                 Content = new StringContent(JsonSerializer.Serialize(new
                 {
-                    model = "glm-4",
+                    model = modelToUse,
                     messages = new[]
                     {
                         new
@@ -56,7 +82,7 @@ public class ZhipuProvider : IAIProvider
                     },
                     temperature = 0.7,
                     max_tokens = 4000
-                }))
+                }), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AnswerMe.Application.AI;
 using AnswerMe.Application.DTOs;
 using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Interfaces;
@@ -13,13 +14,16 @@ public class DataSourceService : IDataSourceService
 {
     private readonly IDataSourceRepository _dataSourceRepository;
     private readonly IDataProtector _dataProtector;
+    private readonly AIProviderFactory _aiProviderFactory;
 
     public DataSourceService(
         IDataSourceRepository dataSourceRepository,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        AIProviderFactory aiProviderFactory)
     {
         _dataSourceRepository = dataSourceRepository;
         _dataProtector = dataProtectionProvider.CreateProtector("DataSourceApiKeys");
+        _aiProviderFactory = aiProviderFactory;
     }
 
     public async Task<DataSourceDto> CreateAsync(int userId, CreateDataSourceDto dto, CancellationToken cancellationToken = default)
@@ -119,10 +123,14 @@ public class DataSourceService : IDataSourceService
         }
 
         // 更新API Key（需要加密）
-        if (!string.IsNullOrEmpty(dto.ApiKey))
+        // 注意：编辑时前端会发送空字符串表示不修改密钥
+        // 需要检查是否是真实的 API Key（不是掩码格式）
+        if (!string.IsNullOrEmpty(dto.ApiKey) && !dto.ApiKey.Contains("...") && !dto.ApiKey.Contains("****"))
         {
+            // 只有当输入的不是掩码且不为空时才更新密钥
             config.ApiKey = _dataProtector.Protect(dto.ApiKey);
         }
+        // 如果 dto.ApiKey 是空字符串或掩码格式，则保留原密钥不变
 
         // 更新Endpoint
         if (dto.Endpoint != null)
@@ -188,6 +196,12 @@ public class DataSourceService : IDataSourceService
 
     public async Task<string?> GetDecryptedApiKeyAsync(int dataSourceId, int userId, CancellationToken cancellationToken = default)
     {
+        var config = await GetDecryptedConfigAsync(dataSourceId, userId, cancellationToken);
+        return config?.ApiKey;
+    }
+
+    public async Task<DataSourceConfigDto?> GetDecryptedConfigAsync(int dataSourceId, int userId, CancellationToken cancellationToken = default)
+    {
         var dataSource = await _dataSourceRepository.GetByIdAsync(dataSourceId, cancellationToken);
         if (dataSource == null || dataSource.UserId != userId)
         {
@@ -195,14 +209,19 @@ public class DataSourceService : IDataSourceService
         }
 
         var config = JsonSerializer.Deserialize<DataSourceConfig>(dataSource.Config);
-        if (string.IsNullOrEmpty(config?.ApiKey))
+        if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
             return null;
         }
 
         try
         {
-            return _dataProtector.Unprotect(config.ApiKey);
+            return new DataSourceConfigDto
+            {
+                ApiKey = _dataProtector.Unprotect(config.ApiKey),
+                Endpoint = config.Endpoint,
+                Model = config.Model
+            };
         }
         catch
         {
@@ -212,8 +231,37 @@ public class DataSourceService : IDataSourceService
 
     public async Task<bool> ValidateApiKeyAsync(int dataSourceId, int userId, CancellationToken cancellationToken = default)
     {
-        var apiKey = await GetDecryptedApiKeyAsync(dataSourceId, userId, cancellationToken);
-        return !string.IsNullOrEmpty(apiKey);
+        var config = await GetDecryptedConfigAsync(dataSourceId, userId, cancellationToken);
+        if (config == null || string.IsNullOrEmpty(config.ApiKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            // 获取 DataSource 实体以确定 Provider 类型
+            var dataSource = await _dataSourceRepository.GetByIdAsync(dataSourceId, cancellationToken);
+            if (dataSource == null || dataSource.UserId != userId)
+            {
+                return false;
+            }
+
+            // 使用注入的 AIProviderFactory 发送真实测试请求
+            var provider = _aiProviderFactory.GetProvider(dataSource.Type);
+
+            if (provider == null)
+            {
+                return false;
+            }
+
+            // 发送真实的 API 验证请求
+            var isValid = await provider.ValidateApiKeyAsync(config.ApiKey, cancellationToken);
+            return isValid;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     #region Private Methods
