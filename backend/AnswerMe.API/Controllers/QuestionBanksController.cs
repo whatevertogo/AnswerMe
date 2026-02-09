@@ -182,8 +182,8 @@ public class QuestionBanksController : BaseApiController
                 name = questionBank.Name,
                 description = questionBank.Description,
                 tags = questionBank.Tags,
-                questionCount = questionsResult.Total,
-                questions = questionsResult.Items,
+                questionCount = questionsResult.TotalCount,
+                questions = questionsResult.Data,
                 exportedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                 version = "0.1.0-alpha"
             };

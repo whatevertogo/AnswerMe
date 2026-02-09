@@ -10,9 +10,8 @@ namespace AnswerMe.API.Controllers;
 /// <summary>
 /// 认证控制器
 /// </summary>
-[ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController : BaseApiController
 {
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
@@ -73,7 +72,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ErrorResponse { Message = ex.Message, StatusCode = 400 });
+            return BadRequestWithError(ex.Message);
         }
     }
 
@@ -117,7 +116,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ErrorResponse { Message = ex.Message, StatusCode = 400 });
+            return BadRequestWithError(ex.Message);
         }
     }
 
@@ -138,7 +137,7 @@ public class AuthController : ControllerBase
         var user = await _authService.GetCurrentUserAsync(userId);
         if (user == null)
         {
-            return NotFound(new ErrorResponse { Message = "用户不存在", StatusCode = 404 });
+            return NotFoundWithError("用户不存在");
         }
 
         return Ok(user);
