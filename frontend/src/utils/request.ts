@@ -90,6 +90,22 @@ instance.interceptors.response.use(
 
 export default instance
 
-export const request = <T = any>(config: AxiosRequestConfig): Promise<T> => {
-  return instance(config)
+// 类型安全的请求方法
+// 注意：响应拦截器已经自动解包 response.data，这里使用 as any 进行类型断言
+export const request = {
+  get: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+    return instance.request({ ...config, method: 'GET', url }).then(res => res as unknown as T)
+  },
+  post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+    return instance.request({ ...config, method: 'POST', url, data }).then(res => res as unknown as T)
+  },
+  put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+    return instance.request({ ...config, method: 'PUT', url, data }).then(res => res as unknown as T)
+  },
+  delete: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+    return instance.request({ ...config, method: 'DELETE', url }).then(res => res as unknown as T)
+  },
+  patch: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+    return instance.request({ ...config, method: 'PATCH', url, data }).then(res => res as unknown as T)
+  }
 }

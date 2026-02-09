@@ -191,7 +191,10 @@ builder.Services.AddScoped<IAttemptService, AttemptService>();
 builder.Services.AddScoped<IAIGenerationService, AIGenerationService>();
 
 // 注册AI Providers
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("Default", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(120); // AI生成可能需要较长时间
+});
 builder.Services.AddSingleton<IAIProvider, OpenAIProvider>();
 builder.Services.AddSingleton<IAIProvider, QwenProvider>();
 builder.Services.AddSingleton<IAIProvider, ZhipuProvider>();

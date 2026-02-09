@@ -1,4 +1,4 @@
-import api from './index'
+import request from '@/utils/request'
 import type {
   Question,
   QuestionQueryParams,
@@ -10,28 +10,28 @@ import type {
  * 获取题目列表（分页）
  */
 export function getQuestions(params: QuestionQueryParams): Promise<any> {
-  return api.get('/Questions', { params }).then(res => res.data)
+  return request.get('/Questions', { params })
 }
 
 /**
  * 获取题目详情
  */
 export function getQuestionDetail(id: string): Promise<Question> {
-  return api.get(`/Questions/${id}`).then(res => res.data)
+  return request.get<Question>(`/Questions/${id}`)
 }
 
 /**
  * 创建题目
  */
 export function createQuestion(data: CreateQuestionDto): Promise<Question> {
-  return api.post('/Questions', data).then(res => res.data)
+  return request.post<Question>('/Questions', data)
 }
 
 /**
  * 批量创建题目
  */
 export function createQuestions(data: CreateQuestionDto[]): Promise<Question[]> {
-  return api.post('/Questions/batch', data).then(res => res.data)
+  return request.post<Question[]>('/Questions/batch', data)
 }
 
 /**
@@ -41,28 +41,28 @@ export function updateQuestion(
   id: string,
   data: UpdateQuestionDto
 ): Promise<Question> {
-  return api.put(`/Questions/${id}`, data).then(res => res.data)
+  return request.put<Question>(`/Questions/${id}`, data)
 }
 
 /**
  * 删除题目
  */
 export function deleteQuestion(id: string): Promise<{ message: string }> {
-  return api.delete(`/Questions/${id}`).then(res => res.data)
+  return request.delete<{ message: string }>(`/Questions/${id}`)
 }
 
 /**
  * 批量删除题目
  */
 export function deleteQuestions(ids: string[]): Promise<{ message: string }> {
-  return api.post('/Questions/batch-delete', ids).then(res => res.data)
+  return request.post<{ message: string }>('/Questions/batch-delete', ids)
 }
 
 /**
  * 搜索题目
  */
 export function searchQuestions(searchTerm: string, questionBankId?: string): Promise<Question[]> {
-  return api.get('/Questions/search', {
+  return request.get<Question[]>('/Questions/search', {
     params: { searchTerm, questionBankId }
-  }).then(res => res.data)
+  })
 }

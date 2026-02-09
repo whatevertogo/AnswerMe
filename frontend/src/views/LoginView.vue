@@ -27,12 +27,12 @@ const handleLogin = async () => {
     const response = await authApi.login(loginForm.value)
 
     // 同时更新两个 store
-    authStore.setToken(response.data.token)
-    authStore.setUser(response.data.user)
+    authStore.setToken(response.token)
+    authStore.setUser(response.user)
 
     // 更新 userStore 以便路由守卫检查
-    authStore.setToken(response.data.token)
-    authStore.setUserInfo(response.data.user)
+    authStore.setToken(response.token)
+    authStore.setUserInfo(response.user)
 
     ElMessage.success('登录成功')
     router.push('/home')
@@ -50,12 +50,12 @@ const handleLocalLogin = async () => {
     const response = await authApi.localLogin()
 
     // 同时更新两个 store
-    authStore.setToken(response.data.token)
-    authStore.setUser(response.data.user)
+    authStore.setToken(response.token)
+    authStore.setUser(response.user)
 
     // 更新 userStore 以便路由守卫检查
-    authStore.setToken(response.data.token)
-    authStore.setUserInfo(response.data.user)
+    authStore.setToken(response.token)
+    authStore.setUserInfo(response.user)
 
     ElMessage.success('本地登录成功')
     router.push('/home')
