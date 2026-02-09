@@ -75,7 +75,7 @@ export const Difficulty = {
 export type DifficultyEnum = (typeof Difficulty)[keyof typeof Difficulty]
 
 export interface Question {
-  id: string
+  id: number
   content: string
   type: QuestionTypeEnum
   options?: string[]
@@ -87,7 +87,7 @@ export interface Question {
 
 /** 题目查询参数 */
 export interface QuestionQueryParams extends PaginationParams {
-  questionBankId?: string
+  questionBankId?: number
   type?: string
   difficulty?: string
   search?: string
@@ -95,7 +95,7 @@ export interface QuestionQueryParams extends PaginationParams {
 
 /** 创建题目DTO */
 export interface CreateQuestionDto {
-  questionBankId: string
+  questionBankId: number
   content: string
   type: string
   options?: string[]
@@ -118,7 +118,7 @@ export interface UpdateQuestionDto {
 
 // 题库相关类型
 export interface QuestionBank {
-  id: string
+  id: number
   name: string
   description: string
   questionCount: number
@@ -171,21 +171,21 @@ export interface AIConfig {
 
 // 生成参数相关类型
 export interface GenerateParams {
-  questionBankId: string
+  questionBankId: number
   topic: string
   count: number
   difficulty: DifficultyEnum
   questionTypes: QuestionTypeEnum[]
-  aiConfigId: string
+  aiConfigId: number
 }
 
 // 答题相关类型
 export interface QuizSession {
-  id: string
-  questionBankId: string
+  id: number
+  questionBankId: number
   questions: Question[]
   currentQuestionIndex: number
-  answers: Map<string, string>
+  answers: Map<number, string>
   startTime: string
   endTime?: string
 }

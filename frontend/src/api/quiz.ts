@@ -34,14 +34,14 @@ export function completeQuiz(data: {
 /**
  * 获取答题记录详情
  */
-export function getQuizResult(attemptId: string): Promise<any> {
+export function getQuizResult(attemptId: number): Promise<any> {
   return request.get(`/Attempts/${attemptId}`)
 }
 
 /**
  * 获取答题详情列表
  */
-export function getQuizDetails(attemptId: string): Promise<any> {
+export function getQuizDetails(attemptId: number): Promise<any> {
   return request.get(`/Attempts/${attemptId}/details`)
 }
 

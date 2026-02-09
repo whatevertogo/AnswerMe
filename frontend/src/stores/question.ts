@@ -50,7 +50,7 @@ export const useQuestionStore = defineStore('question', () => {
     }
   }
 
-  async function fetchQuestion(id: string) {
+  async function fetchQuestion(id: number) {
     loading.value = true
     error.value = null
     try {
@@ -82,7 +82,7 @@ export const useQuestionStore = defineStore('question', () => {
   }
 
   async function updateQuestion(
-    id: string,
+    id: number,
     data: UpdateQuestionDto
   ): Promise<Question> {
     loading.value = true
@@ -108,7 +108,7 @@ export const useQuestionStore = defineStore('question', () => {
     }
   }
 
-  async function deleteQuestion(id: string): Promise<void> {
+  async function deleteQuestion(id: number): Promise<void> {
     loading.value = true
     error.value = null
     try {
@@ -126,7 +126,7 @@ export const useQuestionStore = defineStore('question', () => {
     }
   }
 
-  async function searchQuestions(searchTerm: string, questionBankId?: string): Promise<Question[]> {
+  async function searchQuestions(searchTerm: string, questionBankId?: number): Promise<Question[]> {
     loading.value = true
     error.value = null
     try {

@@ -52,3 +52,36 @@ export function updateQuestionBank(
 export function deleteQuestionBank(id: number): Promise<{ message: string }> {
   return request.delete<{ message: string }>(`/QuestionBanks/${id}`)
 }
+
+/**
+ * 导出题库（返回文件URL）
+ */
+export function exportQuestionBank(id: number): string {
+  return `/api/QuestionBanks/${id}/export`
+}
+
+/**
+ * 导出题库并下载文件
+ */
+export async function exportQuestionBankFile(id: number): Promise<void> {
+  const url = exportQuestionBank(id)
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error('导出失败')
+  }
+
+  const blob = await response.blob()
+  const downloadUrl = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = downloadUrl
+  link.download = `questionbank_${new Date().getTime()}.json`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(downloadUrl)
+}

@@ -216,7 +216,7 @@ public class AIGenerationService : IAIGenerationService
         };
     }
 
-    public async Task<string> GenerateQuestionsAsyncAsync(
+    public Task<string> GenerateQuestionsAsyncAsync(
         int userId,
         AIGenerateRequestDto dto,
         CancellationToken cancellationToken = default)
@@ -239,10 +239,11 @@ public class AIGenerationService : IAIGenerationService
             _asyncTasks[taskId] = progress;
         }
 
-        // 在后台线程中执行生成任务
-        _ = Task.Run(async () => await ExecuteAsyncGeneration(taskId, userId, dto), cancellationToken);
+        // 在后台线程中执行生成任务（fire-and-forget，不等待完成）
+        _ = Task.Run(async () => await ExecuteAsyncGeneration(taskId, userId, dto), cancellationToken)
+            .ConfigureAwait(false);
 
-        return taskId;
+        return Task.FromResult(taskId);
     }
 
     public async Task<AIGenerateProgressDto?> GetProgressAsync(

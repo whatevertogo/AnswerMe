@@ -24,16 +24,16 @@ public class AttemptRepository : IAttemptRepository
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
     }
 
-    public async Task<Attempt> AddAsync(Attempt attempt, CancellationToken cancellationToken = default)
+    public Task<Attempt> AddAsync(Attempt attempt, CancellationToken cancellationToken = default)
     {
         _context.Attempts.Add(attempt);
-        return attempt;
+        return Task.FromResult(attempt);
     }
 
-    public async Task UpdateAsync(Attempt attempt, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(Attempt attempt, CancellationToken cancellationToken = default)
     {
         _context.Attempts.Update(attempt);
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)

@@ -22,6 +22,7 @@ public interface IQuestionRepository
     Task<List<Question>> SearchAsync(int questionBankId, string searchTerm, CancellationToken cancellationToken = default);
 
     Task<Question> AddAsync(Question question, CancellationToken cancellationToken = default);
+    Task AddRangeAsync(List<Question> questions, CancellationToken cancellationToken = default);
     Task<Question> UpdateAsync(Question question, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

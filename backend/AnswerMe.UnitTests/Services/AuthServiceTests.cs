@@ -4,6 +4,7 @@ using AnswerMe.Application.Services;
 using AnswerMe.Domain.Entities;
 using AnswerMe.Domain.Interfaces;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -18,14 +19,25 @@ public class AuthServiceTests
     private readonly Mock<IUserRepository> _mockUserRepo;
     private readonly AuthService _authService;
     private readonly JwtSettings _jwtSettings;
+    private readonly LocalAuthSettings _localAuthSettings;
+    private readonly Mock<ILogger<AuthService>> _mockLogger;
 
     public AuthServiceTests()
     {
         _mockUserRepo = new Mock<IUserRepository>();
+        _mockLogger = new Mock<ILogger<AuthService>>();
         _jwtSettings = new JwtSettings("AnswerMe", "AnswerMeUsers",
             "test_jwt_secret_key_must_be_at_least_32_characters_long_for_security", 30);
+        _localAuthSettings = new LocalAuthSettings
+        {
+            EnableLocalLogin = true,
+            DefaultUsername = "TestUser",
+            DefaultPassword = "test123"
+        };
         _authService = new AuthService(_mockUserRepo.Object,
-            Options.Create(_jwtSettings));
+            Options.Create(_jwtSettings),
+            Options.Create(_localAuthSettings),
+            _mockLogger.Object);
     }
 
     [Fact]

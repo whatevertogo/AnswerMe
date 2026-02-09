@@ -45,11 +45,11 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
     }
   }
 
-  async function fetchQuestionBank(id: string) {
+  async function fetchQuestionBank(id: number) {
     loading.value = true
     error.value = null
     try {
-      const response = await questionBankApi.getQuestionBankDetail(Number(id))
+      const response = await questionBankApi.getQuestionBankDetail(id)
       currentBank.value = response
       questions.value = response.questions || []
       return response
@@ -77,13 +77,13 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
   }
 
   async function updateQuestionBank(
-    id: string,
+    id: number,
     data: UpdateQuestionBankDto
   ): Promise<QuestionBank> {
     loading.value = true
     error.value = null
     try {
-      const result = await questionBankApi.updateQuestionBank(Number(id), data)
+      const result = await questionBankApi.updateQuestionBank(id, data)
       // 更新列表中的数据
       const index = questionBanks.value.findIndex(b => b.id === id)
       if (index !== -1) {
@@ -103,11 +103,11 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
     }
   }
 
-  async function deleteQuestionBank(id: string): Promise<void> {
+  async function deleteQuestionBank(id: number): Promise<void> {
     loading.value = true
     error.value = null
     try {
-      await questionBankApi.deleteQuestionBank(Number(id))
+      await questionBankApi.deleteQuestionBank(id)
       questionBanks.value = questionBanks.value.filter(b => b.id !== id)
       if (currentBank.value?.id === id) {
         currentBank.value = null

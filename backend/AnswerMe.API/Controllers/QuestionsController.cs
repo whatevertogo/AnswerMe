@@ -170,4 +170,67 @@ public class QuestionsController : BaseApiController
 
         return Ok(new { message = "删除成功" });
     }
+
+    /// <summary>
+    /// 批量创建题目
+    /// </summary>
+    [HttpPost("batch")]
+    public async Task<ActionResult<List<QuestionDto>>> CreateBatch([FromBody] List<CreateQuestionDto> dtos, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if (dtos == null || dtos.Count == 0)
+        {
+            return BadRequestWithError("题目列表不能为空");
+        }
+
+        var userId = GetCurrentUserId();
+        try
+        {
+            var questions = await _questionService.CreateBatchAsync(userId, dtos, cancellationToken);
+            return Ok(questions);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestWithError(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "批量创建题目失败");
+            return InternalServerError("批量创建题目失败", "BATCH_CREATE_FAILED");
+        }
+    }
+
+    /// <summary>
+    /// 批量删除题目
+    /// </summary>
+    [HttpPost("batch-delete")]
+    public async Task<ActionResult> DeleteBatch([FromBody] List<int> ids, CancellationToken cancellationToken)
+    {
+        if (ids == null || ids.Count == 0)
+        {
+            return BadRequestWithError("题目ID列表不能为空");
+        }
+
+        var userId = GetCurrentUserId();
+        try
+        {
+            var (successCount, notFoundCount) = await _questionService.DeleteBatchAsync(userId, ids, cancellationToken);
+
+            return Ok(new
+            {
+                message = $"成功删除 {successCount} 道题目" + (notFoundCount > 0 ? $", {notFoundCount} 道题目不存在或无权删除" : ""),
+                successCount,
+                notFoundCount
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "批量删除题目失败");
+            return InternalServerError("批量删除题目失败", "BATCH_DELETE_FAILED");
+        }
+    }
 }

@@ -31,16 +31,16 @@ public class AttemptDetailRepository : IAttemptDetailRepository
             .FirstOrDefaultAsync(d => d.AttemptId == attemptId && d.QuestionId == questionId, cancellationToken);
     }
 
-    public async Task<AttemptDetail> AddAsync(AttemptDetail detail, CancellationToken cancellationToken = default)
+    public Task<AttemptDetail> AddAsync(AttemptDetail detail, CancellationToken cancellationToken = default)
     {
         _context.AttemptDetails.Add(detail);
-        return detail;
+        return Task.FromResult(detail);
     }
 
-    public async Task UpdateAsync(AttemptDetail detail, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(AttemptDetail detail, CancellationToken cancellationToken = default)
     {
         _context.AttemptDetails.Update(detail);
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)

@@ -36,4 +36,14 @@ public interface IQuestionService
     /// 搜索题目
     /// </summary>
     Task<List<QuestionDto>> SearchAsync(int questionBankId, int userId, string searchTerm, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 批量创建题目
+    /// </summary>
+    Task<List<QuestionDto>> CreateBatchAsync(int userId, List<CreateQuestionDto> dtos, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 批量删除题目
+    /// </summary>
+    Task<(int successCount, int notFoundCount)> DeleteBatchAsync(int userId, List<int> ids, CancellationToken cancellationToken = default);
 }

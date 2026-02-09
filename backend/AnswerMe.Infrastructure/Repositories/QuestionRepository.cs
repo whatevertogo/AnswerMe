@@ -73,6 +73,11 @@ public class QuestionRepository : IQuestionRepository
         return question;
     }
 
+    public async Task AddRangeAsync(List<Question> questions, CancellationToken cancellationToken = default)
+    {
+        await Task.Run(() => _context.Questions.AddRange(questions), cancellationToken);
+    }
+
     public async Task<Question> UpdateAsync(Question question, CancellationToken cancellationToken = default)
     {
         _context.Questions.Update(question);

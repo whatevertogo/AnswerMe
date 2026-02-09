@@ -159,7 +159,7 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  async function fetchQuizResult(attemptId: string) {
+  async function fetchQuizResult(attemptId: number) {
     loading.value = true
     error.value = null
     try {
@@ -174,7 +174,7 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  async function fetchQuizDetails(attemptId: string) {
+  async function fetchQuizDetails(attemptId: number) {
     loading.value = true
     error.value = null
     try {

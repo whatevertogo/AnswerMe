@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { FormInstance } from 'element-plus'
 import { Plus, Edit, Delete, Star, CircleCheck, Connection } from '@element-plus/icons-vue'
 import {
   getDataSourcesApi,
@@ -21,6 +22,7 @@ const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
 const currentDataSource = ref<DataSource | null>(null)
 const validatingId = ref<number | null>(null)
+const formRef = ref<FormInstance>()
 
 // Form
 const formData = ref<CreateDataSourceParams>({
@@ -56,7 +58,7 @@ async function fetchDataSources() {
   loading.value = true
   try {
     const response = await getDataSourcesApi()
-    dataSources.value = response.data
+    dataSources.value = response
   } catch (error: any) {
     ElMessage.error('加载数据源列表失败: ' + (error.message || '未知错误'))
   } finally {
@@ -128,7 +130,7 @@ async function handleValidate(dataSource: DataSource) {
   validatingId.value = dataSource.id
   try {
     const response = await validateApiKeyApi(dataSource.id)
-    if (response.data.valid) {
+    if (response.valid) {
       ElMessage.success('API密钥有效')
     } else {
       ElMessage.error('API密钥无效')
@@ -141,29 +143,35 @@ async function handleValidate(dataSource: DataSource) {
 }
 
 async function handleSubmit() {
-  try {
-    if (dialogMode.value === 'create') {
-      await createDataSourceApi(formData.value)
-      ElMessage.success('创建成功')
-    } else if (currentDataSource.value) {
-      const updateData: UpdateDataSourceParams = {
-        name: formData.value.name,
-        endpoint: formData.value.endpoint || undefined,
-        model: formData.value.model || undefined,
-        isDefault: formData.value.isDefault
+  if (!formRef.value) return
+  
+  await formRef.value.validate(async (valid) => {
+    if (!valid) return
+    
+    try {
+      if (dialogMode.value === 'create') {
+        await createDataSourceApi(formData.value)
+        ElMessage.success('创建成功')
+      } else if (currentDataSource.value) {
+        const updateData: UpdateDataSourceParams = {
+          name: formData.value.name,
+          endpoint: formData.value.endpoint || undefined,
+          model: formData.value.model || undefined,
+          isDefault: formData.value.isDefault
+        }
+        // 只有当用户输入了新密钥时才更新
+        if (formData.value.apiKey) {
+          updateData.apiKey = formData.value.apiKey
+        }
+        await updateDataSourceApi(currentDataSource.value.id, updateData)
+        ElMessage.success('更新成功')
       }
-      // 只有当用户输入了新密钥时才更新
-      if (formData.value.apiKey) {
-        updateData.apiKey = formData.value.apiKey
-      }
-      await updateDataSourceApi(currentDataSource.value.id, updateData)
-      ElMessage.success('更新成功')
+      dialogVisible.value = false
+      await fetchDataSources()
+    } catch (error: any) {
+      ElMessage.error((dialogMode.value === 'create' ? '创建' : '更新') + '失败: ' + (error.message || '未知错误'))
     }
-    dialogVisible.value = false
-    await fetchDataSources()
-  } catch (error: any) {
-    ElMessage.error((dialogMode.value === 'create' ? '创建' : '更新') + '失败: ' + (error.message || '未知错误'))
-  }
+  })
 }
 
 function handleProviderChange() {
@@ -172,6 +180,18 @@ function handleProviderChange() {
     formData.value.model = provider.model
     formData.value.endpoint = provider.endpoint
   }
+}
+
+function handleDialogClose() {
+  formData.value = {
+    name: '',
+    type: 'openai',
+    apiKey: '',
+    endpoint: '',
+    model: 'gpt-3.5-turbo',
+    isDefault: false
+  }
+  formRef.value?.resetFields()
 }
 
 function getTypeLabel(type: string) {
@@ -300,7 +320,7 @@ function getTypeTagType(type: string) {
       v-model="dialogVisible"
       :title="dialogMode === 'create' ? '添加AI配置' : '编辑AI配置'"
       width="600px"
-      @close="formData = { name: '', type: 'openai', apiKey: '', endpoint: '', model: 'gpt-3.5-turbo', isDefault: false }"
+      @close="handleDialogClose"
     >
       <el-form
         ref="formRef"

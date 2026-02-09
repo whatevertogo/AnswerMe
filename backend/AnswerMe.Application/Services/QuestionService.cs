@@ -233,6 +233,89 @@ public class QuestionService : IQuestionService
         return result;
     }
 
+    public async Task<List<QuestionDto>> CreateBatchAsync(int userId, List<CreateQuestionDto> dtos, CancellationToken cancellationToken = default)
+    {
+        if (dtos == null || dtos.Count == 0)
+        {
+            throw new InvalidOperationException("创建题目列表不能为空");
+        }
+
+        // 验证所有题库是否存在且属于当前用户
+        var questionBankIds = dtos.Select(d => d.QuestionBankId).Distinct().ToList();
+        foreach (var questionBankId in questionBankIds)
+        {
+            var questionBank = await _questionBankRepository.GetByIdAsync(questionBankId, cancellationToken);
+            if (questionBank == null || questionBank.UserId != userId)
+            {
+                throw new InvalidOperationException($"题库 {questionBankId} 不存在或无权访问");
+            }
+        }
+
+        var questions = new List<Domain.Entities.Question>();
+        foreach (var dto in dtos)
+        {
+            var question = new Domain.Entities.Question
+            {
+                QuestionBankId = dto.QuestionBankId,
+                QuestionText = dto.QuestionText,
+                QuestionType = dto.QuestionType,
+                Options = dto.Options,
+                CorrectAnswer = dto.CorrectAnswer,
+                Explanation = dto.Explanation,
+                Difficulty = dto.Difficulty,
+                OrderIndex = dto.OrderIndex,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            questions.Add(question);
+        }
+
+        await _questionRepository.AddRangeAsync(questions, cancellationToken);
+        await _questionRepository.SaveChangesAsync(cancellationToken);
+
+        var result = new List<QuestionDto>();
+        foreach (var q in questions)
+        {
+            result.Add(await MapToDtoAsync(q, cancellationToken));
+        }
+
+        return result;
+    }
+
+    public async Task<(int successCount, int notFoundCount)> DeleteBatchAsync(int userId, List<int> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids == null || ids.Count == 0)
+        {
+            return (0, 0);
+        }
+
+        var successCount = 0;
+        var notFoundCount = 0;
+
+        foreach (var id in ids)
+        {
+            var question = await _questionRepository.GetByIdAsync(id, cancellationToken);
+            if (question == null)
+            {
+                notFoundCount++;
+                continue;
+            }
+
+            // 验证题库是否属于当前用户
+            var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
+            if (questionBank == null || questionBank.UserId != userId)
+            {
+                notFoundCount++;
+                continue;
+            }
+
+            await _questionRepository.DeleteAsync(id, cancellationToken);
+            successCount++;
+        }
+
+        return (successCount, notFoundCount);
+    }
+
     private async Task<QuestionDto> MapToDtoAsync(Domain.Entities.Question question, CancellationToken cancellationToken)
     {
         // 获取题库信息
