@@ -1,20 +1,21 @@
 using System.Text.Json;
+using AnswerMe.Application.AI;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
-namespace AnswerMe.Application.AI;
+namespace AnswerMe.Infrastructure.AI;
 
 /// <summary>
-/// Minimax AI Provider实现
+/// 通义千问 Qwen Provider实现
 /// </summary>
-public class MinimaxProvider : IAIProvider
+public class QwenProvider : IAIProvider
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<MinimaxProvider> _logger;
+    private readonly ILogger<QwenProvider> _logger;
 
-    public string ProviderName => "Minimax";
+    public string ProviderName => "Qwen";
 
-    public MinimaxProvider(HttpClient httpClient, ILogger<MinimaxProvider> logger)
+    public QwenProvider(HttpClient httpClient, ILogger<QwenProvider> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
@@ -23,40 +24,59 @@ public class MinimaxProvider : IAIProvider
     public async Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
         string apiKey,
         AIQuestionGenerateRequest request,
+        string? model = null,
+        string? endpoint = null,  // 忽略 endpoint 参数，Qwen 使用固定端点
         CancellationToken cancellationToken = default)
     {
         try
         {
             var prompt = BuildPrompt(request);
 
+            // 使用配置的模型，如果为空则使用默认模型 qwen-turbo
+            var modelToUse = string.IsNullOrEmpty(model) ? "qwen-turbo" : model;
+
+            // ✅ 根据题目数量动态计算max_tokens
+            var estimatedTokensPerQuestion = 250;
+            var maxTokens = Math.Max(8000, request.Count * estimatedTokensPerQuestion + 1000);
+
+            _logger.LogInformation("通义千问配置: Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
+                modelToUse, request.Count, maxTokens);
+
+            // ✅ 支持自定义端点（如代理或镜像）
+            // 如果用户提供了自定义端点则使用，否则使用通义千问官方端点
+            var actualEndpoint = string.IsNullOrEmpty(endpoint)
+                ? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"  // 默认官方端点
+                : endpoint;  // 用户自定义端点
+
+            var requestBody = new
+            {
+                model = modelToUse,
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = prompt
+                    }
+                },
+                temperature = 0.7,
+                max_tokens = maxTokens
+            };
+
             var httpRequest = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("https://api.minimax.chat/v1/text/chatcompletion_v2"),
+                RequestUri = new Uri(actualEndpoint),
                 Headers =
                 {
-                    { "Authorization", $"Bearer {apiKey}" },
-                    { "Content-Type", "application/json" }
+                    { "Authorization", $"Bearer {apiKey}" }
                 },
-                Content = new StringContent(JsonSerializer.Serialize(new
-                {
-                    model = "abab6.5s-chat",
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "system",
-                            content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
-                        },
-                        new
-                        {
-                            role = "user",
-                            content = prompt
-                        }
-                    },
-                    temperature = 0.7,
-                    max_tokens = 4000
-                }))
+                Content = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
@@ -64,12 +84,12 @@ public class MinimaxProvider : IAIProvider
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Minimax API错误: {StatusCode}, {Body}", response.StatusCode, responseBody);
+                _logger.LogError("Qwen API错误: {StatusCode}, {Body}", response.StatusCode, responseBody);
 
                 return new AIQuestionGenerateResponse
                 {
                     Success = false,
-                    ErrorMessage = $"Minimax API调用失败: {response.StatusCode}",
+                    ErrorMessage = $"Qwen API调用失败: {response.StatusCode}",
                     ErrorCode = ((int)response.StatusCode).ToString()
                 };
             }
@@ -98,14 +118,14 @@ public class MinimaxProvider : IAIProvider
             var httpRequest = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("https://api.minimax.chat/v1/text/chatcompletion_v2"),
+                RequestUri = new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"),
                 Headers =
                 {
                     { "Authorization", $"Bearer {apiKey}" }
                 },
                 Content = new StringContent(JsonSerializer.Serialize(new
                 {
-                    model = "abab6.5s-chat",
+                    model = "qwen-turbo",
                     messages = new[]
                     {
                         new { role = "user", content = "hi" }
@@ -152,7 +172,7 @@ public class MinimaxProvider : IAIProvider
       ""difficulty"": ""easy""
     }}
   ]
-}}";
+ }}";
     }
 
     private AIQuestionGenerateResponse ParseResponse(string content)

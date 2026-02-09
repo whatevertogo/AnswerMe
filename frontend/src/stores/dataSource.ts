@@ -9,6 +9,7 @@ import {
   setDefaultDataSourceApi,
   validateApiKeyApi
 } from '@/api/datasource'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 export const useDataSourceStore = defineStore('dataSource', () => {
   // State
@@ -24,7 +25,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
       dataSources.value = response
     } catch (error) {
       console.error('获取数据源列表失败:', error)
-      throw error
+      throw extractErrorMessage(error, '获取数据源列表失败')
     } finally {
       loading.value = false
     }
@@ -38,7 +39,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
       return response
     } catch (error) {
       console.error('创建数据源失败:', error)
-      throw error
+      throw extractErrorMessage(error, '创建数据源失败')
     } finally {
       loading.value = false
     }
@@ -55,7 +56,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
       return response
     } catch (error) {
       console.error('更新数据源失败:', error)
-      throw error
+      throw extractErrorMessage(error, '更新数据源失败')
     } finally {
       loading.value = false
     }
@@ -68,7 +69,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
       dataSources.value = dataSources.value.filter(ds => ds.id !== id)
     } catch (error) {
       console.error('删除数据源失败:', error)
-      throw error
+      throw extractErrorMessage(error, '删除数据源失败')
     } finally {
       loading.value = false
     }
@@ -84,7 +85,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
       })
     } catch (error) {
       console.error('设置默认数据源失败:', error)
-      throw error
+      throw extractErrorMessage(error, '设置默认数据源失败')
     } finally {
       loading.value = false
     }
@@ -96,7 +97,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
       return response.valid
     } catch (error) {
       console.error('验证API密钥失败:', error)
-      throw error
+      throw extractErrorMessage(error, '验证API密钥失败')
     }
   }
 

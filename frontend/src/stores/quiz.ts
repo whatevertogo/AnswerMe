@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as quizApi from '@/api/quiz'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 export interface QuizQuestion {
   id: number

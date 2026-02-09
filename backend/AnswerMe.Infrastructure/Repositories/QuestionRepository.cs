@@ -68,14 +68,13 @@ public class QuestionRepository : IQuestionRepository
 
     public async Task<Question> AddAsync(Question question, CancellationToken cancellationToken = default)
     {
-        // 异步添加实体到上下文，避免同步阻塞
-        await Task.Run(() => _context.Questions.Add(question), cancellationToken);
+        await _context.Questions.AddAsync(question, cancellationToken);
         return question;
     }
 
     public async Task AddRangeAsync(List<Question> questions, CancellationToken cancellationToken = default)
     {
-        await Task.Run(() => _context.Questions.AddRange(questions), cancellationToken);
+        await _context.Questions.AddRangeAsync(questions, cancellationToken);
     }
 
     public async Task<Question> UpdateAsync(Question question, CancellationToken cancellationToken = default)

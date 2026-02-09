@@ -15,11 +15,15 @@ public interface IAIProvider
     /// </summary>
     /// <param name="apiKey">API密钥</param>
     /// <param name="request">生成请求</param>
+    /// <param name="model">模型名称（可选，如果为空则使用 Provider 默认模型）</param>
+    /// <param name="endpoint">自定义端点（可选，仅用于 custom_api 类型）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>生成的题目列表</returns>
     Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
         string apiKey,
         AIQuestionGenerateRequest request,
+        string? model = null,
+        string? endpoint = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

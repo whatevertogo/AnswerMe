@@ -5,6 +5,7 @@ using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Entities;
 using AnswerMe.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AnswerMe.Application.Services;
 
@@ -120,23 +121,25 @@ public class AIGenerationService : IAIGenerationService
         };
 
         // 调用AI生成（带重试机制）
-        // 修复P1-1: 解密API Key后再使用
-        var apiKey = await _dataSourceService.GetDecryptedApiKeyAsync(dataSource.Id, userId, cancellationToken);
-        if (string.IsNullOrEmpty(apiKey))
+        // 获取完整的解密配置（包括 API Key、Endpoint、Model）
+        var config = await _dataSourceService.GetDecryptedConfigAsync(dataSource.Id, userId, cancellationToken);
+        if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
-            _logger.LogError("无法获取数据源 {DataSourceId} 的解密API Key", dataSource.Id);
+            _logger.LogError("无法获取数据源 {DataSourceId} 的解密配置", dataSource.Id);
             return new AIGenerateResponseDto
             {
                 Success = false,
-                ErrorMessage = "API Key解密失败，请检查数据源配置",
-                ErrorCode = "API_KEY_DECRYPTION_FAILED"
+                ErrorMessage = "数据源配置解密失败，请检查配置",
+                ErrorCode = "CONFIG_DECRYPTION_FAILED"
             };
         }
 
         var aiResponse = await CallAIWithRetryAsync(
             provider,
-            apiKey,
+            config.ApiKey,
             aiRequest,
+            config.Model,
+            config.Endpoint,
             maxRetries: 3,
             cancellationToken);
 
@@ -216,7 +219,7 @@ public class AIGenerationService : IAIGenerationService
         };
     }
 
-    public Task<string> GenerateQuestionsAsyncAsync(
+    public Task<string> StartAsyncGeneration(
         int userId,
         AIGenerateRequestDto dto,
         CancellationToken cancellationToken = default)
@@ -228,6 +231,7 @@ public class AIGenerationService : IAIGenerationService
         var progress = new AIGenerateProgressDto
         {
             TaskId = taskId,
+            UserId = userId,  // 保存用户ID用于权限验证
             Status = "pending",
             GeneratedCount = 0,
             TotalCount = dto.Count,
@@ -258,6 +262,12 @@ public class AIGenerationService : IAIGenerationService
             {
                 if (_asyncTasks.TryGetValue(taskId, out var progress))
                 {
+                    // 验证用户权限：只能查询自己的任务
+                    if (progress.UserId != userId)
+                    {
+                        return null;  // 返回 null 表示任务不存在（不泄露其他用户任务信息）
+                    }
+
                     // 返回副本避免外部修改
                     return JsonSerializer.Deserialize<AIGenerateProgressDto>(
                         JsonSerializer.Serialize(progress));
@@ -277,8 +287,14 @@ public class AIGenerationService : IAIGenerationService
             // 更新状态为处理中
             UpdateTaskStatus(taskId, "processing");
 
+            // ✅ 修复P0: 创建独立作用域，避免使用已释放的 DbContext
+            using var scope = _serviceProvider.CreateScope();
+
+            // 从新作用域获取服务实例（通过接口）
+            var aiGenerationService = scope.ServiceProvider.GetRequiredService<IAIGenerationService>();
+
             // 调用同步生成逻辑
-            var response = await GenerateQuestionsAsync(userId, dto, CancellationToken.None);
+            var response = await aiGenerationService.GenerateQuestionsAsync(userId, dto, CancellationToken.None);
 
             if (response.Success)
             {
@@ -333,6 +349,8 @@ public class AIGenerationService : IAIGenerationService
         IAIProvider provider,
         string apiKey,
         AIQuestionGenerateRequest request,
+        string? model,
+        string? endpoint,
         int maxRetries,
         CancellationToken cancellationToken)
     {
@@ -342,8 +360,8 @@ public class AIGenerationService : IAIGenerationService
         {
             try
             {
-                // 调用AI生成，传递apiKey
-                var response = await provider.GenerateQuestionsAsync(apiKey, request, cancellationToken);
+                // 调用AI生成，传递 apiKey、model 和 endpoint
+                var response = await provider.GenerateQuestionsAsync(apiKey, request, model, endpoint, cancellationToken);
 
                 if (response.Success)
                 {

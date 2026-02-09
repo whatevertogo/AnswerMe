@@ -48,6 +48,11 @@ public interface IDataSourceService
     Task<string?> GetDecryptedApiKeyAsync(int dataSourceId, int userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 解密并获取完整的数据源配置（包括API密钥、端点、模型）
+    /// </summary>
+    Task<DataSourceConfigDto?> GetDecryptedConfigAsync(int dataSourceId, int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 验证API密钥是否有效
     /// </summary>
     Task<bool> ValidateApiKeyAsync(int dataSourceId, int userId, CancellationToken cancellationToken = default);

@@ -48,7 +48,8 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
 
     try {
       // 根据题目数量选择同步或异步
-      const useAsync = params.count > 20
+      // ≥20题使用异步，<20题使用同步（与后端逻辑一致）
+      const useAsync = params.count >= 20
 
       if (useAsync) {
         // 异步生成
@@ -73,7 +74,23 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
         }
       }
     } catch (err: any) {
-      error.value = err.response?.data?.message || err.message || '生成题目时发生错误'
+      // 改进错误提示，特别是 API Key 相关错误
+      const errorMessage = err.response?.data?.message || err.message || '生成题目时发生错误'
+      const errorCode = err.response?.data?.errorCode || ''
+
+      // 如果是 API Key 无效错误，提供更友好的提示
+      if (errorMessage.includes('Incorrect API key') ||
+          errorMessage.includes('invalid_api_key') ||
+          errorMessage.includes('401') ||
+          errorMessage.includes('Unauthorized')) {
+        error.value = 'API Key 无效或未配置。请先在"AI配置"中添加有效的 API Key。'
+      } else if (errorMessage.includes('未找到有效的AI配置') ||
+                 errorCode === 'NO_DATA_SOURCE') {
+        error.value = '未找到 AI 配置。请先在"AI配置"中添加数据源。'
+      } else {
+        error.value = errorMessage
+      }
+
       console.error('生成题目失败:', err)
     } finally {
       loading.value = false

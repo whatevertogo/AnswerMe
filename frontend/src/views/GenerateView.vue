@@ -324,7 +324,7 @@ function getQuestionTypeText(type: string) {
                 <el-checkbox
                   v-for="type in questionTypeOptions"
                   :key="type.value"
-                  :label="type.value"
+                  :value="type.value"
                 >
                   {{ type.label }}
                 </el-checkbox>

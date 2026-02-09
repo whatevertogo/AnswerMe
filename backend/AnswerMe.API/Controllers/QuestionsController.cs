@@ -31,20 +31,8 @@ public class QuestionsController : BaseApiController
     public async Task<ActionResult<QuestionListDto>> GetList([FromQuery] QuestionListQueryDto query, CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
-        try
-        {
-            var result = await _questionService.GetListAsync(userId, query, cancellationToken);
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequestWithError(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "获取题目列表失败");
-            return InternalServerError("获取题目列表失败", "GET_LIST_FAILED");
-        }
+        var result = await _questionService.GetListAsync(userId, query, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>
@@ -59,20 +47,8 @@ public class QuestionsController : BaseApiController
         }
 
         var userId = GetCurrentUserId();
-        try
-        {
-            var results = await _questionService.SearchAsync(questionBankId, userId, searchTerm, cancellationToken);
-            return Ok(results);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequestWithError(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "搜索题目失败");
-            return InternalServerError("搜索题目失败", "SEARCH_FAILED");
-        }
+        var results = await _questionService.SearchAsync(questionBankId, userId, searchTerm, cancellationToken);
+        return Ok(results);
     }
 
     /// <summary>
@@ -98,26 +74,9 @@ public class QuestionsController : BaseApiController
     [HttpPost]
     public async Task<ActionResult<QuestionDto>> Create([FromBody] CreateQuestionDto dto, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         var userId = GetCurrentUserId();
-        try
-        {
-            var question = await _questionService.CreateAsync(userId, dto, cancellationToken);
-            return CreatedAtAction(nameof(GetById), new { id = question.Id }, question);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequestWithError(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "创建题目失败");
-            return InternalServerError("创建题目失败", "CREATE_FAILED");
-        }
+        var question = await _questionService.CreateAsync(userId, dto, cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { id = question.Id }, question);
     }
 
     /// <summary>
@@ -126,32 +85,15 @@ public class QuestionsController : BaseApiController
     [HttpPut("{id}")]
     public async Task<ActionResult<QuestionDto>> Update(int id, [FromBody] UpdateQuestionDto dto, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         var userId = GetCurrentUserId();
-        try
-        {
-            var question = await _questionService.UpdateAsync(id, userId, dto, cancellationToken);
+        var question = await _questionService.UpdateAsync(id, userId, dto, cancellationToken);
 
-            if (question == null)
-            {
-                return NotFoundWithError("题目不存在");
-            }
+        if (question == null)
+        {
+            return NotFoundWithError("题目不存在");
+        }
 
-            return Ok(question);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequestWithError(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "更新题目失败");
-            return InternalServerError("更新题目失败", "UPDATE_FAILED");
-        }
+        return Ok(question);
     }
 
     /// <summary>
@@ -177,31 +119,14 @@ public class QuestionsController : BaseApiController
     [HttpPost("batch")]
     public async Task<ActionResult<List<QuestionDto>>> CreateBatch([FromBody] List<CreateQuestionDto> dtos, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         if (dtos == null || dtos.Count == 0)
         {
             return BadRequestWithError("题目列表不能为空");
         }
 
         var userId = GetCurrentUserId();
-        try
-        {
-            var questions = await _questionService.CreateBatchAsync(userId, dtos, cancellationToken);
-            return Ok(questions);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequestWithError(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "批量创建题目失败");
-            return InternalServerError("批量创建题目失败", "BATCH_CREATE_FAILED");
-        }
+        var questions = await _questionService.CreateBatchAsync(userId, dtos, cancellationToken);
+        return Ok(questions);
     }
 
     /// <summary>
@@ -216,21 +141,13 @@ public class QuestionsController : BaseApiController
         }
 
         var userId = GetCurrentUserId();
-        try
-        {
-            var (successCount, notFoundCount) = await _questionService.DeleteBatchAsync(userId, ids, cancellationToken);
+        var (successCount, notFoundCount) = await _questionService.DeleteBatchAsync(userId, ids, cancellationToken);
 
-            return Ok(new
-            {
-                message = $"成功删除 {successCount} 道题目" + (notFoundCount > 0 ? $", {notFoundCount} 道题目不存在或无权删除" : ""),
-                successCount,
-                notFoundCount
-            });
-        }
-        catch (Exception ex)
+        return Ok(new
         {
-            _logger.LogError(ex, "批量删除题目失败");
-            return InternalServerError("批量删除题目失败", "BATCH_DELETE_FAILED");
-        }
+            message = $"成功删除 {successCount} 道题目" + (notFoundCount > 0 ? $", {notFoundCount} 道题目不存在或无权删除" : ""),
+            successCount,
+            notFoundCount
+        });
     }
 }

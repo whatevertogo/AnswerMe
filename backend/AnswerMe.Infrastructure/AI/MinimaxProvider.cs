@@ -1,20 +1,21 @@
 using System.Text.Json;
+using AnswerMe.Application.AI;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
-namespace AnswerMe.Application.AI;
+namespace AnswerMe.Infrastructure.AI;
 
 /// <summary>
-/// OpenAI Provider实现
+/// Minimax AI Provider实现
 /// </summary>
-public class OpenAIProvider : IAIProvider
+public class MinimaxProvider : IAIProvider
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<OpenAIProvider> _logger;
+    private readonly ILogger<MinimaxProvider> _logger;
 
-    public string ProviderName => "OpenAI";
+    public string ProviderName => "Minimax";
 
-    public OpenAIProvider(HttpClient httpClient, ILogger<OpenAIProvider> logger)
+    public MinimaxProvider(HttpClient httpClient, ILogger<MinimaxProvider> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
@@ -23,40 +24,59 @@ public class OpenAIProvider : IAIProvider
     public async Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
         string apiKey,
         AIQuestionGenerateRequest request,
+        string? model = null,
+        string? endpoint = null,  // 忽略 endpoint 参数，Minimax 使用固定端点
         CancellationToken cancellationToken = default)
     {
         try
         {
             var prompt = BuildPrompt(request);
 
+            // 使用配置的模型，如果为空则使用默认模型 abab6.5s-chat
+            var modelToUse = string.IsNullOrEmpty(model) ? "abab6.5s-chat" : model;
+
+            // ✅ 根据题目数量动态计算max_tokens
+            var estimatedTokensPerQuestion = 250;
+            var maxTokens = Math.Max(8000, request.Count * estimatedTokensPerQuestion + 1000);
+
+            _logger.LogInformation("Minimax配置: Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
+                modelToUse, request.Count, maxTokens);
+
+            // ✅ 支持自定义端点（如代理或镜像）
+            // 如果用户提供了自定义端点则使用，否则使用 Minimax 官方端点
+            var actualEndpoint = string.IsNullOrEmpty(endpoint)
+                ? "https://api.minimax.chat/v1/text/chatcompletion_v2"  // 默认官方端点
+                : endpoint;  // 用户自定义端点
+
+            var requestBody = new
+            {
+                model = modelToUse,
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = prompt
+                    }
+                },
+                temperature = 0.7,
+                max_tokens = maxTokens
+            };
+
             var httpRequest = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("https://api.openai.com/v1/chat/completions"),
+                RequestUri = new Uri(actualEndpoint),
                 Headers =
                 {
-                    { "Authorization", $"Bearer {apiKey}" },
-                    { "Content-Type", "application/json" }
+                    { "Authorization", $"Bearer {apiKey}" }
                 },
-                Content = new StringContent(JsonSerializer.Serialize(new
-                {
-                    model = "gpt-4",
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "system",
-                            content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
-                        },
-                        new
-                        {
-                            role = "user",
-                            content = prompt
-                        }
-                    },
-                    temperature = 0.7,
-                    max_tokens = 4000
-                }))
+                Content = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
@@ -64,12 +84,12 @@ public class OpenAIProvider : IAIProvider
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("OpenAI API错误: {StatusCode}, {Body}", response.StatusCode, responseBody);
+                _logger.LogError("Minimax API错误: {StatusCode}, {Body}", response.StatusCode, responseBody);
 
                 return new AIQuestionGenerateResponse
                 {
                     Success = false,
-                    ErrorMessage = $"OpenAI API调用失败: {response.StatusCode}",
+                    ErrorMessage = $"Minimax API调用失败: {response.StatusCode}",
                     ErrorCode = ((int)response.StatusCode).ToString()
                 };
             }
@@ -97,12 +117,21 @@ public class OpenAIProvider : IAIProvider
         {
             var httpRequest = new HttpRequestMessage
             {
-                Method = HttpMethod.Get,
-                RequestUri = new Uri("https://api.openai.com/v1/models"),
+                Method = HttpMethod.Post,
+                RequestUri = new Uri("https://api.minimax.chat/v1/text/chatcompletion_v2"),
                 Headers =
                 {
                     { "Authorization", $"Bearer {apiKey}" }
-                }
+                },
+                Content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    model = "abab6.5s-chat",
+                    messages = new[]
+                    {
+                        new { role = "user", content = "hi" }
+                    },
+                    max_tokens = 5
+                }))
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
@@ -146,7 +175,7 @@ public class OpenAIProvider : IAIProvider
 }}";
     }
 
-        private AIQuestionGenerateResponse ParseResponse(string content)
+    private AIQuestionGenerateResponse ParseResponse(string content)
     {
         try
         {

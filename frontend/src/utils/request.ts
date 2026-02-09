@@ -13,7 +13,7 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const instance: AxiosInstance = axios.create({
   baseURL,
-  timeout: 15000,
+  timeout: 120000, // ✅ 增加到120秒（2分钟），适应AI生成时间
   headers: {
     'Content-Type': 'application/json'
   }
@@ -45,6 +45,7 @@ instance.interceptors.response.use(
   error => {
     const { response } = error
     let message = '请求失败'
+    let showError = true // 控制是否显示错误消息
 
     if (response) {
       // 尝试从错误响应中提取消息（支持新旧两种格式）
@@ -62,8 +63,10 @@ instance.interceptors.response.use(
           // 清除用户状态
           const authStore = useAuthStore()
           authStore.clearAuth()
-          // 跳转到登录页
-          router.push('/login')
+          // 跳转到登录页，避免循环
+          if (router.currentRoute.value.path !== '/login') {
+            router.push('/login')
+          }
           break
         case 403:
           message = '拒绝访问'
@@ -72,18 +75,33 @@ instance.interceptors.response.use(
           message = '请求资源不存在'
           break
         case 500:
-          message = errorMessage
+          message = '服务器内部错误，请稍后重试'
+          break
+        case 502:
+        case 503:
+        case 504:
+          message = '服务暂时不可用，请稍后重试'
           break
         default:
           message = errorMessage
       }
     } else if (error.code === 'ECONNABORTED') {
-      message = '请求超时'
+      message = '请求超时，请检查网络连接'
     } else if (error.message === 'Network Error') {
-      message = '网络连接失败，请检查网络'
+      message = '网络连接失败，请检查网络设置'
+    } else if (error.message?.includes('timeout')) {
+      message = '请求超时，请稍后重试'
     }
 
-    ElMessage.error(message)
+    // 只在有明确错误消息时显示
+    if (showError && message) {
+      ElMessage.error({
+        message,
+        duration: 3000,
+        showClose: true
+      })
+    }
+
     return Promise.reject(error)
   }
 )
@@ -91,21 +109,21 @@ instance.interceptors.response.use(
 export default instance
 
 // 类型安全的请求方法
-// 注意：响应拦截器已经自动解包 response.data，这里使用 as any 进行类型断言
+// 响应拦截器已经自动解包 response.data
 export const request = {
   get: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.request({ ...config, method: 'GET', url }).then(res => res as unknown as T)
+    return instance.get<T>(url, config) as Promise<T>
   },
   post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.request({ ...config, method: 'POST', url, data }).then(res => res as unknown as T)
+    return instance.post<T>(url, data, config) as Promise<T>
   },
   put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.request({ ...config, method: 'PUT', url, data }).then(res => res as unknown as T)
+    return instance.put<T>(url, data, config) as Promise<T>
   },
   delete: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.request({ ...config, method: 'DELETE', url }).then(res => res as unknown as T)
+    return instance.delete<T>(url, config) as Promise<T>
   },
   patch: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.request({ ...config, method: 'PATCH', url, data }).then(res => res as unknown as T)
+    return instance.patch<T>(url, data, config) as Promise<T>
   }
 }

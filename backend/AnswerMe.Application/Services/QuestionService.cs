@@ -1,3 +1,4 @@
+using AnswerMe.Application.Common;
 using AnswerMe.Application.DTOs;
 using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Interfaces;
@@ -46,7 +47,7 @@ public class QuestionService : IQuestionService
         await _questionRepository.AddAsync(question, cancellationToken);
         await _questionRepository.SaveChangesAsync(cancellationToken);
 
-        return await MapToDtoAsync(question, cancellationToken);
+        return question.ToDto();
     }
 
     public async Task<QuestionListDto> GetListAsync(int userId, QuestionListQueryDto query, CancellationToken cancellationToken = default)
@@ -68,11 +69,7 @@ public class QuestionService : IQuestionService
                     (string.IsNullOrEmpty(query.QuestionType) || q.QuestionType == query.QuestionType))
                 .ToList();
 
-            var dtos = new List<QuestionDto>();
-            foreach (var q in result)
-            {
-                dtos.Add(await MapToDtoAsync(q, cancellationToken));
-            }
+            var dtos = result.ToDtoList();
 
             return new QuestionListDto
             {
@@ -96,11 +93,7 @@ public class QuestionService : IQuestionService
                 (string.IsNullOrEmpty(query.QuestionType) || q.QuestionType == query.QuestionType))
             .ToList();
 
-        var resultList = new List<QuestionDto>();
-        foreach (var q in filteredQuestions)
-        {
-            resultList.Add(await MapToDtoAsync(q, cancellationToken));
-        }
+        var resultList = filteredQuestions.ToDtoList();
 
         // 获取总数
         var totalCount = await _questionRepository.CountByQuestionBankIdAsync(query.QuestionBankId, cancellationToken);
@@ -133,7 +126,7 @@ public class QuestionService : IQuestionService
             return null;
         }
 
-        return await MapToDtoAsync(question, cancellationToken);
+        return question.ToDto();
     }
 
     public async Task<QuestionDto?> UpdateAsync(int id, int userId, UpdateQuestionDto dto, CancellationToken cancellationToken = default)
@@ -191,7 +184,7 @@ public class QuestionService : IQuestionService
 
         await _questionRepository.SaveChangesAsync(cancellationToken);
 
-        return await MapToDtoAsync(question, cancellationToken);
+        return question.ToDto();
     }
 
     public async Task<bool> DeleteAsync(int id, int userId, CancellationToken cancellationToken = default)
@@ -223,14 +216,7 @@ public class QuestionService : IQuestionService
         }
 
         var questions = await _questionRepository.SearchAsync(questionBankId, searchTerm, cancellationToken);
-        var result = new List<QuestionDto>();
-
-        foreach (var q in questions)
-        {
-            result.Add(await MapToDtoAsync(q, cancellationToken));
-        }
-
-        return result;
+        return questions.ToDtoList();
     }
 
     public async Task<List<QuestionDto>> CreateBatchAsync(int userId, List<CreateQuestionDto> dtos, CancellationToken cancellationToken = default)
@@ -273,13 +259,7 @@ public class QuestionService : IQuestionService
         await _questionRepository.AddRangeAsync(questions, cancellationToken);
         await _questionRepository.SaveChangesAsync(cancellationToken);
 
-        var result = new List<QuestionDto>();
-        foreach (var q in questions)
-        {
-            result.Add(await MapToDtoAsync(q, cancellationToken));
-        }
-
-        return result;
+        return questions.ToDtoList();
     }
 
     public async Task<(int successCount, int notFoundCount)> DeleteBatchAsync(int userId, List<int> ids, CancellationToken cancellationToken = default)
@@ -314,27 +294,5 @@ public class QuestionService : IQuestionService
         }
 
         return (successCount, notFoundCount);
-    }
-
-    private async Task<QuestionDto> MapToDtoAsync(Domain.Entities.Question question, CancellationToken cancellationToken)
-    {
-        // 获取题库信息
-        var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
-
-        return new QuestionDto
-        {
-            Id = question.Id,
-            QuestionBankId = question.QuestionBankId,
-            QuestionBankName = questionBank?.Name ?? string.Empty,
-            QuestionText = question.QuestionText,
-            QuestionType = question.QuestionType,
-            Options = question.Options,
-            CorrectAnswer = question.CorrectAnswer,
-            Explanation = question.Explanation,
-            Difficulty = question.Difficulty,
-            OrderIndex = question.OrderIndex,
-            CreatedAt = question.CreatedAt,
-            UpdatedAt = question.UpdatedAt
-        };
     }
 }

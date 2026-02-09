@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AnswerMe.Application.Common;
 using AnswerMe.Application.DTOs;
 using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Interfaces;
@@ -44,7 +45,7 @@ public class QuestionBankService : IQuestionBankService
         await _questionBankRepository.AddAsync(questionBank, cancellationToken);
         await _questionBankRepository.SaveChangesAsync(cancellationToken);
 
-        return await MapToDtoAsync(questionBank, cancellationToken);
+        return await questionBank.ToDtoAsync(_questionRepository, cancellationToken);
     }
 
     public async Task<QuestionBankListDto> GetListAsync(int userId, QuestionBankListQueryDto query, CancellationToken cancellationToken = default)
@@ -55,11 +56,7 @@ public class QuestionBankService : IQuestionBankService
             query.LastId,
             cancellationToken);
 
-        var result = new List<QuestionBankDto>();
-        foreach (var qb in questionBanks)
-        {
-            result.Add(await MapToDtoAsync(qb, cancellationToken));
-        }
+        var result = await questionBanks.ToDtoListAsync(_questionRepository, cancellationToken);
 
         // 判断是否有更多数据
         var hasMore = questionBanks.Count == query.PageSize;
@@ -81,7 +78,7 @@ public class QuestionBankService : IQuestionBankService
             return null;
         }
 
-        return await MapToDtoAsync(questionBank, cancellationToken);
+        return await questionBank.ToDtoAsync(_questionRepository, cancellationToken);
     }
 
     public async Task<QuestionBankDto?> UpdateAsync(int id, int userId, UpdateQuestionBankDto dto, CancellationToken cancellationToken = default)
@@ -136,7 +133,7 @@ public class QuestionBankService : IQuestionBankService
 
         await _questionBankRepository.SaveChangesAsync(cancellationToken);
 
-        return await MapToDtoAsync(questionBank, cancellationToken);
+        return await questionBank.ToDtoAsync(_questionRepository, cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(int id, int userId, CancellationToken cancellationToken = default)
@@ -155,48 +152,6 @@ public class QuestionBankService : IQuestionBankService
     public async Task<List<QuestionBankDto>> SearchAsync(int userId, string searchTerm, CancellationToken cancellationToken = default)
     {
         var questionBanks = await _questionBankRepository.SearchAsync(userId, searchTerm, cancellationToken);
-        var result = new List<QuestionBankDto>();
-
-        foreach (var qb in questionBanks)
-        {
-            result.Add(await MapToDtoAsync(qb, cancellationToken));
-        }
-
-        return result;
-    }
-
-    private async Task<QuestionBankDto> MapToDtoAsync(Domain.Entities.QuestionBank questionBank, CancellationToken cancellationToken)
-    {
-        // 获取题目数量
-        var questions = await _questionRepository.GetByQuestionBankIdAsync(questionBank.Id, cancellationToken);
-
-        // 解析Tags
-        List<string> tags = new();
-        if (!string.IsNullOrEmpty(questionBank.Tags))
-        {
-            try
-            {
-                tags = JsonSerializer.Deserialize<List<string>>(questionBank.Tags) ?? new();
-            }
-            catch
-            {
-                tags = new();
-            }
-        }
-
-        return new QuestionBankDto
-        {
-            Id = questionBank.Id,
-            UserId = questionBank.UserId,
-            Name = questionBank.Name,
-            Description = questionBank.Description,
-            Tags = tags,
-            DataSourceId = questionBank.DataSourceId,
-            DataSourceName = questionBank.DataSource?.Name,
-            QuestionCount = questions.Count,
-            Version = questionBank.Version,
-            CreatedAt = questionBank.CreatedAt,
-            UpdatedAt = questionBank.UpdatedAt
-        };
+        return await questionBanks.ToDtoListAsync(_questionRepository, cancellationToken);
     }
 }

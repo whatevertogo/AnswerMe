@@ -19,22 +19,13 @@ export const useAuthStore = defineStore('auth', () => {
   const userEmail = computed(() => userInfo.value?.email ?? '')
 
   // Actions
-  function setToken(newToken: string) {
-    token.value = newToken
-    localStorage.setItem('token', newToken)
-  }
-
-  function setUserInfo(info: UserInfo) {
-    userInfo.value = info
-  }
-
   function setAuth(newToken: string, info: UserInfo) {
     token.value = newToken
     userInfo.value = info
     localStorage.setItem('token', newToken)
   }
 
-  function setUser(userData: UserDto) {
+  function setUserFromDto(userData: UserDto) {
     userInfo.value = {
       id: userData.id,
       username: userData.username,
@@ -58,10 +49,8 @@ export const useAuthStore = defineStore('auth', () => {
     userInfo,
     isAuthenticated,
     userEmail,
-    setToken,
-    setUserInfo,
     setAuth,
-    setUser,
+    setUserFromDto,
     clearAuth,
     logout
   }

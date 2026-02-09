@@ -114,6 +114,11 @@ public class AIGenerateProgressDto
     public string TaskId { get; set; } = string.Empty;
 
     /// <summary>
+    /// 用户ID（用于权限验证）
+    /// </summary>
+    public int UserId { get; set; }
+
+    /// <summary>
     /// 任务状态：pending, processing, completed, failed, partial_success
     /// </summary>
     public string Status { get; set; } = string.Empty;

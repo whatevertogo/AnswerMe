@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Notebook,
@@ -12,32 +12,32 @@ const router = useRouter()
 
 const stats = ref([
   {
-    icon: Notebook,
+    icon: markRaw(Notebook),
     title: '题库总数',
     value: '12',
     color: '#409eff',
     path: '/question-banks'
   },
   {
-    icon: CollectionTag,
+    icon: markRaw(CollectionTag),
     title: '题目总数',
     value: '256',
     color: '#67c23a',
     path: '/question-banks'
   },
   {
-    icon: TrendCharts,
+    icon: markRaw(TrendCharts),
     title: '本月练习',
     value: '45',
     color: '#e6a23c',
     path: '#'
   },
   {
-    icon: Setting,
+    icon: markRaw(Setting),
     title: 'AI配置',
     value: '3',
     color: '#f56c6c',
-    path: '/data-sources'
+    path: '/ai-config'
   }
 ])
 
@@ -68,7 +68,7 @@ const quickActions = ref([
     description: '管理AI数据源',
     icon: '⚙️',
     color: '#909399',
-    action: () => router.push('/data-sources')
+    action: () => router.push('/ai-config')
   }
 ])
 

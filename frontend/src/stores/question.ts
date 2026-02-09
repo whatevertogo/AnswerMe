@@ -8,6 +8,7 @@ import type {
 } from '@/types'
 import * as questionApi from '@/api/question'
 import { QuestionType, Difficulty } from '@/types'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 export type { Question }
 export { QuestionType, Difficulty }
@@ -42,8 +43,8 @@ export const useQuestionStore = defineStore('question', () => {
         page: response.page,
         pageSize: response.pageSize
       }
-    } catch {
-      error.value = '获取题目列表失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '获取题目列表失败')
       throw error.value
     } finally {
       loading.value = false
@@ -57,8 +58,8 @@ export const useQuestionStore = defineStore('question', () => {
       const response = await questionApi.getQuestionDetail(id)
       currentQuestion.value = response
       return response
-    } catch {
-      error.value = '获取题目详情失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '获取题目详情失败')
       throw error.value
     } finally {
       loading.value = false
@@ -73,8 +74,8 @@ export const useQuestionStore = defineStore('question', () => {
       questions.value.unshift(result)
       pagination.value.total += 1
       return result
-    } catch {
-      error.value = '创建题目失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '创建题目失败')
       throw error.value
     } finally {
       loading.value = false
@@ -99,10 +100,9 @@ export const useQuestionStore = defineStore('question', () => {
         currentQuestion.value = result
       }
       return result
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '更新题目失败'
-      error.value = message
-      throw message
+    } catch (err) {
+      error.value = extractErrorMessage(err, '更新题目失败')
+      throw error.value
     } finally {
       loading.value = false
     }
@@ -118,8 +118,8 @@ export const useQuestionStore = defineStore('question', () => {
       if (currentQuestion.value?.id === id) {
         currentQuestion.value = null
       }
-    } catch {
-      error.value = '删除题目失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '删除题目失败')
       throw error.value
     } finally {
       loading.value = false
@@ -133,8 +133,8 @@ export const useQuestionStore = defineStore('question', () => {
       const results = await questionApi.searchQuestions(searchTerm, questionBankId)
       questions.value = results
       return results
-    } catch {
-      error.value = '搜索题目失败'
+    } catch (err) {
+      error.value = extractErrorMessage(err, '搜索题目失败')
       throw error.value
     } finally {
       loading.value = false

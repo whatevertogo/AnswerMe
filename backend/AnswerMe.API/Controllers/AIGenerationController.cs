@@ -83,9 +83,9 @@ public class AIGenerationController : BaseApiController
             return BadRequest(ModelState);
         }
 
-        if (dto.Count <= 20)
+        if (dto.Count < 20)
         {
-            return BadRequestWithError("异步生成适用于>20题的场景，≤20题请使用同步生成接口");
+            return BadRequestWithError("异步生成适用于≥20题的场景，<20题请使用同步生成接口");
         }
 
         var userId = GetCurrentUserId();
@@ -94,7 +94,7 @@ public class AIGenerationController : BaseApiController
 
         try
         {
-            var taskId = await _aiGenerationService.GenerateQuestionsAsyncAsync(userId, dto, cancellationToken);
+            var taskId = await _aiGenerationService.StartAsyncGeneration(userId, dto, cancellationToken);
 
             return Ok(new AIGenerateResponseDto
             {
