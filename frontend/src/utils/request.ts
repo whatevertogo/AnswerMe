@@ -47,9 +47,15 @@ instance.interceptors.response.use(
     let message = '请求失败'
 
     if (response) {
+      // 尝试从错误响应中提取消息（支持新旧两种格式）
+      const errorMessage =
+        response.data?.error?.message || // 新格式: { error: { message } }
+        response.data?.message ||        // 旧格式: { message }
+        '请求失败'
+
       switch (response.status) {
         case 400:
-          message = response.data?.message || '请求参数错误'
+          message = errorMessage
           break
         case 401:
           message = '登录已过期，请重新登录'
@@ -66,10 +72,10 @@ instance.interceptors.response.use(
           message = '请求资源不存在'
           break
         case 500:
-          message = '服务器内部错误'
+          message = errorMessage
           break
         default:
-          message = response.data?.message || '请求失败'
+          message = errorMessage
       }
     } else if (error.code === 'ECONNABORTED') {
       message = '请求超时'

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using AnswerMe.API.DTOs;
 using Serilog;
 
 namespace AnswerMe.API.Filters;
@@ -32,24 +33,24 @@ public class GlobalExceptionFilter : IExceptionFilter
         // 根据异常类型确定HTTP状态码和错误消息
         var (statusCode, title, message) = GetErrorInfo(context.Exception);
 
-        // 构建错误响应
-        var errorResponse = new ErrorResponse
-        {
-            Error = new ErrorDetail
-            {
-                Title = title,
-                Message = message,
-                StatusCode = statusCode
-            }
-        };
+        // 构建错误响应（使用Create方法，自动支持两种格式）
+        var errorDetail = ErrorDetail.Create(message, statusCode, null, title);
+        errorDetail.ExceptionType = context.Exception.GetType().Name;
 
         // 仅在开发环境暴露堆栈跟踪
         if (_environment.IsDevelopment())
         {
-            errorResponse.Error.StackTrace = context.Exception.StackTrace;
-            errorResponse.Error.InnerException = context.Exception.InnerException?.Message;
-            errorResponse.Error.ExceptionType = context.Exception.GetType().Name;
+            errorDetail.StackTrace = context.Exception.StackTrace;
+            errorDetail.InnerException = context.Exception.InnerException?.Message;
         }
+
+        var errorResponse = new ErrorResponse
+        {
+            Error = errorDetail,
+            // 同时设置扁平化属性以保持前端兼容性
+            Message = message,
+            StatusCode = statusCode
+        };
 
         context.Result = new ObjectResult(errorResponse)
         {
@@ -109,25 +110,4 @@ public class GlobalExceptionFilter : IExceptionFilter
                     : "服务器内部错误,请稍后重试")
         };
     }
-}
-
-/// <summary>
-/// 标准错误响应格式
-/// </summary>
-public class ErrorResponse
-{
-    public ErrorDetail Error { get; set; } = null!;
-}
-
-/// <summary>
-/// 错误详情
-/// </summary>
-public class ErrorDetail
-{
-    public string Title { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-    public int StatusCode { get; set; }
-    public string? ExceptionType { get; set; }
-    public string? StackTrace { get; set; }
-    public string? InnerException { get; set; }
 }
