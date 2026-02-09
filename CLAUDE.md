@@ -223,15 +223,6 @@ LOCAL_AUTH__DEFAULT_PASSWORD=local123
 ```
 
 启用后，可直接使用默认用户名和密码登录应用。
-```csharp
-private int GetCurrentUserId()
-{
-    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    if (!int.TryParse(userIdClaim, out var userId))
-        throw new UnauthorizedAccessException("无效的用户身份");
-    return userId;
-}
-```
 
 ## 数据库
 
@@ -265,6 +256,24 @@ private int GetCurrentUserId()
 **API 层:** `src/api/` - Axios 配置后端地址 `http://localhost:5000/api`
 
 **CORS:** 后端默认允许 `http://localhost:5173`
+
+## API 端点概览
+
+主要 API 端点（后端端口默认 5000）:
+- `POST /api/auth/register` - 用户注册
+- `POST /api/auth/login` - 用户登录
+- `POST /api/auth/local-login` - 本地模式登录
+- `GET /api/questionbanks` - 获取题库列表
+- `POST /api/questionbanks` - 创建题库
+- `GET /api/questions` - 获取题目列表
+- `POST /api/questions/generate` - AI 生成题目
+- `POST /api/attempts` - 开始答题
+- `POST /api/attempts/{id}/submit` - 提交答案
+- `GET /api/datasources` - 获取数据源配置
+- `POST /api/datasources/validate` - 验证 API 密钥
+- `GET /health` - 健康检查
+
+详细 API 文档请查看控制器源码: `backend/AnswerMe.API/Controllers/`
 
 ## 常用模式
 
