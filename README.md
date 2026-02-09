@@ -40,35 +40,83 @@
 
 ### 环境要求
 
-- Docker 20.10+
-- Docker Compose 2.0+
+- .NET 10 SDK
+- Node.js 18+
+- npm 或 pnpm
 
 ### 一键启动
+
+#### 方式一：本地开发服务器（推荐开发）
 
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/whatevetogo/Answerme.git
-cd ai-questionbank
+cd AnswerMe
 
 # 2. 配置环境变量
 cp .env.example .env
-# 编辑 .env 文件,设置必要的环境变量
+# 编辑 .env 文件，设置必要的环境变量
 
-# 3. 启动服务(后台运行)
-docker-compose up -d
+# 3. 启动后端服务器（终端1）
+cd backend
+dotnet run --project AnswerMe.API
+# 后端将运行在 http://localhost:5000（或配置的端口）
 
-# 4. 查看日志
-docker-compose logs -f
+# 4. 启动前端开发服务器（终端2）
+cd frontend
+npm install           # 首次运行需要安装依赖
+npm run dev           # 启动 Vite 开发服务器
+# 前端将运行在 http://localhost:5173（或可用端口）
 
 # 5. 访问应用
+# 打开浏览器访问前端地址（如 http://localhost:5173）
+```
+
+#### 方式二：Docker Compose（推荐生产）
+
+```bash
+# 1. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，设置必要的环境变量
+
+# 2. 启动服务（后台运行）
+docker-compose up -d
+
+# 3. 查看日志
+docker-compose logs -f
+
+# 4. 访问应用
 # 前端: http://localhost:3000
 # 后端API: http://localhost:5000/swagger
 ```
 
+### 本地开发命令汇总
+
+**后端（.NET 10 + ASP.NET Core）**:
+```bash
+cd backend
+dotnet run --project AnswerMe.API              # 启动开发服务器（热重载）
+dotnet build AnswerMe.API                      # 编译项目
+dotnet test                                    # 运行测试
+```
+
+**前端（Vue 3 + Vite）**:
+```bash
+cd frontend
+npm install                                    # 安装依赖
+npm run dev                                    # 启动开发服务器（http://localhost:5173）
+npm run build                                  # 生产构建
+npm run preview                                # 预览生产构建
+npm run test                                   # 运行测试
+npm run lint                                   # ESLint 检查和修复
+```
+
 ### 首次使用
 
-1. 打开浏览器访问 `http://localhost:3000`
-2. 注册账户(或在 `.env` 中设置 `ENABLE_REGISTRATION=false` 进入单用户模式)
+1. 打开浏览器访问前端地址（本地开发为 `http://localhost:5173`）
+2. 使用本地登录功能（已在 .env 中预配置）
+   - 用户名: `LocalUser`
+   - 密码: `local123`
 3. 在 **设置 → AI配置** 中添加您的AI API密钥
 4. 创建题库并生成您的第一批AI题目!
 
@@ -87,6 +135,129 @@ docker-compose logs -f
 - **企业培训** - 企业内部培训题库管理,知识考核
 - **开源社区** - 团队协作构建共享题库
 
+## 💻 开发命令
+
+### 后端（.NET 10）
+
+```bash
+# 导航到后端目录
+cd backend
+
+# 启动开发服务器（支持热重载）
+dotnet run --project AnswerMe.API
+# API: http://localhost:5000
+# Swagger: http://localhost:5000/swagger
+
+# 编译项目
+dotnet build
+
+# 运行测试
+dotnet test
+
+# 应用数据库迁移
+dotnet ef database update --project AnswerMe.Infrastructure --startup-project AnswerMe.API
+
+# 创建新迁移
+dotnet ef migrations add MigrationName --project AnswerMe.Infrastructure --startup-project AnswerMe.API
+
+# 监视模式运行（自动重启）
+dotnet watch --project AnswerMe.API
+```
+
+### 前端（Vue 3 + Vite）
+
+```bash
+# 导航到前端目录
+cd frontend
+
+# 首次运行 - 安装依赖
+npm install
+
+# 启动开发服务器（热重载）
+npm run dev
+# 默认: http://localhost:5173
+# 如果端口被占用，会自动尝试 5174, 5175...
+
+# 生产构建
+npm run build
+# 输出: dist/
+
+# 预览生产构建
+npm run preview
+
+# 运行测试
+npm run test                # 运行测试
+npm run test:ui            # 测试 UI 界面
+npm run test:coverage      # 测试覆盖率报告
+
+# 代码质量
+npm run lint               # ESLint 检查和自动修复
+npm run format             # Prettier 格式化
+```
+
+### Docker Compose
+
+```bash
+# 启动所有服务（db + backend）
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+
+# 查看特定服务日志
+docker-compose logs -f backend
+docker-compose logs -f db
+
+# 停止服务
+docker-compose down
+
+# 停止并删除数据卷
+docker-compose down -v
+
+# 重建并启动
+docker-compose up -d --build
+
+# 进入后端容器
+docker-compose exec backend bash
+
+# 进入数据库容器
+docker-compose exec db psql -U answeruser -d answermedb
+```
+
+### 端口配置
+
+| 服务 | 默认端口 | 环境变量 | 说明 |
+|------|---------|---------|------|
+| 前端 | 5173 | `FRONTEND_PORT` | Vite 开发服务器（自动寻找可用端口） |
+| 后端 API | 5000 | `BACKEND_PORT` | ASP.NET Core API |
+| 数据库 | 5432 | `POSTGRES_PORT` | PostgreSQL（Docker 模式） |
+
+**注意**: Vite 开发服务器如果默认端口被占用，会自动尝试 5174、5175 等端口。
+
+### 环境变量速查
+
+**必需配置**（首次运行前设置）:
+```bash
+# JWT 密钥（至少32字符）
+JWT_SECRET=your-secret-key-minimum-32-characters-long
+
+# 数据库密码（生产环境）
+POSTGRES_PASSWORD=your-secure-password
+```
+
+**可选配置**（开发默认值）:
+```bash
+# 本地认证模式（个人使用）
+LOCAL_AUTH__ENABLE_LOCAL_LOGIN=true
+LOCAL_AUTH__DEFAULT_USERNAME=LocalUser
+LOCAL_AUTH__DEFAULT_PASSWORD=local123
+
+# 前端地址（CORS配置）
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+```
+
+完整配置选项请查看 `.env.example` 文件。
+
 ## 🛠️ 技术栈
 
 ### 后端
@@ -103,6 +274,11 @@ docker-compose logs -f
 - **Element Plus** - UI组件库
 - **Pinia** - 状态管理
 - **Vue Router** - 路由管理
+
+### DevOps
+- **Docker** - 容器化
+- **Docker Compose** - 服务编排
+- **GitHub Actions** - CI/CD
 
 ### DevOps
 - **Docker** - 容器化
