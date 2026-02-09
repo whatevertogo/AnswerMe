@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { CircleCheck, Clock, Aim, RefreshRight } from '@element-plus/icons-vue'
+import { CircleCheck, Clock, Aim, RefreshRight, ArrowUp } from '@element-plus/icons-vue'
 
 interface Question {
   id: number
   content: string
-  type: 'single' | 'multiple' | 'essay'
+  type: 'single' | 'multiple' | 'boolean' | 'fill' | 'essay'
   difficulty: string
   tags: string[]
+  correctAnswer?: string
   explanation?: string
 }
 
@@ -27,7 +28,32 @@ const emit = defineEmits<{
 const activeTab = ref('overview')
 
 const answeredCount = computed(() => Object.keys(props.answers).length)
-const correctCount = computed(() => Math.floor(answeredCount.value * 0.7)) // 模拟正确率
+
+// 计算实际答对的题目数量
+const correctCount = computed(() => {
+  let count = 0
+  props.questions.forEach(question => {
+    const userAnswer = props.answers[question.id]
+    if (!userAnswer) return
+
+    // 将用户答案和正确答案标准化后比较
+    const normalizeAnswer = (answer: string | string[]): string => {
+      if (Array.isArray(answer)) {
+        return answer.sort().join(',')
+      }
+      return answer.trim().toLowerCase()
+    }
+
+    const userAnswerStr = normalizeAnswer(userAnswer)
+    const correctAnswerStr = normalizeAnswer(question.correctAnswer || '')
+
+    if (userAnswerStr === correctAnswerStr) {
+      count++
+    }
+  })
+  return count
+})
+
 const score = computed(() => Math.round((correctCount.value / props.questions.length) * 100))
 const accuracy = computed(() => answeredCount.value > 0 ? Math.round((correctCount.value / answeredCount.value) * 100) : 0)
 
@@ -87,7 +113,7 @@ const getDifficultyColor = (difficulty: string) => {
           <div class="stat-card success">
             <div class="card-header">
               <span class="card-label">正确率</span>
-              <el-icon :size="20" color="#10b981"><TrendingUp /></el-icon>
+              <el-icon :size="20" color="#10b981"><ArrowUp /></el-icon>
             </div>
             <div class="stat-value">{{ accuracy }}%</div>
             <div class="stat-label">{{ correctCount }}/{{ answeredCount }} 题</div>

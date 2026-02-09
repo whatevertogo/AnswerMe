@@ -2,7 +2,7 @@
 interface Question {
   id: number
   content: string
-  type: 'single' | 'multiple' | 'essay'
+  type: 'single' | 'multiple' | 'boolean' | 'fill' | 'essay'
   difficulty: string
   tags: string[]
 }

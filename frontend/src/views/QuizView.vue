@@ -164,6 +164,7 @@ async function loadQuestionsDetails(questionIds: number[]) {
       options: parseOptions(q.options),
       difficulty: q.difficulty || 'medium',
       tags: [],
+      correctAnswer: q.correctAnswer,
       explanation: q.explanation
     }))
 

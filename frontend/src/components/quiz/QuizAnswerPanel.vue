@@ -1,7 +1,7 @@
 <script setup lang="ts">
 interface Question {
   id: number
-  type: 'single' | 'multiple' | 'essay'
+  type: 'single' | 'multiple' | 'boolean' | 'fill' | 'essay'
   options: string[]
 }
 

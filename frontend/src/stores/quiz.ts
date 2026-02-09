@@ -9,6 +9,7 @@ export interface QuizQuestion {
   options: string[]
   difficulty: 'easy' | 'medium' | 'hard'
   tags: string[]
+  correctAnswer?: string
   explanation?: string
 }
 
