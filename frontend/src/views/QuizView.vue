@@ -1,116 +1,211 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Clock, CircleCheck, Flag, ArrowLeft, ArrowRight, Moon, Sunny, House, Reading } from '@element-plus/icons-vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Clock, CircleCheck, Flag, ArrowLeft, ArrowRight, Sunny, Moon, House, Reading } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import QuizQuestionList from '@/components/quiz/QuizQuestionList.vue'
 import QuizQuestionPanel from '@/components/quiz/QuizQuestionPanel.vue'
 import QuizAnswerPanel from '@/components/quiz/QuizAnswerPanel.vue'
 import QuizResultModal from '@/components/quiz/QuizResultModal.vue'
+import { useQuizStore } from '@/stores/quiz'
+import { getQuestionDetail } from '@/api/question'
+import type { QuizQuestion } from '@/stores/quiz'
 
 const router = useRouter()
+const route = useRoute()
+const quizStore = useQuizStore()
 
-interface Question {
-  id: number
-  content: string
-  type: 'single' | 'multiple' | 'essay'
-  options: string[]
-  difficulty: 'easy' | 'medium' | 'hard'
-  tags: string[]
-  explanation?: string
-}
+// 从路由参数获取 bankId 和 attemptId (sessionId)
+const bankId = computed(() => parseInt(route.params.bankId as string))
+const sessionId = computed(() => route.params.sessionId as string)
 
-// Mock data - 实际应该从 API 获取
-const mockQuestions: Question[] = [
-  {
-    id: 1,
-    content: '以下哪个是 JavaScript 中声明常量的关键字?',
-    type: 'single',
-    options: ['var', 'let', 'const', 'static'],
-    difficulty: 'easy',
-    tags: ['JavaScript', '基础'],
-    explanation: 'const 用于声明一个只读的常量,一旦声明,常量的值就不能改变。'
-  },
-  {
-    id: 2,
-    content: 'React 中哪个生命周期方法会在组件渲染后立即调用?(多选)',
-    type: 'multiple',
-    options: ['componentDidMount', 'useEffect', 'componentDidUpdate', 'componentWillUnmount'],
-    difficulty: 'medium',
-    tags: ['React', '生命周期'],
-    explanation: 'componentDidMount 和 useEffect (空依赖数组) 都会在组件首次渲染后立即执行。'
-  },
-  {
-    id: 3,
-    content: '解释 Vue 3 Composition API 的优势和应用场景。',
-    type: 'essay',
-    options: [],
-    difficulty: 'hard',
-    tags: ['Vue', '架构设计'],
-    explanation: 'Composition API 提供了更好的逻辑复用、类型推断和代码组织方式。'
-  },
-  {
-    id: 4,
-    content: 'CSS 中 display: flex 和 display: grid 的主要区别是什么?',
-    type: 'single',
-    options: [
-      'flex 用于一维布局,grid 用于二维布局',
-      'grid 用于一维布局,flex 用于二维布局',
-      '两者完全相同',
-      'flex 只能水平排列,grid 只能垂直排列'
-    ],
-    difficulty: 'medium',
-    tags: ['CSS', '布局'],
-    explanation: 'Flexbox 是一维布局系统(行或列),Grid 是二维布局系统(行和列同时控制)。'
-  },
-  {
-    id: 5,
-    content: '以下哪些是 TypeScript 相比 JavaScript 的优势?(多选)',
-    type: 'multiple',
-    options: ['静态类型检查', '更好的 IDE 支持', '编译时错误发现', '运行时性能提升'],
-    difficulty: 'easy',
-    tags: ['TypeScript', '理论'],
-    explanation: 'TypeScript 提供静态类型、更好的 IDE 智能提示和编译时错误检测,但不会提升运行时性能。'
-  }
-]
-
-// State
-const currentQuestionIndex = ref(0)
-const answers = ref<Record<number, string | string[]>>({})
+// 本地状态
+const questions = ref<QuizQuestion[]>([])
+const questionMap = ref<Map<number, QuizQuestion>>(new Map())
 const markedQuestions = ref<Set<number>>(new Set())
 const timeElapsed = ref(0)
 const showResult = ref(false)
-const isSubmitted = ref(false)
 const darkMode = ref(true)
+const loading = ref(true)
+const initializing = ref(true)
+
+// 计时器
+let timer: number | null = null
 
 // Computed
 const currentQuestion = computed(() => {
-  const q = mockQuestions[currentQuestionIndex.value]
+  const qid = quizStore.currentQuestionId
+  if (qid === null) return null
+  return questionMap.value.get(qid) || null
+})
+
+const safeCurrentQuestion = computed(() => {
+  const q = currentQuestion.value
   if (!q) {
-    // 如果索引越界，返回第一题
-    return mockQuestions[0]!
+    return {
+      id: 0,
+      content: '加载中...',
+      type: 'single' as const,
+      options: [],
+      difficulty: 'medium' as const,
+      tags: [],
+      explanation: ''
+    }
   }
   return q
 })
 
-// 确保currentQuestion永远不为undefined（用于TypeScript类型检查）
-const safeCurrentQuestion = computed(() => currentQuestion.value!)
-const answeredCount = computed(() => Object.keys(answers.value).length)
-const progress = computed(() => (answeredCount.value / mockQuestions.length) * 100)
+const answeredCount = computed(() => quizStore.answeredCount)
+const progress = computed(() => quizStore.progress)
+const totalQuestions = computed(() => quizStore.questionIds.length)
 
-// Timer
-let timer: number | null = null
-onMounted(() => {
-  timer = window.setInterval(() => {
-    timeElapsed.value++
-  }, 1000)
+// 初始化答题
+onMounted(async () => {
+  await initializeQuiz()
+  startTimer()
 })
 
 onUnmounted(() => {
+  stopTimer()
+})
+
+// 监听路由参数变化
+watch(() => route.params, async () => {
+  if (route.name === 'Quiz') {
+    stopTimer()
+    await initializeQuiz()
+    startTimer()
+  }
+})
+
+async function initializeQuiz() {
+  initializing.value = true
+  loading.value = true
+
+  try {
+    // 如果 sessionId 是 'new' 或不存在，则开始新答题
+    if (!sessionId.value || sessionId.value === 'new' || sessionId.value === 'undefined') {
+      // 开始新答题
+      await startNewQuiz()
+    } else {
+      // 加载已有答题
+      await loadExistingQuiz()
+    }
+  } catch (error: any) {
+    ElMessage.error('初始化答题失败: ' + (error.message || '未知错误'))
+    console.error('初始化答题失败:', error)
+    router.back()
+  } finally {
+    initializing.value = false
+    loading.value = false
+  }
+}
+
+async function startNewQuiz() {
+  try {
+    // 调用 startQuiz API
+    const response = await quizStore.startQuiz(bankId.value, 'sequential')
+
+    // 获取题目详情
+    await loadQuestionsDetails(quizStore.questionIds)
+
+    ElMessage.success('答题开始！')
+  } catch (error: any) {
+    throw error
+  }
+}
+
+async function loadExistingQuiz() {
+  try {
+    const attemptId = parseInt(sessionId.value)
+
+    // 加载答题详情
+    const details = await quizStore.fetchQuizDetails(sessionId.value)
+
+    // 从详情中提取题目ID
+    const questionIds = details.map((d: any) => d.questionId)
+
+    // 更新 store 状态
+    quizStore.currentAttemptId = attemptId
+    quizStore.questionIds = questionIds
+
+    // 恢复答案
+    details.forEach((detail: any) => {
+      if (detail.userAnswer) {
+        quizStore.answers[detail.questionId] = detail.userAnswer
+      }
+    })
+
+    // 获取题目详情
+    await loadQuestionsDetails(questionIds)
+
+    // 检查是否已完成
+    const completedDetail = details.find((d: any) => d.completedAt !== null)
+    if (completedDetail) {
+      // 已完成，直接显示结果
+      showResult.value = true
+    }
+  } catch (error: any) {
+    throw error
+  }
+}
+
+async function loadQuestionsDetails(questionIds: number[]) {
+  try {
+    // 批量获取题目详情
+    const questionPromises = questionIds.map(id => getQuestionDetail(id.toString()))
+    const questionDetails = await Promise.all(questionPromises)
+
+    // 转换为 QuizQuestion 格式
+    questions.value = questionDetails.map((q: any) => ({
+      id: q.id,
+      content: q.questionText,
+      type: convertQuestionType(q.questionType),
+      options: parseOptions(q.options),
+      difficulty: q.difficulty || 'medium',
+      tags: [],
+      explanation: q.explanation
+    }))
+
+    // 创建映射
+    questionMap.value = new Map(questions.value.map(q => [q.id, q]))
+  } catch (error: any) {
+    ElMessage.error('加载题目详情失败: ' + (error.message || '未知错误'))
+    throw error
+  }
+}
+
+function convertQuestionType(type: string): QuizQuestion['type'] {
+  const typeMap: Record<string, QuizQuestion['type']> = {
+    'choice': 'single',
+    'multiple-choice': 'multiple',
+    'true-false': 'boolean',
+    'short-answer': 'essay'
+  }
+  return typeMap[type] || 'single'
+}
+
+function parseOptions(optionsStr?: string): string[] {
+  if (!optionsStr) return []
+  try {
+    return JSON.parse(optionsStr)
+  } catch {
+    return []
+  }
+}
+
+function startTimer() {
+  timer = window.setInterval(() => {
+    timeElapsed.value++
+  }, 1000)
+}
+
+function stopTimer() {
   if (timer) {
     clearInterval(timer)
     timer = null
   }
-})
+}
 
 // Methods
 const formatTime = (seconds: number) => {
@@ -119,8 +214,20 @@ const formatTime = (seconds: number) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-const handleAnswer = (questionId: number, answer: string | string[]) => {
-  answers.value[questionId] = answer
+const handleAnswer = async (questionId: number, answer: string | string[]) => {
+  try {
+    let answerStr: string
+    if (Array.isArray(answer)) {
+      answerStr = JSON.stringify(answer)
+    } else {
+      answerStr = answer
+    }
+
+    await quizStore.submitAnswer(questionId, answerStr, timeElapsed.value)
+  } catch (error: any) {
+    ElMessage.error('提交答案失败: ' + (error.message || '未知错误'))
+    console.error('提交答案失败:', error)
+  }
 }
 
 const toggleMark = (questionId: number) => {
@@ -132,24 +239,29 @@ const toggleMark = (questionId: number) => {
 }
 
 const goToQuestion = (index: number) => {
-  currentQuestionIndex.value = index
+  quizStore.goToQuestion(index)
 }
 
 const goToNext = () => {
-  if (currentQuestionIndex.value < mockQuestions.length - 1) {
-    currentQuestionIndex.value++
-  }
+  quizStore.goToNext()
 }
 
 const goToPrevious = () => {
-  if (currentQuestionIndex.value > 0) {
-    currentQuestionIndex.value--
-  }
+  quizStore.goToPrevious()
 }
 
-const handleSubmit = () => {
-  isSubmitted.value = true
-  showResult.value = true
+const handleSubmit = async () => {
+  try {
+    loading.value = true
+    const result = await quizStore.completeQuiz()
+    showResult.value = true
+    ElMessage.success('交卷成功！')
+  } catch (error: any) {
+    ElMessage.error('交卷失败: ' + (error.message || '未知错误'))
+    console.error('交卷失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 const goHome = () => {
@@ -160,133 +272,143 @@ const toggleDarkMode = () => {
   darkMode.value = !darkMode.value
   // TODO: 实现深色模式切换逻辑
 }
-
-// Cleanup
-onMounted(() => {
-  return () => {
-    if (timer) clearInterval(timer)
-  }
-})
 </script>
 
 <template>
   <div class="quiz-container">
-    <!-- 顶部导航栏 -->
-    <header class="quiz-header">
-      <div class="header-left">
-        <div class="logo-section">
-          <el-icon :size="20" class="logo-icon"><Reading /></el-icon>
-          <h1 class="logo-title">AnswerMe</h1>
-        </div>
-        <el-divider direction="vertical" />
-        <div class="quiz-info">
-          <span>前端开发测试</span>
-          <span class="separator">·</span>
-          <span>{{ mockQuestions.length }} 题</span>
-        </div>
-      </div>
-
-      <div class="header-right">
-        <!-- 进度 -->
-        <div class="progress-indicator">
-          <el-icon :size="16" color="#10b981"><CircleCheck /></el-icon>
-          <span class="progress-text">{{ answeredCount }}/{{ mockQuestions.length }}</span>
-          <el-progress :percentage="progress" :show-text="false" :stroke-width="6" />
-        </div>
-
-        <!-- 计时器 -->
-        <div class="timer-indicator">
-          <el-icon :size="16" color="#3b82f6"><Clock /></el-icon>
-          <span class="timer-text">{{ formatTime(timeElapsed) }}</span>
-        </div>
-
-        <!-- 深色模式切换 -->
-        <el-button :icon="darkMode ? Sunny : Moon" circle size="small" @click="toggleDarkMode" />
-
-        <el-button @click="goHome">
-          <el-icon><House /></el-icon>
-          返回首页
-        </el-button>
-      </div>
-    </header>
-
-    <!-- 主体内容 -->
-    <div class="quiz-body">
-      <!-- 左侧题目列表 -->
-      <QuizQuestionList
-        :questions="mockQuestions"
-        :current-index="currentQuestionIndex"
-        :answers="answers"
-        :marked-questions="markedQuestions"
-        @question-click="goToQuestion"
-      />
-
-      <!-- 中间题目面板 -->
-      <div class="quiz-main">
-        <QuizQuestionPanel
-          :question="safeCurrentQuestion"
-          :question-number="currentQuestionIndex + 1"
-          :total-questions="mockQuestions.length"
-        />
-
-        <!-- 答题区域 -->
-        <div class="answer-section">
-          <QuizAnswerPanel
-            :question="safeCurrentQuestion"
-            :answer="answers[safeCurrentQuestion.id]"
-            :disabled="isSubmitted"
-            @update:answer="(ans) => handleAnswer(safeCurrentQuestion.id, ans)"
-          />
-        </div>
-      </div>
+    <!-- 加载状态 -->
+    <div v-if="initializing" class="loading-container">
+      <el-skeleton :rows="5" animated />
+      <p class="loading-text">正在初始化答题...</p>
     </div>
 
-    <!-- 底部操作栏 -->
-    <footer class="quiz-footer">
-      <div class="footer-left">
-        <el-button
-          :type="markedQuestions.has(safeCurrentQuestion.id) ? 'warning' : 'default'"
-          :icon="Flag"
-          @click="toggleMark(safeCurrentQuestion.id)"
-        >
-          {{ markedQuestions.has(safeCurrentQuestion.id) ? '已标记' : '标记' }}
-        </el-button>
+    <template v-else-if="questions.length > 0">
+      <!-- 顶部导航栏 -->
+      <header class="quiz-header">
+        <div class="header-left">
+          <div class="logo-section">
+            <el-icon :size="20" class="logo-icon"><Reading /></el-icon>
+            <h1 class="logo-title">AnswerMe</h1>
+          </div>
+          <el-divider direction="vertical" />
+          <div class="quiz-info">
+            <span>题库 #{{ bankId }}</span>
+            <span class="separator">·</span>
+            <span>{{ totalQuestions }} 题</span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- 进度 -->
+          <div class="progress-indicator">
+            <el-icon :size="16" color="#10b981"><CircleCheck /></el-icon>
+            <span class="progress-text">{{ answeredCount }}/{{ totalQuestions }}</span>
+            <el-progress :percentage="progress" :show-text="false" :stroke-width="6" />
+          </div>
+
+          <!-- 计时器 -->
+          <div class="timer-indicator">
+            <el-icon :size="16" color="#3b82f6"><Clock /></el-icon>
+            <span class="timer-text">{{ formatTime(timeElapsed) }}</span>
+          </div>
+
+          <!-- 深色模式切换 -->
+          <el-button :icon="darkMode ? Sunny : Moon" circle size="small" @click="toggleDarkMode" />
+
+          <el-button @click="goHome">
+            <el-icon><House /></el-icon>
+            返回首页
+          </el-button>
+        </div>
+      </header>
+
+      <!-- 主体内容 -->
+      <div class="quiz-body">
+        <!-- 左侧题目列表 -->
+        <QuizQuestionList
+          :questions="questions"
+          :current-index="quizStore.currentQuestionIndex"
+          :answers="quizStore.answers"
+          :marked-questions="markedQuestions"
+          @question-click="goToQuestion"
+        />
+
+        <!-- 中间题目面板 -->
+        <div class="quiz-main">
+          <QuizQuestionPanel
+            :question="safeCurrentQuestion"
+            :question-number="quizStore.currentQuestionIndex + 1"
+            :total-questions="totalQuestions"
+          />
+
+          <!-- 答题区域 -->
+          <div class="answer-section">
+            <QuizAnswerPanel
+              :question="safeCurrentQuestion"
+              :answer="quizStore.answers[safeCurrentQuestion.id]"
+              :disabled="quizStore.loading || showResult"
+              @update:answer="(ans) => handleAnswer(safeCurrentQuestion.id, ans)"
+            />
+          </div>
+        </div>
       </div>
 
-      <div class="footer-right">
-        <el-button
-          :icon="ArrowLeft"
-          :disabled="currentQuestionIndex === 0"
-          @click="goToPrevious"
-        >
-          上一题
-        </el-button>
+      <!-- 底部操作栏 -->
+      <footer class="quiz-footer">
+        <div class="footer-left">
+          <el-button
+            :type="markedQuestions.has(safeCurrentQuestion.id) ? 'warning' : 'default'"
+            :icon="Flag"
+            @click="toggleMark(safeCurrentQuestion.id)"
+          >
+            {{ markedQuestions.has(safeCurrentQuestion.id) ? '已标记' : '标记' }}
+          </el-button>
+        </div>
 
-        <el-button
-          :icon="ArrowRight"
-          :disabled="currentQuestionIndex === mockQuestions.length - 1"
-          @click="goToNext"
-        >
-          下一题
-        </el-button>
+        <div class="footer-right">
+          <el-button
+            :icon="ArrowLeft"
+            :disabled="quizStore.currentQuestionIndex === 0"
+            @click="goToPrevious"
+          >
+            上一题
+          </el-button>
 
-        <el-button
-          type="primary"
-          :disabled="answeredCount === 0"
-          @click="handleSubmit"
-        >
-          交卷
-        </el-button>
-      </div>
-    </footer>
+          <el-button
+            :icon="ArrowRight"
+            :disabled="quizStore.currentQuestionIndex >= totalQuestions - 1"
+            @click="goToNext"
+          >
+            下一题
+          </el-button>
 
-    <!-- 结果弹窗 -->
-    <QuizResultModal
-      v-model:visible="showResult"
-      :questions="mockQuestions"
-      :answers="answers"
-      :time-elapsed="timeElapsed"
-    />
+          <el-button
+            type="primary"
+            :disabled="answeredCount === 0 || showResult"
+            :loading="loading"
+            @click="handleSubmit"
+          >
+            交卷
+          </el-button>
+        </div>
+      </footer>
+
+      <!-- 结果弹窗 -->
+      <QuizResultModal
+        v-model:visible="showResult"
+        :questions="questions"
+        :answers="quizStore.answers"
+        :time-elapsed="timeElapsed"
+        :attempt-id="quizStore.currentAttemptId"
+      />
+    </template>
+
+    <!-- 空状态 -->
+    <div v-else class="empty-container">
+      <el-empty description="暂无题目">
+        <el-button type="primary" @click="goHome">返回首页</el-button>
+      </el-empty>
+    </div>
   </div>
 </template>
 
@@ -300,6 +422,21 @@ onMounted(() => {
 
 .dark .quiz-container {
   background: linear-gradient(to bottom right, #030712, #111827);
+}
+
+.loading-container,
+.empty-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.loading-text {
+  font-size: 16px;
+  color: #606266;
 }
 
 /* 顶部导航栏 */

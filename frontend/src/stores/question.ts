@@ -36,7 +36,7 @@ export const useQuestionStore = defineStore('question', () => {
         search: params.search
       }
       const response = await questionApi.getQuestions(queryParams)
-      questions.value = response.data
+      questions.value = response
       pagination.value = {
         total: response.total,
         page: response.page,

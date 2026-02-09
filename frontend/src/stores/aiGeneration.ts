@@ -53,23 +53,23 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
       if (useAsync) {
         // 异步生成
         const response = await generateQuestionsAsyncApi(params)
-        currentResponse.value = response.data
+        currentResponse.value = response
 
-        if (response.data.success && response.data.taskId) {
-          currentTaskId.value = response.data.taskId
-          await startProgressPolling(response.data.taskId)
+        if (response.success && response.taskId) {
+          currentTaskId.value = response.taskId
+          await startProgressPolling(response.taskId)
         } else {
-          error.value = response.data.errorMessage || '创建异步任务失败'
+          error.value = response.errorMessage || '创建异步任务失败'
         }
       } else {
         // 同步生成
         const response = await generateQuestionsApi(params)
-        currentResponse.value = response.data
+        currentResponse.value = response
 
-        if (response.data.success) {
-          generatedQuestions.value = response.data.questions
+        if (response.success) {
+          generatedQuestions.value = response.questions
         } else {
-          error.value = response.data.errorMessage || '生成失败'
+          error.value = response.errorMessage || '生成失败'
         }
       }
     } catch (err: any) {
@@ -96,20 +96,20 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
   async function updateProgress(taskId: string) {
     try {
       const response = await getGenerationProgressApi(taskId)
-      progress.value = response.data
+      progress.value = response
 
       // 如果任务完成，停止轮询
       if (isCompleted.value) {
         stopProgressPolling()
 
         // 如果有生成的题目，保存到结果中
-        if (response.data.questions && response.data.questions.length > 0) {
-          generatedQuestions.value = response.data.questions
+        if (response.questions && response.questions.length > 0) {
+          generatedQuestions.value = response.questions
         }
 
         // 如果失败，设置错误信息
-        if (response.data.status === 'failed' && response.data.errorMessage) {
-          error.value = response.data.errorMessage
+        if (response.status === 'failed' && response.errorMessage) {
+          error.value = response.errorMessage
         }
       }
     } catch (err: any) {

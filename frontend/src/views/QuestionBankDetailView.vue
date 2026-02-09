@@ -89,28 +89,41 @@ const handleExport = async () => {
   if (!currentQuestionBank.value) return
 
   try {
-    const data = JSON.stringify(
-      {
-        bankName: currentQuestionBank.value.name,
-        description: currentQuestionBank.value.description,
-        questions: questions.value
-      },
-      null,
-      2
-    )
+    // 调用后端导出API
+    const response = await fetch(`/api/questionbanks/${bankId.value}/export`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
 
-    const blob = new Blob([data], { type: 'application/json' })
+    if (!response.ok) {
+      throw new Error('导出失败')
+    }
+
+    // 获取文件名
+    const contentDisposition = response.headers.get('Content-Disposition')
+    let fileName = `${currentQuestionBank.value.name}.json`
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = fileNameMatch[1].replace(/['"]/g, '')
+      }
+    }
+
+    // 下载文件
+    const blob = await response.blob()
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${currentQuestionBank.value.name}.json`
+    link.download = fileName
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
 
     ElMessage.success('导出成功')
-  } catch {
+  } catch (error) {
+    console.error('导出失败:', error)
     ElMessage.error('导出失败')
   }
 }
