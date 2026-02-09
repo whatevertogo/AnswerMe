@@ -381,3 +381,5 @@ _logger.LogError(ex, "操作失败: {Data}", data);
 ## 中文支持
 
 项目使用中文作为面向用户的内容。所有 DTOs、实体和 API 消息支持中文文本。数据库使用 SQLite 和 PostgreSQL 正确存储中文。
+
+项目大部分完整架构 docs/project-structure.md
