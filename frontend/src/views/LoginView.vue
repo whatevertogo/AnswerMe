@@ -25,12 +25,42 @@ const handleLogin = async () => {
   loading.value = true
   try {
     const response = await authApi.login(loginForm.value)
+
+    // 同时更新两个 store
     authStore.setToken(response.data.token)
     authStore.setUser(response.data.user)
+
+    // 更新 userStore 以便路由守卫检查
+    authStore.setToken(response.data.token)
+    authStore.setUserInfo(response.data.user)
+
     ElMessage.success('登录成功')
     router.push('/home')
   } catch (error: any) {
     const message = error.response?.data?.message || '登录失败，请检查邮箱和密码'
+    ElMessage.error(message)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleLocalLogin = async () => {
+  loading.value = true
+  try {
+    const response = await authApi.localLogin()
+
+    // 同时更新两个 store
+    authStore.setToken(response.data.token)
+    authStore.setUser(response.data.user)
+
+    // 更新 userStore 以便路由守卫检查
+    authStore.setToken(response.data.token)
+    authStore.setUserInfo(response.data.user)
+
+    ElMessage.success('本地登录成功')
+    router.push('/home')
+  } catch (error: any) {
+    const message = error.response?.data?.message || '本地登录失败'
     ElMessage.error(message)
   } finally {
     loading.value = false
@@ -68,6 +98,10 @@ const handleLogin = async () => {
       <div class="form-footer">
         <span class="footer-text">还没有账号？</span>
         <router-link to="/register" class="footer-link">立即注册</router-link>
+      </div>
+
+      <div class="local-login-wrapper">
+        <span class="local-login-text" @click="handleLocalLogin">本地登录</span>
       </div>
     </el-form>
   </div>
@@ -193,6 +227,24 @@ const handleLogin = async () => {
 }
 
 .footer-link:hover {
+  color: #2AA198;
+}
+
+.local-login-wrapper {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.local-login-text {
+  font-size: 0.875rem;
+  color: #268BD2;
+  font-weight: 600;
+  font-style: italic;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.local-login-text:hover {
   color: #2AA198;
 }
 </style>

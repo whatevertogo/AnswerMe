@@ -28,5 +28,13 @@ export const authApi = {
    */
   getCurrentUser(): Promise<AxiosResponse<UserDto>> {
     return api.get<UserDto>('/auth/me')
+  },
+
+  /**
+   * 本地登录（无需账号密码）
+   * POST /api/auth/local-login
+   */
+  localLogin(): Promise<AxiosResponse<AuthResponseDto>> {
+    return api.post<AuthResponseDto>('/auth/local-login')
   }
 }

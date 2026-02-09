@@ -1,427 +1,257 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code (claude.ai/code) 提供项目指导。
 
-## Project Overview
+## 项目概述
 
-**AnswerMe** is an open-source, self-hosted intelligent question bank system that allows users to use their own AI API keys to generate questions. Users maintain full control over their learning data and can deploy to their own servers with Docker.
+**AnswerMe** 是一个开源的自托管智能题库系统。用户使用自己的 AI API 密钥生成题目，完全掌控学习数据。
 
-**Tech Stack:**
-- Backend: .NET 10 Web API + EF Core 10
-- Frontend: Vue 3 + TypeScript + Pinia + Element Plus
-- Database: SQLite (development) / PostgreSQL (production)
-- Deployment: Docker Compose
+**技术栈:**
+- 后端: .NET 10 Web API + EF Core 10
+- 前端: Vue 3 + TypeScript + Pinia + Element Plus
+- 数据库: SQLite (开发环境) / PostgreSQL (生产环境)
+- 部署: Docker Compose
 
-**Core Architecture:**
-Clean Architecture with 4 distinct layers:
-1. **Domain** (`backend/AnswerMe.Domain/`) - Entities and interfaces, no dependencies
-2. **Application** (`backend/AnswerMe.Application/`) - Business logic, DTOs, services
-3. **Infrastructure** (`backend/AnswerMe.Infrastructure/`) - EF Core, repositories, external concerns
-4. **API** (`backend/AnswerMe.API/`) - Controllers, middleware, startup configuration
+**核心架构:**
+Clean Architecture 四层架构:
+1. **Domain** (`backend/AnswerMe.Domain/`) - 实体和接口，无依赖
+2. **Application** (`backend/AnswerMe.Application/`) - 业务逻辑、DTOs、服务
+3. **Infrastructure** (`backend/AnswerMe.Infrastructure/`) - EF Core、仓储、外部关注点
+4. **API** (`backend/AnswerMe.API/`) - 控制器、中间件、启动配置
 
-## Development Commands
+**关键规则:** 依赖只能向内流动。Domain → Application → Infrastructure → API。严禁反向依赖。
 
-### Backend (.NET 10)
+## 开发命令
+
+### 后端 (.NET 10)
 
 ```bash
-# Navigate to backend
 cd backend
 
-# Build solution
+# 构建解决方案
 dotnet build
 
-# Run API (development, auto-applies migrations)
+# 运行 API（开发环境，自动应用迁移）
 dotnet run --project AnswerMe.API
 
-# Run with specific database type
+# 使用 PostgreSQL 运行
 set DB_TYPE=PostgreSQL
 dotnet run --project AnswerMe.API
 
-# Create new migration
+# 创建迁移
 dotnet ef migrations add MigrationName --project AnswerMe.Infrastructure --startup-project AnswerMe.API
 
-# Apply migrations manually
+# 手动应用迁移
 dotnet ef database update --project AnswerMe.Infrastructure --startup-project AnswerMe.API
 
-# Run tests
+# 运行测试
 dotnet test
 
-# Watch mode for development
+# 监视模式
 dotnet watch --project AnswerMe.API
 ```
 
-### Frontend (Vue 3 + Vite)
+### 前端 (Vue 3 + Vite)
 
 ```bash
-# Navigate to frontend
-cd frontend/AnswerMe.Frontend
+cd frontend
 
-# Install dependencies
-npm install
-
-# Run dev server (http://localhost:5173)
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+npm install          # 安装依赖
+npm run dev          # 开发服务器 http://localhost:5173
+npm run build        # 生产构建
+npm run preview      # 预览生产构建
 ```
 
-### Docker Development
+### Docker
 
 ```bash
-# Start all services (db + backend + frontend)
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-
-# Rebuild and start
-docker-compose up -d --build
+docker-compose up -d           # 启动所有服务
+docker-compose logs -f         # 查看日志
+docker-compose down            # 停止服务
+docker-compose up -d --build   # 重新构建并启动
 ```
 
-## Architecture Patterns
+## 架构模式
 
-### Clean Architecture Layering
+### 仓储模式
 
-**Critical Rule:** Dependencies must flow inward only. Domain → Application → Infrastructure → API. Never reverse dependencies.
+所有仓储接口定义在 `Domain/Interfaces/`，实现在 `Infrastructure/Repositories/`。
 
-- **Domain** has ZERO dependencies on other layers. Defines entities (`User`, `QuestionBank`, `Question`, `DataSource`) and repository interfaces.
-- **Application** depends on Domain. Contains services (`AuthService`, `QuestionBankService`, `AIGenerationService`) and DTOs.
-- **Infrastructure** implements Domain interfaces. Contains EF Core `AnswerMeDbContext` and repository implementations.
-- **API** depends on Application. Contains controllers, JWT configuration, middleware pipeline.
-
-### Repository Pattern
-
-All repositories are defined in `Domain/Interfaces/` and implemented in `Infrastructure/Repositories/`.
-
-**Standard Repository Interface:**
 ```csharp
+// 接口（Domain 层）
 public interface IQuestionRepository
 {
     Task<Question?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
-    Task<List<Question>> GetByQuestionBankIdAsync(int questionBankId, CancellationToken cancellationToken = default);
     Task<Question> AddAsync(Question question, CancellationToken cancellationToken = default);
-    Task<Question> UpdateAsync(Question question, CancellationToken cancellationToken = default);
-    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }
-```
 
-**Registration in Program.cs:**
-```csharp
+// 注册（Program.cs）
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 ```
 
-### Service Layer
+### 服务层
 
-Services contain business logic and are registered as scoped:
+服务包含业务逻辑，使用仓储（绝不直接使用 DbContext），返回 DTOs。
+
 ```csharp
+// 注册
 builder.Services.AddScoped<IQuestionBankService, QuestionBankService>();
-builder.Services.AddScoped<IAIGenerationService, AIGenerationService>();
+
+// 服务模式
+public class QuestionBankService : IQuestionBankService
+{
+    // 使用仓储，不用 DbContext
+    // 返回 DTOs，不返回实体
+    // 业务规则违反抛出 InvalidOperationException
+}
 ```
 
-Services should:
-- Use repositories for data access (never use `DbContext` directly)
-- Return DTOs, not entities
-- Handle business rules and validation
-- Throw `InvalidOperationException` for business rule violations
+### 乐观锁
 
-### Optimistic Locking
-
-`QuestionBank` entity uses `byte[] Version` for optimistic locking:
+`QuestionBank` 使用 `byte[] Version` 进行并发控制:
 
 ```csharp
-public byte[] Version { get; set; } = Array.Empty<byte>();
-```
+public byte[] Version { get; set; } = new byte[8]; // 初始化为 8 字节
 
-**Update logic in service:**
-```csharp
-if (dto.Version != null && !questionBank.Version.SequenceEqual(dto.Version))
+// 更新模式
+if (dto.Version == null || !questionBank.Version.SequenceEqual(dto.Version))
 {
     throw new InvalidOperationException("题库已被其他用户修改，请刷新后重试");
 }
-
-// Increment version
-var versionBytes = questionBank.Version ?? new byte[8];
-var version = BitConverter.ToInt64(versionBytes);
-BitConverter.GetBytes(version + 1).CopyTo(questionBank.Version);
+var version = BitConverter.ToInt64(questionBank.Version);
+BitConverter.GetBytes(version + 1).CopyTo(questionBank.Version, 0);
 ```
 
-### Cursor-Based Pagination
+### 基于游标的分页
 
-Implemented in `QuestionBankRepository.GetPagedAsync()`:
 ```csharp
-public async Task<List<QuestionBank>> GetPagedAsync(int userId, int pageSize, int? lastId, CancellationToken cancellationToken = default)
+public async Task<List<QuestionBank>> GetPagedAsync(int userId, int pageSize, int? lastId)
 {
     var query = _context.QuestionBanks
         .Where(qb => qb.UserId == userId)
         .OrderByDescending(qb => qb.Id)
-        .Take(pageSize + 1); // Fetch one extra to determine if more exist
+        .Take(pageSize + 1); // 多取一条判断是否还有更多
 
     if (lastId.HasValue)
-    {
         query = query.Where(qb => qb.Id < lastId.Value);
-    }
 
-    var results = await query.ToListAsync(cancellationToken);
+    var results = await query.ToListAsync();
     return results.Take(pageSize).ToList();
 }
 ```
 
-Returns `pageSize + 1` items. If you get `pageSize + 1` results, there are more pages.
+### AI Provider 抽象
 
-### AI Provider Abstraction
+通过 `IAIProvider` 接口支持多个 AI 提供商:
 
-Multiple AI providers supported through `IAIProvider` interface:
-
-**Interface** (`Application/AI/IAIProvider.cs`):
 ```csharp
 public interface IAIProvider
 {
     string ProviderName { get; }
     Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
-        AIQuestionGenerateRequest request,
-        CancellationToken cancellationToken = default);
+        string apiKey, AIQuestionGenerateRequest request, CancellationToken cancellationToken);
     Task<bool> ValidateApiKeyAsync(string apiKey, CancellationToken cancellationToken = default);
 }
+
+// 工厂通过名称检索 provider
+var provider = _aiProviderFactory.GetProvider("OpenAI");
 ```
 
-**Factory Pattern** (`Application/AI/AIProviderFactory.cs`):
-```csharp
-public class AIProviderFactory
-{
-    public IAIProvider? GetProvider(string providerName)
-    {
-        return _providers.FirstOrDefault(p =>
-            p.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase));
-    }
-}
-```
+**添加新 provider:**
+1. 在 `Application/AI/` 中实现 `IAIProvider`
+2. 在 `Program.cs` 注册: `builder.Services.AddSingleton<IAIProvider, NewProvider>();`
 
-**Currently Implemented:**
-- `OpenAIProvider` (`Application/AI/OpenAIProvider.cs`)
+### 数据源加密
 
-**To add new provider:**
-1. Create class implementing `IAIProvider` in `Application/AI/`
-2. Register in `Program.cs`: `builder.Services.AddSingleton<IAIProvider, NewProvider>();`
-3. Update factory (automatic via DI)
-
-### DataSource Entity
-
-**Critical:** `DataSource` stores AI provider configurations with encrypted API keys:
+`DataSource.Config` 使用 Data Protection API 存储加密的 API 密钥:
 
 ```csharp
-public class DataSource : BaseEntity
-{
-    public int UserId { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty; // openai, qwen, custom_api
-    public string Config { get; set; } = string.Empty; // JSON configuration (encrypted)
-    public bool IsDefault { get; set; } = false;
-}
+// 加密
+var encrypted = _dataProtector.Protect(apiKey);
+
+// 解密
+var decrypted = _dataProtector.Unprotect(encryptedConfig);
+
+// 密钥持久化到 `keys/` 目录（90 天生命周期）
 ```
 
-**Config JSON structure (encrypted before storage):**
-```json
-{
-  "apiKey": "sk-...",
-  "baseUrl": "https://api.openai.com/v1",
-  "model": "gpt-4"
-}
-```
+**安全规则:**
+- 绝不记录或向前端返回 API 密钥
+- 使用 API 密钥前必须解密
+- 返回给客户端的 DTOs 中要掩码处理 API 密钥
 
-**Encryption:** Uses ASP.NET Core Data Protection API. Never log or return API keys to frontend.
+### JWT 认证
 
-### JWT Authentication
-
-**Configuration** (environment variable takes precedence):
 ```bash
+# 必需的环境变量
 JWT_SECRET=must-be-at-least-32-characters-long
 JWT_ISSUER=AnswerMe
 JWT_AUDIENCE=AnswerMeUsers
 JWT_EXPIRY_DAYS=30
 ```
 
-**User extraction in controllers:**
+**在控制器中提取用户 ID:**
 ```csharp
 private int GetCurrentUserId()
 {
     var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-    {
+    if (!int.TryParse(userIdClaim, out var userId))
         throw new UnauthorizedAccessException("无效的用户身份");
-    }
     return userId;
 }
 ```
 
-### API Key Security Rules
+## 数据库
 
-**CRITICAL SECURITY RULES:**
-1. API keys are encrypted in database using Data Protection API
-2. API key endpoints NEVER return the actual key value
-3. Only validation endpoints return success/failure
-4. Never log API keys or include in error messages
-5. Use environment variable `ENCRYPTION_KEY` for Data Protection (in production)
+**SQLite**（默认）: API 目录下的 `answerme_dev.db` 文件。开发环境启动时自动应用迁移。
 
-### Database Selection
-
-**SQLite** (default development):
-- File: `answerme_dev.db` in API project directory
-- Connection string: `Data Source=answerme_dev.db`
-- Auto-applied migrations on startup in development mode
-
-**PostgreSQL** (production):
-- Set environment variable: `DB_TYPE=PostgreSQL`
-- Connection string from appsettings or environment
-
-### Entity Framework Core
+**PostgreSQL**（生产环境）: 设置环境变量 `DB_TYPE=PostgreSQL`。
 
 **DbContext** (`Infrastructure/Data/AnswerMeDbContext.cs`):
-- Auto-discover entities in `Domain.Entities` namespace
-- Migrations in `Infrastructure/Migrations/`
-- Cascade delete configured for relationships
+- 自动发现 `Domain.Entities` 命名空间中的实体
+- 迁移文件位于 `Infrastructure/Migrations/`
+- 为关系配置了级联删除
 
-**Creating migrations:**
-```bash
-cd backend
-dotnet ef migrations add AddNewField --project AnswerMe.Infrastructure --startup-project AnswerMe.API
-```
+## 前端架构
 
-**Migration auto-apply on startup** (development only):
+**位置:** `frontend/src/`
+
+**Vue 3 Composition API** + TypeScript。
+
+**Pinia stores:** `src/stores/`（auth、questionBank、dataSource 等）
+
+**Router:** `src/router/` - 路由守卫检查认证状态
+
+**API 层:** `src/api/` - Axios 配置后端地址 `http://localhost:5000/api`
+
+**CORS:** 后端默认允许 `http://localhost:5173`
+
+## 常用模式
+
+### 添加新实体
+
+1. 在 `Domain/Entities/` 创建实体
+2. 在 `Domain/Interfaces/` 创建仓储接口
+3. 在 `Infrastructure/Repositories/` 实现仓储
+4. 在 `Application/Interfaces/` 创建服务接口
+5. 在 `Application/Services/` 实现服务
+6. 在 `API/Controllers/` 创建控制器
+7. 在 `Program.cs` 注册所有服务
+8. 创建迁移: `dotnet ef migrations add AddEntity`
+
+### 错误处理
+
+**全局异常过滤器**在 `Program.cs` 中注册
+
+**服务异常:**
+- `InvalidOperationException` - 业务规则违反
+- `UnauthorizedAccessException` - 权限问题
+
+**控制器模式:**
 ```csharp
-if (app.Environment.IsDevelopment())
-{
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AnswerMeDbContext>();
-    db.Database.Migrate();
-}
-```
-
-## Important Files and Locations
-
-### Configuration Files
-
-- **Backend config**: `backend/AnswerMe.API/appsettings.json`
-- **Environment variables**: `.env.example` (root directory)
-- **Docker compose**: `docker-compose.yml` (root)
-- **Frontend config**: `frontend/AnswerMe.Frontend/vite.config.ts`
-
-### Key Source Files
-
-**Domain Layer:**
-- `backend/AnswerMe.Domain/Entities/` - All entity definitions
-- `backend/AnswerMe.Domain/Interfaces/` - Repository interfaces
-
-**Application Layer:**
-- `backend/AnswerMe.Application/DTOs/` - Request/response DTOs
-- `backend/AnswerMe.Application/Services/` - Business logic services
-- `backend/AnswerMe.Application/Interfaces/` - Service interfaces
-- `backend/AnswerMe.Application/AI/` - AI provider implementations
-
-**Infrastructure Layer:**
-- `backend/AnswerMe.Infrastructure/Data/AnswerMeDbContext.cs` - EF Core context
-- `backend/AnswerMe.Infrastructure/Repositories/` - Repository implementations
-- `backend/AnswerMe.Infrastructure/Migrations/` - Database migrations
-
-**API Layer:**
-- `backend/AnswerMe.API/Program.cs` - Startup configuration, DI registration
-- `backend/AnswerMe.API/Controllers/` - API endpoints
-
-## Common Patterns
-
-### Adding New Entity
-
-1. **Create entity** in `Domain/Entities/`:
-```csharp
-public class MyEntity : BaseEntity
-{
-    public string Name { get; set; } = string.Empty;
-    // Navigation properties
-}
-```
-
-2. **Add to DbContext** (auto-discovered, but can add explicitly):
-```csharp
-public DbSet<MyEntity> MyEntities { get; set; }
-```
-
-3. **Create repository interface** in `Domain/Interfaces/`:
-```csharp
-public interface IMyEntityRepository
-{
-    Task<MyEntity?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
-    Task<MyEntity> AddAsync(MyEntity entity, CancellationToken cancellationToken = default);
-}
-```
-
-4. **Implement repository** in `Infrastructure/Repositories/`:
-```csharp
-public class MyEntityRepository : IMyEntityRepository
-{
-    private readonly AnswerMeDbContext _context;
-    // Implementation using _context.MyEntities
-}
-```
-
-5. **Create service interface** in `Application/Interfaces/`:
-```csharp
-public interface IMyEntityService
-{
-    Task<MyEntityDto> CreateAsync(CreateMyEntityDto dto, CancellationToken cancellationToken = default);
-}
-```
-
-6. **Implement service** in `Application/Services/`
-
-7. **Create controller** in `API/Controllers/`:
-```csharp
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-public class MyEntitiesController : ControllerBase
-{
-    // Inject service, implement endpoints
-}
-```
-
-8. **Register services** in `Program.cs`:
-```csharp
-builder.Services.AddScoped<IMyEntityRepository, MyEntityRepository>();
-builder.Services.AddScoped<IMyEntityService, MyEntityService>();
-```
-
-9. **Create migration**:
-```bash
-dotnet ef migrations add AddMyEntity --project AnswerMe.Infrastructure --startup-project AnswerMe.API
-```
-
-### Error Handling
-
-**Global exception filter** registered in `Program.cs`:
-```csharp
-options.Filters.Add<AnswerMe.API.Filters.GlobalExceptionFilter>();
-```
-
-**Service layer exceptions:**
-- `InvalidOperationException` - Business rule violations
-- `UnauthorizedAccessException` - Permission issues
-
-**Controller error responses:**
-```csharp
-if (!ModelState.IsValid)
-{
-    return BadRequest(ModelState);
-}
-
 try
 {
-    var result = await _service.SomeMethodAsync(dto);
+    var result = await _service.MethodAsync(dto);
     return Ok(result);
 }
 catch (InvalidOperationException ex)
@@ -431,110 +261,44 @@ catch (InvalidOperationException ex)
 catch (Exception ex)
 {
     _logger.LogError(ex, "操作失败");
-    return StatusCode(500, new { message = "服务器内部错误，请稍后重试" });
+    return StatusCode(500, new { message = "服务器内部错误" });
 }
 ```
 
-### Logging
+### 日志
 
-**Serilog** configured in `Program.cs`:
-- Console output
-- File output: `logs/answerme-.log` (7-day retention)
-- Structured logging with properties
+**Serilog** 在 `Program.cs` 中配置:
+- 控制台输出
+- 文件: `logs/answerme-.log`（保留 7 天）
 
-**Usage in services:**
+**使用方式:**
 ```csharp
 _logger.LogInformation("用户 {UserId} 执行操作", userId);
 _logger.LogError(ex, "操作失败: {Data}", data);
 ```
 
-## Testing
+## 环境变量
 
-**Test project**: `backend/AnswerMe.UnitTests/`
+**必需:**
+- `JWT_SECRET` - 至少 32 个字符
+- `ENCRYPTION_KEY` - 生产环境用于 API 密钥加密
 
-**Run tests:**
-```bash
-cd backend
-dotnet test
+**可选:**
+- `DB_TYPE` - "Sqlite"（默认）或 "PostgreSQL"
+- `ConnectionStrings__DefaultConnection` - 数据库连接字符串
+- `JWT__Issuer`、`JWT__Audience`、`JWT__ExpiryDays` - JWT 设置
+- `ALLOWED_ORIGINS` - CORS 源（默认: "http://localhost:3000,http://localhost:5173"）
 
-# Run with coverage
-dotnet test --collect:"XPlat Code Coverage"
+## 部署
 
-# Run specific test
-dotnet test --filter "FullyQualifiedName~TestMethodName"
-```
+1. 复制 `.env.example` 到 `.env` 并配置
+2. 设置强密码 `JWT_SECRET` 和 `ENCRYPTION_KEY`
+3. 运行: `docker-compose up -d`
+4. 前端: `http://localhost:3000`
+5. API: `http://localhost:5000`
 
-## Environment Variables
+**健康检查:** `GET /health`
 
-**Required:**
-- `JWT_SECRET` - At least 32 characters (JWT signing)
-- `ENCRYPTION_KEY` - For API key encryption in production
+## 中文支持
 
-**Optional:**
-- `DB_TYPE` - "Sqlite" (default) or "PostgreSQL"
-- `ConnectionStrings__DefaultConnection` - Database connection string
-- `JWT__Issuer` - JWT issuer (default: "AnswerMe")
-- `JWT__Audience` - JWT audience (default: "AnswerMeUsers")
-- `JWT__ExpiryDays` - Token expiry in days (default: 30)
-- `ALLOWED_ORIGINS` - CORS origins (default: "http://localhost:3000,http://localhost:5173")
-
-## Migration Tasks
-
-The project uses OpenSpec workflow for change management. Current change: `ai-questionbank-mvp`
-
-**To continue implementation:**
-```bash
-/opsx:apply ai-questionbank-mvp
-```
-
-**Tasks file location:** `openspec/changes/ai-questionbank-mvp/tasks.md`
-
-## Known Issues and Limitations
-
-1. **Async task storage** - Currently uses in-memory `Dictionary<>` for AI generation tasks. Production should use Redis or database.
-2. **AI Provider API Key injection** - `OpenAIProvider.GetApiKey()` returns placeholder. Needs proper integration with `DataSource.Config` decryption.
-3. **Single AI Provider** - Only OpenAI implemented. Qwen/智谱GLM/Minimax providers pending.
-4. **Testing** - Unit tests minimal. Need comprehensive test coverage.
-
-## Frontend Notes
-
-**Frontend location**: `frontend/AnswerMe.Frontend/`
-
-**Vue 3 Composition API** with TypeScript.
-
-**Pinia stores**: `frontend/AnswerMe.Frontend/src/stores/`
-
-**Router**: `frontend/AnswerMe.Frontend/src/router/`
-
-**Axios base URL**: Points to `http://localhost:5000/api` (backend API)
-
-**CORS**: Backend allows `http://localhost:5173` by default (Vite dev server)
-
-## Deployment
-
-**Production deployment via Docker:**
-
-1. Copy `.env.example` to `.env` and configure
-2. Set strong `JWT_SECRET` and `ENCRYPTION_KEY`
-3. Run: `docker-compose up -d`
-4. Access frontend at `http://localhost:3000`
-5. API at `http://localhost:5000`
-
-**Health check endpoint:** `GET /health`
-
-## Development Workflow
-
-1. Make changes to domain entities first
-2. Create migration: `dotnet ef migrations add ...`
-3. Update repository interfaces if needed
-4. Implement repository changes
-5. Update/create services for business logic
-6. Create/update DTOs
-7. Add/update controller endpoints
-8. Test manually or via Postman
-9. Run tests: `dotnet test`
-10. Commit with conventional commit message
-
-## Chinese Language Support
-
-The project uses Chinese for user-facing content. All DTOs, entities, and API messages support Chinese text. Database stores Chinese text correctly with SQLite and PostgreSQL.
+项目使用中文作为面向用户的内容。所有 DTOs、实体和 API 消息支持中文文本。数据库使用 SQLite 和 PostgreSQL 正确存储中文。

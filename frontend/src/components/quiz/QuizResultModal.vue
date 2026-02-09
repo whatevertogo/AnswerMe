@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { CheckCircle, Close, Clock, Target, TrendingUp, RefreshRight } from '@element-plus/icons-vue'
+import { CircleCheck, Clock, Aim, RefreshRight } from '@element-plus/icons-vue'
 
 interface Question {
   id: number
@@ -59,10 +59,6 @@ const getDifficultyColor = (difficulty: string) => {
     default: return '#6b7280'
   }
 }
-
-const handleClose = () => {
-  emit('update:visible', false)
-}
 </script>
 
 <template>
@@ -81,7 +77,7 @@ const handleClose = () => {
           <div class="score-card" :class="getScoreClass(score)">
             <div class="card-header">
               <span class="card-label">总分</span>
-              <el-icon :size="20"><Target /></el-icon>
+              <el-icon :size="20"><Aim /></el-icon>
             </div>
             <div class="score-value">{{ score }}</div>
             <div class="score-label">{{ getScoreLabel(score) }}</div>
@@ -149,7 +145,7 @@ const handleClose = () => {
                   answers[question.id] ? 'answered' : 'unanswered'
                 ]"
               >
-                <CheckCircle />
+                <CircleCheck />
               </el-icon>
               <span class="detail-index">第 {{ index + 1 }} 题</span>
               <el-tag

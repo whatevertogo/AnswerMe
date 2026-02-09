@@ -6,9 +6,9 @@ import axios, {
 } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
-import { useUserStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
 
-// 开发环境使用vite代理，生产环境使用完整URL
+// TODO-开发环境使用vite代理，生产环境使用完整URL
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const instance: AxiosInstance = axios.create({
@@ -23,8 +23,8 @@ const instance: AxiosInstance = axios.create({
 instance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // 从Pinia store获取token
-    const userStore = useUserStore()
-    const token = userStore.token
+    const authStore = useAuthStore()
+    const token = authStore.token
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -54,8 +54,8 @@ instance.interceptors.response.use(
         case 401:
           message = '登录已过期，请重新登录'
           // 清除用户状态
-          const userStore = useUserStore()
-          userStore.clearAuth()
+          const authStore = useAuthStore()
+          authStore.clearAuth()
           // 跳转到登录页
           router.push('/login')
           break

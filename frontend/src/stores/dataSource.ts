@@ -20,7 +20,8 @@ export const useDataSourceStore = defineStore('dataSource', () => {
   async function fetchDataSources() {
     loading.value = true
     try {
-      dataSources.value = await getDataSourcesApi()
+      const response = await getDataSourcesApi()
+      dataSources.value = response.data
     } catch (error) {
       console.error('获取数据源列表失败:', error)
       throw error
@@ -32,9 +33,9 @@ export const useDataSourceStore = defineStore('dataSource', () => {
   async function createDataSource(params: CreateDataSourceParams) {
     loading.value = true
     try {
-      const result = await createDataSourceApi(params)
-      dataSources.value.push(result)
-      return result
+      const response = await createDataSourceApi(params)
+      dataSources.value.push(response.data)
+      return response.data
     } catch (error) {
       console.error('创建数据源失败:', error)
       throw error
@@ -46,12 +47,12 @@ export const useDataSourceStore = defineStore('dataSource', () => {
   async function updateDataSource(id: number, params: UpdateDataSourceParams) {
     loading.value = true
     try {
-      const result = await updateDataSourceApi(id, params)
+      const response = await updateDataSourceApi(id, params)
       const index = dataSources.value.findIndex(ds => ds.id === id)
       if (index !== -1) {
-        dataSources.value[index] = result
+        dataSources.value[index] = response.data
       }
-      return result
+      return response.data
     } catch (error) {
       console.error('更新数据源失败:', error)
       throw error
@@ -91,8 +92,8 @@ export const useDataSourceStore = defineStore('dataSource', () => {
 
   async function validateApiKey(id: number) {
     try {
-      const result = await validateApiKeyApi(id)
-      return result.valid
+      const response = await validateApiKeyApi(id)
+      return response.data.valid
     } catch (error) {
       console.error('验证API密钥失败:', error)
       throw error

@@ -9,10 +9,9 @@ namespace AnswerMe.API.Controllers;
 /// <summary>
 /// 题库管理控制器
 /// </summary>
-[ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class QuestionBanksController : ControllerBase
+public class QuestionBanksController : BaseApiController
 {
     private readonly IQuestionBankService _questionBankService;
     private readonly ILogger<QuestionBanksController> _logger;
@@ -146,16 +145,5 @@ public class QuestionBanksController : ControllerBase
         }
 
         return Ok(new { message = "删除成功" });
-    }
-
-    private int GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (int.TryParse(userIdClaim, out var userId))
-        {
-            return userId;
-        }
-
-        throw new UnauthorizedAccessException("无法获取用户ID");
     }
 }

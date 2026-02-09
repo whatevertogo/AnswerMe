@@ -9,10 +9,9 @@ namespace AnswerMe.API.Controllers;
 /// <summary>
 /// 数据源管理控制器
 /// </summary>
-[ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class DataSourceController : ControllerBase
+public class DataSourceController : BaseApiController
 {
     private readonly IDataSourceService _dataSourceService;
     private readonly ILogger<DataSourceController> _logger;
@@ -170,16 +169,5 @@ public class DataSourceController : ControllerBase
         }
 
         return Ok(new { message = "API密钥有效", valid = true });
-    }
-
-    private int GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (int.TryParse(userIdClaim, out var userId))
-        {
-            return userId;
-        }
-
-        throw new UnauthorizedAccessException("无法获取用户ID");
     }
 }

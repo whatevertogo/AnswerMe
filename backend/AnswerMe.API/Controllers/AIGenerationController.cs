@@ -9,10 +9,9 @@ namespace AnswerMe.API.Controllers;
 /// <summary>
 /// AI生成题目控制器
 /// </summary>
-[ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class AIGenerationController : ControllerBase
+public class AIGenerationController : BaseApiController
 {
     private readonly IAIGenerationService _aiGenerationService;
     private readonly ILogger<AIGenerationController> _logger;
@@ -146,18 +145,5 @@ public class AIGenerationController : ControllerBase
             _logger.LogError(ex, "查询生成进度失败: TaskId={TaskId}", taskId);
             return StatusCode(500, new { message = "服务器内部错误，请稍后重试" });
         }
-    }
-
-    /// <summary>
-    /// 获取当前用户ID
-    /// </summary>
-    private int GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            throw new UnauthorizedAccessException("无效的用户身份");
-        }
-        return userId;
     }
 }

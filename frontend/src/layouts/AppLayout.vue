@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   HomeFilled,
@@ -10,11 +10,11 @@ import {
   ArrowDown
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useUserStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
-const userStore = useUserStore()
+const authStore = useAuthStore()
 
 const menuItems = [
   {
@@ -44,7 +44,7 @@ const handleLogout = async () => {
       type: 'warning'
     })
 
-    userStore.logout()
+    authStore.logout()
     ElMessage.success('已退出登录')
     router.push('/login')
   } catch {
@@ -85,7 +85,7 @@ const handleLogout = async () => {
                 <el-icon><User /></el-icon>
               </el-avatar>
               <span class="user-name">
-                {{ userStore.userInfo?.username || userStore.userInfo?.email || '用户' }}
+                {{ authStore.userInfo?.username || authStore.userInfo?.email || '用户' }}
               </span>
               <el-icon class="dropdown-icon" :size="14"><ArrowDown /></el-icon>
             </div>

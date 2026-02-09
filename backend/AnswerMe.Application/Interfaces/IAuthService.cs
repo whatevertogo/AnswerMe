@@ -21,4 +21,9 @@ public interface IAuthService
     /// 获取当前用户信息
     /// </summary>
     Task<UserDto?> GetCurrentUserAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 本地模式登录（无需凭据）
+    /// </summary>
+    Task<AuthResponseDto> LocalLoginAsync(CancellationToken cancellationToken = default);
 }

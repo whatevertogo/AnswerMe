@@ -92,8 +92,8 @@ public class QuestionBankService : IQuestionBankService
             return null;
         }
 
-        // 乐观锁检查
-        if (dto.Version != null && !questionBank.Version.SequenceEqual(dto.Version))
+        // 乐观锁检查 - 强制要求版本号
+        if (dto.Version == null || !questionBank.Version.SequenceEqual(dto.Version))
         {
             throw new InvalidOperationException("题库已被其他用户修改，请刷新后重试");
         }
@@ -123,11 +123,14 @@ public class QuestionBankService : IQuestionBankService
             questionBank.DataSourceId = dto.DataSourceId.Value;
         }
 
-        // 更新版本号 - 使用 Buffer.BlockCopy 避免 CopyTo 方法二义性
-        var versionBytes = questionBank.Version ?? new byte[8];
-        var version = BitConverter.ToInt64(versionBytes);
-        var newVersionBytes = BitConverter.GetBytes(version + 1);
-        Buffer.BlockCopy(newVersionBytes, 0, questionBank.Version!, 0, newVersionBytes.Length);
+        // 更新版本号 - 确保数组长度正确
+        if (questionBank.Version == null || questionBank.Version.Length < 8)
+        {
+            questionBank.Version = new byte[8];
+        }
+
+        var version = BitConverter.ToInt64(questionBank.Version);
+        BitConverter.GetBytes(version + 1).CopyTo(questionBank.Version, 0);
 
         questionBank.UpdatedAt = DateTime.UtcNow;
 

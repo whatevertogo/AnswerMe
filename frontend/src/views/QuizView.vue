@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Clock, CheckCircle, Flag, ArrowLeft, ArrowRight, Moon, Sunny, Home, Reading } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { Clock, CircleCheck, Flag, ArrowLeft, ArrowRight, Moon, Sunny, House, Reading } from '@element-plus/icons-vue'
 import QuizQuestionList from '@/components/quiz/QuizQuestionList.vue'
 import QuizQuestionPanel from '@/components/quiz/QuizQuestionPanel.vue'
 import QuizAnswerPanel from '@/components/quiz/QuizAnswerPanel.vue'
@@ -84,7 +83,17 @@ const isSubmitted = ref(false)
 const darkMode = ref(true)
 
 // Computed
-const currentQuestion = computed(() => mockQuestions[currentQuestionIndex.value])
+const currentQuestion = computed(() => {
+  const q = mockQuestions[currentQuestionIndex.value]
+  if (!q) {
+    // 如果索引越界，返回第一题
+    return mockQuestions[0]!
+  }
+  return q
+})
+
+// 确保currentQuestion永远不为undefined（用于TypeScript类型检查）
+const safeCurrentQuestion = computed(() => currentQuestion.value!)
 const answeredCount = computed(() => Object.keys(answers.value).length)
 const progress = computed(() => (answeredCount.value / mockQuestions.length) * 100)
 
@@ -94,6 +103,13 @@ onMounted(() => {
   timer = window.setInterval(() => {
     timeElapsed.value++
   }, 1000)
+})
+
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
 })
 
 // Methods
@@ -173,7 +189,7 @@ onMounted(() => {
       <div class="header-right">
         <!-- 进度 -->
         <div class="progress-indicator">
-          <el-icon :size="16" color="#10b981"><CheckCircle /></el-icon>
+          <el-icon :size="16" color="#10b981"><CircleCheck /></el-icon>
           <span class="progress-text">{{ answeredCount }}/{{ mockQuestions.length }}</span>
           <el-progress :percentage="progress" :show-text="false" :stroke-width="6" />
         </div>
@@ -188,7 +204,7 @@ onMounted(() => {
         <el-button :icon="darkMode ? Sunny : Moon" circle size="small" @click="toggleDarkMode" />
 
         <el-button @click="goHome">
-          <el-icon><Home /></el-icon>
+          <el-icon><House /></el-icon>
           返回首页
         </el-button>
       </div>
@@ -208,7 +224,7 @@ onMounted(() => {
       <!-- 中间题目面板 -->
       <div class="quiz-main">
         <QuizQuestionPanel
-          :question="currentQuestion"
+          :question="safeCurrentQuestion"
           :question-number="currentQuestionIndex + 1"
           :total-questions="mockQuestions.length"
         />
@@ -216,10 +232,10 @@ onMounted(() => {
         <!-- 答题区域 -->
         <div class="answer-section">
           <QuizAnswerPanel
-            :question="currentQuestion"
-            :answer="answers[currentQuestion.id]"
+            :question="safeCurrentQuestion"
+            :answer="answers[safeCurrentQuestion.id]"
             :disabled="isSubmitted"
-            @update:answer="(ans) => handleAnswer(currentQuestion.id, ans)"
+            @update:answer="(ans) => handleAnswer(safeCurrentQuestion.id, ans)"
           />
         </div>
       </div>
@@ -229,11 +245,11 @@ onMounted(() => {
     <footer class="quiz-footer">
       <div class="footer-left">
         <el-button
-          :type="markedQuestions.has(currentQuestion.id) ? 'warning' : 'default'"
+          :type="markedQuestions.has(safeCurrentQuestion.id) ? 'warning' : 'default'"
           :icon="Flag"
-          @click="toggleMark(currentQuestion.id)"
+          @click="toggleMark(safeCurrentQuestion.id)"
         >
-          {{ markedQuestions.has(currentQuestion.id) ? '已标记' : '标记' }}
+          {{ markedQuestions.has(safeCurrentQuestion.id) ? '已标记' : '标记' }}
         </el-button>
       </div>
 

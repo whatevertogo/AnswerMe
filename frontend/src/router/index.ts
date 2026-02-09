@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { useUserStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -36,6 +36,18 @@ const routes: Array<RouteRecordRaw> = [
     path: '/question-banks/:id',
     name: 'QuestionBankDetail',
     component: () => import('@/views/QuestionBankDetailView.vue'),
+    meta: { requiresAuth: true, layout: 'app' }
+  },
+  {
+    path: '/questions',
+    name: 'Questions',
+    component: () => import('@/views/QuestionsView.vue'),
+    meta: { requiresAuth: true, layout: 'app' }
+  },
+  {
+    path: '/question-banks/:bankId/questions',
+    name: 'BankQuestions',
+    component: () => import('@/views/QuestionsView.vue'),
     meta: { requiresAuth: true, layout: 'app' }
   },
   {
@@ -75,10 +87,10 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫 - 使用Pinia store进行认证检查
+// 路由守卫 - 使用 authStore 进行认证检查
 router.beforeEach((to, _from, next) => {
-  const userStore = useUserStore()
-  const isLoggedIn = userStore.isLoggedIn
+  const authStore = useAuthStore()
+  const isLoggedIn = authStore.isAuthenticated
   const requiresAuth = to.meta.requiresAuth !== false
 
   if (requiresAuth && !isLoggedIn) {

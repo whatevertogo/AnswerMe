@@ -1,17 +1,865 @@
+<script setup lang="ts">
+import { ref, computed, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Delete, MagicStick, DocumentCopy, ArrowLeft } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAIGenerationStore } from '@/stores/aiGeneration'
+import { useDataSourceStore } from '@/stores/dataSource'
+import type { DataSource } from '@/api/datasource'
+import type { AIGenerateRequest } from '@/api/aiGeneration'
+import { getQuestionBanks } from '@/api/questionBank'
+import type { QuestionBank } from '@/types'
+
+const router = useRouter()
+const aiGenerationStore = useAIGenerationStore()
+const dataSourceStore = useDataSourceStore()
+
+// 表单数据
+const formData = ref<AIGenerateRequest>({
+  subject: '',
+  count: 10,
+  difficulty: 'medium',
+  questionTypes: ['single'],
+  language: 'zh-CN',
+  customPrompt: '',
+  questionBankId: undefined,
+  providerName: undefined
+})
+
+// 题型选项
+const questionTypeOptions = [
+  { label: '单选题', value: 'single' },
+  { label: '多选题', value: 'multiple' },
+  { label: '判断题', value: 'boolean' },
+  { label: '填空题', value: 'fill' },
+  { label: '简答题', value: 'essay' }
+]
+
+// 难度选项
+const difficultyOptions = [
+  { label: '简单', value: 'easy' },
+  { label: '中等', value: 'medium' },
+  { label: '困难', value: 'hard' }
+]
+
+// 语言选项
+const languageOptions = [
+  { label: '中文', value: 'zh-CN' },
+  { label: 'English', value: 'en-US' }
+]
+
+// 数据源列表
+const dataSources = ref<DataSource[]>([])
+const selectedDataSource = ref<DataSource | null>(null)
+
+// 题库列表
+const questionBanks = ref<QuestionBank[]>([])
+const selectedQuestionBank = ref<QuestionBank | null>(null)
+const loadingQuestionBanks = ref(false)
+
+// 高级选项展开状态
+const showAdvancedOptions = ref(false)
+
+// 计算属性
+const isFormValid = computed(() => {
+  return formData.value.subject.trim().length > 0 &&
+         formData.value.count > 0 &&
+         formData.value.count <= 100 &&
+         formData.value.questionTypes.length > 0 &&
+         selectedDataSource.value !== null
+})
+
+const willUseAsync = computed(() => formData.value.count > 20)
+
+const canGenerate = computed(() => isFormValid.value && !aiGenerationStore.loading)
+
+// 加载数据源
+async function loadDataSources() {
+  try {
+    await dataSourceStore.fetchDataSources()
+    dataSources.value = dataSourceStore.dataSources
+
+    // 自动选择默认数据源
+    const defaultDataSource = dataSources.value.find(ds => ds.isDefault)
+    if (defaultDataSource) {
+      selectedDataSource.value = defaultDataSource
+      formData.value.providerName = defaultDataSource.type
+    } else if (dataSources.value.length > 0) {
+      const firstDs = dataSources.value[0]
+      if (firstDs) {
+        selectedDataSource.value = firstDs
+        formData.value.providerName = firstDs.type
+      }
+    }
+  } catch (error) {
+    console.error('加载数据源失败:', error)
+    ElMessage.error('加载数据源失败')
+  }
+}
+
+// 加载题库列表
+async function loadQuestionBanks() {
+  loadingQuestionBanks.value = true
+  try {
+    const response = await getQuestionBanks({ pageSize: 100 })
+    questionBanks.value = response.data || []
+  } catch (error) {
+    console.error('加载题库列表失败:', error)
+  } finally {
+    loadingQuestionBanks.value = false
+  }
+}
+
+// 数据源选择变更
+function handleDataSourceChange() {
+  if (selectedDataSource.value) {
+    formData.value.providerName = selectedDataSource.value.type
+  }
+}
+
+// 题库选择变更
+function handleQuestionBankChange() {
+  if (selectedQuestionBank.value) {
+    formData.value.questionBankId = selectedQuestionBank.value.id as any
+  } else {
+    formData.value.questionBankId = undefined
+  }
+}
+
+// 生成题目
+async function handleGenerate() {
+  if (!isFormValid.value) {
+    ElMessage.warning('请填写完整信息')
+    return
+  }
+
+  await aiGenerationStore.generateQuestions(formData.value)
+
+  if (aiGenerationStore.error) {
+    ElMessage.error(aiGenerationStore.error)
+  } else if (aiGenerationStore.isCompleted) {
+    ElMessage.success(`成功生成 ${aiGenerationStore.generatedQuestions.length} 道题目`)
+  }
+}
+
+// 取消生成
+function handleCancel() {
+  ElMessageBox.confirm('确定要取消生成吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '继续生成',
+    type: 'warning'
+  }).then(() => {
+    aiGenerationStore.cancelGeneration()
+    ElMessage.info('已取消生成')
+  }).catch(() => {
+    // 用户点击取消
+  })
+}
+
+// 重置表单
+function handleReset() {
+  aiGenerationStore.reset()
+  formData.value = {
+    subject: '',
+    count: 10,
+    difficulty: 'medium',
+    questionTypes: ['single'],
+    language: 'zh-CN',
+    customPrompt: '',
+    questionBankId: undefined,
+    providerName: selectedDataSource.value?.type
+  }
+}
+
+// 复制题目文本
+function copyQuestionText(question: any) {
+  const text = `【${question.questionType}】${question.questionText}\n` +
+    (question.options && question.options.length > 0 ? question.options.map((opt: string, idx: number) =>
+      `${String.fromCharCode(65 + idx)}. ${opt}`).join('\n') + '\n' : '') +
+    `答案: ${question.correctAnswer}\n` +
+    (question.explanation ? `解析: ${question.explanation}` : '')
+
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success('已复制到剪贴板')
+  }).catch(() => {
+    ElMessage.error('复制失败')
+  })
+}
+
+// 返回
+function goBack() {
+  router.back()
+}
+
+// 初始化
+loadDataSources()
+loadQuestionBanks()
+
+// 清理轮询定时器
+onUnmounted(() => {
+  aiGenerationStore.stopProgressPolling()
+})
+
+// 辅助函数
+function progressStatusType(status: string) {
+  const typeMap: Record<string, any> = {
+    pending: 'info',
+    processing: 'warning',
+    completed: 'success',
+    partial_success: 'warning'
+  }
+  return typeMap[status] || 'danger'
+}
+
+function progressStatus(status: string) {
+  return status === 'completed' ? 'success' : status === 'failed' ? 'exception' : undefined
+}
+
+function taskStatusText(status: string) {
+  const textMap: Record<string, string> = {
+    pending: '等待中',
+    processing: '生成中',
+    completed: '已完成',
+    failed: '失败',
+    partial_success: '部分成功'
+  }
+  return textMap[status] || status
+}
+
+function getDifficultyType(difficulty: string) {
+  const typeMap: Record<string, any> = {
+    easy: 'success',
+    medium: 'warning',
+    hard: 'danger'
+  }
+  return typeMap[difficulty] || 'info'
+}
+
+function getDifficultyText(difficulty: string) {
+  const textMap: Record<string, string> = {
+    easy: '简单',
+    medium: '中等',
+    hard: '困难'
+  }
+  return textMap[difficulty] || difficulty
+}
+
+function getQuestionTypeText(type: string) {
+  const textMap: Record<string, string> = {
+    single: '单选题',
+    multiple: '多选题',
+    boolean: '判断题',
+    fill: '填空题',
+    essay: '简答题'
+  }
+  return textMap[type] || type
+}
+</script>
+
 <template>
-  <div class="placeholder-view">
-    <el-result icon="info" title="生成题目页面" sub-title="功能开发中...">
-      <template #extra>
-        <el-button type="primary" @click="$router.back">返回</el-button>
-      </template>
-    </el-result>
+  <div class="generate-container">
+    <!-- 顶部导航 -->
+    <header class="generate-header">
+      <div class="header-left">
+        <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
+        <h1 class="page-title">
+          <el-icon><MagicStick /></el-icon>
+          AI 生成题目
+        </h1>
+      </div>
+    </header>
+
+    <div class="generate-content">
+      <!-- 左侧：生成表单 -->
+      <div class="form-section">
+        <el-card shadow="never">
+          <template #header>
+            <span class="card-title">生成配置</span>
+          </template>
+
+          <el-form :model="formData" label-width="100px" label-position="left">
+            <!-- 主题 -->
+            <el-form-item label="生成主题" required>
+              <el-input
+                v-model="formData.subject"
+                placeholder="例如：Vue 3 Composition API"
+                :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
+                clearable
+              />
+            </el-form-item>
+
+            <!-- 数量和难度 -->
+            <el-form-item label="题目数量" required>
+              <el-input-number
+                v-model="formData.count"
+                :min="1"
+                :max="100"
+                :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
+              />
+              <span class="form-hint">
+                {{ willUseAsync ? '> 20题将使用异步生成' : '≤ 20题使用同步生成' }}
+              </span>
+            </el-form-item>
+
+            <el-form-item label="难度等级">
+              <el-select
+                v-model="formData.difficulty"
+                :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
+              >
+                <el-option
+                  v-for="item in difficultyOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+
+            <!-- 题型 -->
+            <el-form-item label="题型" required>
+              <el-checkbox-group
+                v-model="formData.questionTypes"
+                :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
+              >
+                <el-checkbox
+                  v-for="type in questionTypeOptions"
+                  :key="type.value"
+                  :label="type.value"
+                >
+                  {{ type.label }}
+                </el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+
+            <!-- 数据源选择 -->
+            <el-form-item label="AI 数据源" required>
+              <el-select
+                v-model="selectedDataSource"
+                :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
+                placeholder="选择数据源"
+                @change="handleDataSourceChange"
+                value-key="id"
+              >
+                <el-option
+                  v-for="ds in dataSources"
+                  :key="ds.id"
+                  :label="ds.name"
+                  :value="ds"
+                >
+                  <span>{{ ds.name }}</span>
+                  <el-tag v-if="ds.isDefault" size="small" type="success" style="margin-left: 8px">
+                    默认
+                  </el-tag>
+                </el-option>
+              </el-select>
+              <div v-if="dataSources.length === 0" class="form-hint error">
+                暂无数据源，请先
+                <router-link to="/datasource">配置数据源</router-link>
+              </div>
+            </el-form-item>
+
+            <!-- 题库选择（可选） -->
+            <el-form-item label="添加到题库">
+              <el-select
+                v-model="selectedQuestionBank"
+                :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
+                placeholder="可选：选择目标题库"
+                clearable
+                filterable
+                @change="handleQuestionBankChange"
+                value-key="id"
+                :loading="loadingQuestionBanks"
+              >
+                <el-option
+                  v-for="qb in questionBanks"
+                  :key="qb.id"
+                  :label="qb.name"
+                  :value="qb"
+                >
+                  <span>{{ qb.name }}</span>
+                  <span style="color: #8492a6; font-size: 12px; margin-left: 8px">
+                    {{ qb.questionCount }} 题
+                  </span>
+                </el-option>
+              </el-select>
+            </el-form-item>
+
+            <!-- 高级选项 -->
+            <el-form-item>
+              <el-button
+                type="primary"
+                text
+                @click="showAdvancedOptions = !showAdvancedOptions"
+              >
+                {{ showAdvancedOptions ? '收起' : '展开' }}高级选项
+              </el-button>
+            </el-form-item>
+
+            <template v-if="showAdvancedOptions">
+              <el-form-item label="语言">
+                <el-select
+                  v-model="formData.language"
+                  :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
+                >
+                  <el-option
+                    v-for="lang in languageOptions"
+                    :key="lang.value"
+                    :label="lang.label"
+                    :value="lang.value"
+                  />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="自定义提示">
+                <el-input
+                  v-model="formData.customPrompt"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="可选：自定义生成要求"
+                  :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
+                />
+              </el-form-item>
+            </template>
+          </el-form>
+
+          <!-- 操作按钮 -->
+          <div class="action-buttons">
+            <el-button
+              v-if="!aiGenerationStore.generating"
+              type="primary"
+              :icon="MagicStick"
+              :disabled="!canGenerate"
+              :loading="aiGenerationStore.loading"
+              @click="handleGenerate"
+            >
+              {{ willUseAsync ? '开始生成（异步）' : '立即生成' }}
+            </el-button>
+            <el-button
+              v-else
+              type="danger"
+              :icon="Delete"
+              @click="handleCancel"
+            >
+              取消生成
+            </el-button>
+            <el-button
+              :disabled="aiGenerationStore.generating"
+              @click="handleReset"
+            >
+              重置
+            </el-button>
+          </div>
+        </el-card>
+
+        <!-- 生成进度卡片 -->
+        <el-card
+          v-if="aiGenerationStore.generating || aiGenerationStore.progress"
+          shadow="never"
+          class="progress-card"
+        >
+          <template #header>
+            <span class="card-title">生成进度</span>
+          </template>
+
+          <div class="progress-content">
+            <div class="progress-info">
+              <span class="progress-label">
+                {{ aiGenerationStore.isAsyncTask ? '异步任务' : '同步任务' }}
+              </span>
+              <el-tag :type="progressStatusType(aiGenerationStore.taskStatus)">
+                {{ taskStatusText(aiGenerationStore.taskStatus) }}
+              </el-tag>
+            </div>
+
+            <el-progress
+              :percentage="aiGenerationStore.progressPercentage"
+              :status="progressStatus(aiGenerationStore.taskStatus)"
+              :stroke-width="8"
+            />
+
+            <div v-if="aiGenerationStore.progress" class="progress-details">
+              <span>{{ aiGenerationStore.progress.generatedCount }} / {{ aiGenerationStore.progress.totalCount }} 题</span>
+            </div>
+
+            <div v-if="aiGenerationStore.currentTaskId" class="task-id">
+              <span class="label">任务ID:</span>
+              <code>{{ aiGenerationStore.currentTaskId }}</code>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 右侧：生成结果 -->
+      <div class="result-section">
+        <el-card shadow="never">
+          <template #header>
+            <div class="result-header">
+              <span class="card-title">
+                生成结果
+                <span v-if="aiGenerationStore.generatedQuestions.length > 0" class="count">
+                  ({{ aiGenerationStore.generatedQuestions.length }} 题)
+                </span>
+              </span>
+            </div>
+          </template>
+
+          <!-- 空状态 -->
+          <div v-if="aiGenerationStore.generatedQuestions.length === 0" class="empty-state">
+            <el-empty description="暂无生成结果">
+              <template #image>
+                <el-icon :size="60" color="#dcdfe6"><MagicStick /></el-icon>
+              </template>
+            </el-empty>
+          </div>
+
+          <!-- 题目列表 -->
+          <div v-else class="questions-list">
+            <div
+              v-for="(question, index) in aiGenerationStore.generatedQuestions"
+              :key="question.id"
+              class="question-item"
+            >
+              <div class="question-header">
+                <span class="question-number">第 {{ index + 1 }} 题</span>
+                <div class="question-tags">
+                  <el-tag size="small" :type="getDifficultyType(question.difficulty)">
+                    {{ getDifficultyText(question.difficulty) }}
+                  </el-tag>
+                  <el-tag size="small" type="info">
+                    {{ getQuestionTypeText(question.questionType) }}
+                  </el-tag>
+                </div>
+              </div>
+
+              <div class="question-content">{{ question.questionText }}</div>
+
+              <div v-if="question.options && question.options.length > 0" class="question-options">
+                <div
+                  v-for="(option, optIndex) in question.options"
+                  :key="optIndex"
+                  class="option-item"
+                >
+                  {{ String.fromCharCode(65 + optIndex) }}. {{ option }}
+                </div>
+              </div>
+
+              <div class="question-meta">
+                <div class="answer-section">
+                  <span class="label">正确答案:</span>
+                  <span class="answer">{{ question.correctAnswer }}</span>
+                </div>
+
+                <div v-if="question.explanation" class="explanation-section">
+                  <span class="label">解析:</span>
+                  <span class="explanation">{{ question.explanation }}</span>
+                </div>
+              </div>
+
+              <div class="question-actions">
+                <el-button
+                  size="small"
+                  :icon="DocumentCopy"
+                  @click="copyQuestionText(question)"
+                >
+                  复制
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.placeholder-view {
-  background-color: #ffffff;
-  border-radius: 8px;
-  padding: 20px;
+.generate-container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+  padding: 1.5rem;
+}
+
+.dark .generate-container {
+  background: linear-gradient(to bottom right, #030712, #111827);
+}
+
+.generate-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dark .page-title {
+  color: #f9fafb;
+}
+
+.generate-content {
+  display: grid;
+  grid-template-columns: 450px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 1.5rem;
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dark .card-title {
+  color: #f9fafb;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-left: 0.5rem;
+}
+
+.form-hint.error {
+  color: #ef4444;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.progress-card {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+}
+
+.dark .progress-card {
+  background: #1e3a8a33;
+  border-color: #1e40af;
+}
+
+.progress-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progress-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.dark .progress-label {
+  color: #d1d5db;
+}
+
+.progress-details {
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.dark .progress-details {
+  color: #9ca3af;
+}
+
+.task-id {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  padding: 0.5rem;
+  background: #ffffff;
+  border-radius: 0.375rem;
+}
+
+.task-id .label {
+  color: #6b7280;
+}
+
+.dark .task-id {
+  background: #1f2937;
+}
+
+.task-id code {
+  font-family: monospace;
+  color: #3b82f6;
+  font-size: 0.75rem;
+}
+
+.result-section {
+  min-height: 500px;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.count {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.dark .count {
+  color: #9ca3af;
+}
+
+.empty-state {
+  padding: 3rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.question-item {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #ffffff;
+}
+
+.dark .question-item {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.question-number {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.question-tags {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.question-content {
+  font-size: 0.9375rem;
+  color: #374151;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+
+.dark .question-content {
+  color: #d1d5db;
+}
+
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1rem;
+}
+
+.option-item {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.dark .option-item {
+  color: #9ca3af;
+}
+
+.question-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 0.375rem;
+  margin-bottom: 0.75rem;
+}
+
+.dark .question-meta {
+  background: #111827;
+}
+
+.answer-section,
+.explanation-section {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.answer-section .label {
+  font-weight: 600;
+  color: #059669;
+  white-space: nowrap;
+}
+
+.answer-section .answer {
+  color: #374151;
+  font-weight: 500;
+}
+
+.dark .answer-section .answer {
+  color: #d1d5db;
+}
+
+.explanation-section .label {
+  font-weight: 600;
+  color: #2563eb;
+  white-space: nowrap;
+}
+
+.explanation-section .explanation {
+  color: #374151;
+}
+
+.dark .explanation-section .explanation {
+  color: #d1d5db;
+}
+
+.question-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
 </style>

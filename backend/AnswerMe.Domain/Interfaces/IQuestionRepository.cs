@@ -10,6 +10,17 @@ public interface IQuestionRepository
     Task<Question?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<List<Question>> GetByQuestionBankIdAsync(int questionBankId, CancellationToken cancellationToken = default);
     Task<int> CountByQuestionBankIdAsync(int questionBankId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取题目列表(游标分页)
+    /// </summary>
+    Task<List<Question>> GetPagedAsync(int questionBankId, int pageSize, int? lastId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 搜索题目
+    /// </summary>
+    Task<List<Question>> SearchAsync(int questionBankId, string searchTerm, CancellationToken cancellationToken = default);
+
     Task<Question> AddAsync(Question question, CancellationToken cancellationToken = default);
     Task<Question> UpdateAsync(Question question, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);

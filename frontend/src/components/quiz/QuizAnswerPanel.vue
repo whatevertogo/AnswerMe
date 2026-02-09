@@ -21,9 +21,11 @@ const handleSingleSelect = (option: string) => {
   emit('update:answer', option)
 }
 
-const handleMultipleSelect = (option: string, checked: boolean) => {
+const handleMultipleSelect = (option: string, checked: boolean | string[]) => {
   const currentAnswers = (props.answer as string[]) || []
-  if (checked) {
+  // el-checkbox 可能传递 boolean 或 string[]
+  const isChecked = typeof checked === 'boolean' ? checked : checked.includes(option)
+  if (isChecked) {
     emit('update:answer', [...currentAnswers, option])
   } else {
     emit('update:answer', currentAnswers.filter(a => a !== option))
@@ -70,7 +72,7 @@ const getOptionLabel = (index: number) => {
       >
         <el-checkbox
           :model-value="(answer as string[])?.includes(option)"
-          @update:model-value="(val) => handleMultipleSelect(option, val as boolean)"
+          @update:model-value="(val: any) => handleMultipleSelect(option, val as boolean)"
           :disabled="disabled"
         >
           <span class="option-label">{{ getOptionLabel(index) }}.</span>

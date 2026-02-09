@@ -1,54 +1,9 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+/**
+ * User Store - 用户状态管理
+ * 
+ * 此文件提供对用户状态的访问。
+ * 推荐使用 @/stores/auth 获取完整的认证功能。
+ */
 
-export interface UserInfo {
-  id: number
-  username: string
-  email: string
-  createdAt?: string
-}
-
-export const useUserStore = defineStore('user', () => {
-  // State
-  const token = ref<string>('')
-  const userInfo = ref<UserInfo | null>(null)
-
-  // Getters
-  const isLoggedIn = computed<boolean>(() => !!token.value && !!userInfo.value)
-
-  // Actions
-  function setToken(newToken: string) {
-    token.value = newToken
-  }
-
-  function setUserInfo(info: UserInfo) {
-    userInfo.value = info
-  }
-
-  function setAuth(newToken: string, info: UserInfo) {
-    token.value = newToken
-    userInfo.value = info
-  }
-
-  function clearAuth() {
-    token.value = ''
-    userInfo.value = null
-  }
-
-  function logout() {
-    clearAuth()
-  }
-
-  return {
-    token,
-    userInfo,
-    isLoggedIn,
-    setToken,
-    setUserInfo,
-    setAuth,
-    clearAuth,
-    logout
-  }
-}, {
-  persist: true
-})
+// 重新导出 auth store 以支持 @/stores/user 引用
+export { useAuthStore, type UserInfo } from './auth'

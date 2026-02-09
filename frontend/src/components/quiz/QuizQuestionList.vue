@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle, Flag } from '@element-plus/icons-vue'
+import { CircleCheck, Flag } from '@element-plus/icons-vue'
 
 interface Question {
   id: number
@@ -30,6 +30,8 @@ const getDifficultyColor = (difficulty: string) => {
 
 const getStatusClass = (index: number) => {
   const question = props.questions[index]
+  if (!question) return ''
+
   const hasAnswer = props.answers[question.id] !== undefined
   const isMarked = props.markedQuestions.has(question.id)
 
@@ -70,7 +72,7 @@ const getStatusClass = (index: number) => {
 
           <!-- 已答标记 -->
           <el-icon v-if="answers[question.id] !== undefined" class="status-icon answered">
-            <CheckCircle />
+            <CircleCheck />
           </el-icon>
 
           <!-- 标记标记 -->

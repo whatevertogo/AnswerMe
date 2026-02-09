@@ -20,6 +20,7 @@ public class QuestionRepository : IQuestionRepository
     public async Task<Question?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         return await _context.Questions
+            .Include(q => q.QuestionBank)
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken);
     }
 
@@ -35,6 +36,34 @@ public class QuestionRepository : IQuestionRepository
     {
         return await _context.Questions
             .CountAsync(q => q.QuestionBankId == questionBankId, cancellationToken);
+    }
+
+    public async Task<List<Question>> GetPagedAsync(int questionBankId, int pageSize, int? lastId, CancellationToken cancellationToken = default)
+    {
+        var query = _context.Questions
+            .Where(q => q.QuestionBankId == questionBankId)
+            .OrderByDescending(q => q.Id)
+            .Take(pageSize + 1); // 多取一个判断是否有更多
+
+        if (lastId.HasValue)
+        {
+            query = query.Where(q => q.Id < lastId.Value);
+        }
+
+        var results = await query.ToListAsync(cancellationToken);
+        return results.Take(pageSize).ToList();
+    }
+
+    public async Task<List<Question>> SearchAsync(int questionBankId, string searchTerm, CancellationToken cancellationToken = default)
+    {
+        return await _context.Questions
+            .Where(q =>
+                q.QuestionBankId == questionBankId &&
+                (EF.Functions.Like(q.QuestionText, $"%{searchTerm}%") ||
+                 EF.Functions.Like(q.CorrectAnswer, $"%{searchTerm}%") ||
+                 EF.Functions.Like(q.Explanation ?? "", $"%{searchTerm}%")))
+            .OrderBy(q => q.OrderIndex)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<Question> AddAsync(Question question, CancellationToken cancellationToken = default)

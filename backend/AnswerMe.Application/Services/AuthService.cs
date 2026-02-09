@@ -5,6 +5,7 @@ using AnswerMe.Application.DTOs;
 using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Entities;
 using AnswerMe.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -17,11 +18,19 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly JwtSettings _jwtSettings;
+    private readonly LocalAuthSettings _localAuthSettings;
+    private readonly ILogger<AuthService> _logger;
 
-    public AuthService(IUserRepository userRepository, IOptions<JwtSettings> jwtSettings)
+    public AuthService(
+        IUserRepository userRepository,
+        IOptions<JwtSettings> jwtSettings,
+        IOptions<LocalAuthSettings> localAuthSettings,
+        ILogger<AuthService> logger)
     {
         _userRepository = userRepository;
         _jwtSettings = jwtSettings.Value;
+        _localAuthSettings = localAuthSettings.Value;
+        _logger = logger;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto, CancellationToken cancellationToken = default)
@@ -89,6 +98,48 @@ public class AuthService : IAuthService
     {
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
         return user == null ? null : MapToUserDto(user);
+    }
+
+    public async Task<AuthResponseDto> LocalLoginAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_localAuthSettings.EnableLocalLogin)
+        {
+            throw new InvalidOperationException("本地登录模式未启用");
+        }
+
+        // 尝试获取或创建本地用户
+        User? localUser = await _userRepository.GetByEmailAsync(_localAuthSettings.DefaultEmail, cancellationToken);
+
+        if (localUser == null)
+        {
+            _logger.LogInformation("创建默认本地用户: {Username}", _localAuthSettings.DefaultUsername);
+
+            // 创建本地用户
+            localUser = new User
+            {
+                Username = _localAuthSettings.DefaultUsername,
+                Email = _localAuthSettings.DefaultEmail,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(_localAuthSettings.DefaultPassword),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _userRepository.AddAsync(localUser, cancellationToken);
+            _logger.LogInformation("本地用户创建成功: UserId={UserId}", localUser.Id);
+        }
+        else
+        {
+            _logger.LogInformation("本地用户登录: UserId={UserId}, Username={Username}", localUser.Id, localUser.Username);
+        }
+
+        // 生成JWT Token
+        var token = GenerateJwtToken(localUser);
+
+        return new AuthResponseDto
+        {
+            Token = token,
+            User = MapToUserDto(localUser)
+        };
     }
 
     /// <summary>

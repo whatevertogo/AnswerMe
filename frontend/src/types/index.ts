@@ -85,6 +85,37 @@ export interface Question {
   tags: string[]
 }
 
+/** 题目查询参数 */
+export interface QuestionQueryParams extends PaginationParams {
+  questionBankId?: string
+  type?: string
+  difficulty?: string
+  search?: string
+}
+
+/** 创建题目DTO */
+export interface CreateQuestionDto {
+  questionBankId: string
+  content: string
+  type: string
+  options?: string[]
+  correctAnswer: string
+  explanation?: string
+  difficulty: string
+  tags?: string[]
+}
+
+/** 更新题目DTO */
+export interface UpdateQuestionDto {
+  content?: string
+  type?: string
+  options?: string[]
+  correctAnswer?: string
+  explanation?: string
+  difficulty?: string
+  tags?: string[]
+}
+
 // 题库相关类型
 export interface QuestionBank {
   id: string

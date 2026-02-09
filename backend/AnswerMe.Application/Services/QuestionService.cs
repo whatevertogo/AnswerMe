@@ -1,0 +1,257 @@
+using AnswerMe.Application.DTOs;
+using AnswerMe.Application.Interfaces;
+using AnswerMe.Domain.Interfaces;
+
+namespace AnswerMe.Application.Services;
+
+/// <summary>
+/// 题目服务实现
+/// </summary>
+public class QuestionService : IQuestionService
+{
+    private readonly IQuestionRepository _questionRepository;
+    private readonly IQuestionBankRepository _questionBankRepository;
+
+    public QuestionService(
+        IQuestionRepository questionRepository,
+        IQuestionBankRepository questionBankRepository)
+    {
+        _questionRepository = questionRepository;
+        _questionBankRepository = questionBankRepository;
+    }
+
+    public async Task<QuestionDto> CreateAsync(int userId, CreateQuestionDto dto, CancellationToken cancellationToken = default)
+    {
+        // 验证题库是否存在且属于当前用户
+        var questionBank = await _questionBankRepository.GetByIdAsync(dto.QuestionBankId, cancellationToken);
+        if (questionBank == null || questionBank.UserId != userId)
+        {
+            throw new InvalidOperationException("题库不存在或无权访问");
+        }
+
+        var question = new Domain.Entities.Question
+        {
+            QuestionBankId = dto.QuestionBankId,
+            QuestionText = dto.QuestionText,
+            QuestionType = dto.QuestionType,
+            Options = dto.Options,
+            CorrectAnswer = dto.CorrectAnswer,
+            Explanation = dto.Explanation,
+            Difficulty = dto.Difficulty,
+            OrderIndex = dto.OrderIndex,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await _questionRepository.AddAsync(question, cancellationToken);
+        await _questionRepository.SaveChangesAsync(cancellationToken);
+
+        return await MapToDtoAsync(question, cancellationToken);
+    }
+
+    public async Task<QuestionListDto> GetListAsync(int userId, QuestionListQueryDto query, CancellationToken cancellationToken = default)
+    {
+        // 验证题库是否存在且属于当前用户
+        var questionBank = await _questionBankRepository.GetByIdAsync(query.QuestionBankId, cancellationToken);
+        if (questionBank == null || questionBank.UserId != userId)
+        {
+            throw new InvalidOperationException("题库不存在或无权访问");
+        }
+
+        // 如果有搜索关键词,使用搜索
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var questions = await _questionRepository.SearchAsync(query.QuestionBankId, query.Search, cancellationToken);
+            var result = questions
+                .Where(q =>
+                    (string.IsNullOrEmpty(query.Difficulty) || q.Difficulty == query.Difficulty) &&
+                    (string.IsNullOrEmpty(query.QuestionType) || q.QuestionType == query.QuestionType))
+                .ToList();
+
+            var dtos = new List<QuestionDto>();
+            foreach (var q in result)
+            {
+                dtos.Add(await MapToDtoAsync(q, cancellationToken));
+            }
+
+            return new QuestionListDto
+            {
+                Data = dtos,
+                HasMore = false,
+                NextCursor = null,
+                TotalCount = dtos.Count
+            };
+        }
+
+        var questionsPaged = await _questionRepository.GetPagedAsync(
+            query.QuestionBankId,
+            query.PageSize,
+            query.LastId,
+            cancellationToken);
+
+        // 根据难度和类型过滤
+        var filteredQuestions = questionsPaged
+            .Where(q =>
+                (string.IsNullOrEmpty(query.Difficulty) || q.Difficulty == query.Difficulty) &&
+                (string.IsNullOrEmpty(query.QuestionType) || q.QuestionType == query.QuestionType))
+            .ToList();
+
+        var resultList = new List<QuestionDto>();
+        foreach (var q in filteredQuestions)
+        {
+            resultList.Add(await MapToDtoAsync(q, cancellationToken));
+        }
+
+        // 获取总数
+        var totalCount = await _questionRepository.CountByQuestionBankIdAsync(query.QuestionBankId, cancellationToken);
+
+        // 判断是否有更多数据
+        var hasMore = filteredQuestions.Count == query.PageSize;
+        int? nextCursor = hasMore ? filteredQuestions.LastOrDefault()?.Id : (int?)null;
+
+        return new QuestionListDto
+        {
+            Data = resultList,
+            HasMore = hasMore,
+            NextCursor = nextCursor,
+            TotalCount = totalCount
+        };
+    }
+
+    public async Task<QuestionDto?> GetByIdAsync(int id, int userId, CancellationToken cancellationToken = default)
+    {
+        var question = await _questionRepository.GetByIdAsync(id, cancellationToken);
+        if (question == null)
+        {
+            return null;
+        }
+
+        // 验证题库是否属于当前用户
+        var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
+        if (questionBank == null || questionBank.UserId != userId)
+        {
+            return null;
+        }
+
+        return await MapToDtoAsync(question, cancellationToken);
+    }
+
+    public async Task<QuestionDto?> UpdateAsync(int id, int userId, UpdateQuestionDto dto, CancellationToken cancellationToken = default)
+    {
+        var question = await _questionRepository.GetByIdAsync(id, cancellationToken);
+        if (question == null)
+        {
+            return null;
+        }
+
+        // 验证题库是否属于当前用户
+        var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
+        if (questionBank == null || questionBank.UserId != userId)
+        {
+            return null;
+        }
+
+        // 更新字段
+        if (dto.QuestionText != null)
+        {
+            question.QuestionText = dto.QuestionText;
+        }
+
+        if (dto.QuestionType != null)
+        {
+            question.QuestionType = dto.QuestionType;
+        }
+
+        if (dto.Options != null)
+        {
+            question.Options = dto.Options;
+        }
+
+        if (dto.CorrectAnswer != null)
+        {
+            question.CorrectAnswer = dto.CorrectAnswer;
+        }
+
+        if (dto.Explanation != null)
+        {
+            question.Explanation = dto.Explanation;
+        }
+
+        if (dto.Difficulty != null)
+        {
+            question.Difficulty = dto.Difficulty;
+        }
+
+        if (dto.OrderIndex.HasValue)
+        {
+            question.OrderIndex = dto.OrderIndex.Value;
+        }
+
+        question.UpdatedAt = DateTime.UtcNow;
+
+        await _questionRepository.SaveChangesAsync(cancellationToken);
+
+        return await MapToDtoAsync(question, cancellationToken);
+    }
+
+    public async Task<bool> DeleteAsync(int id, int userId, CancellationToken cancellationToken = default)
+    {
+        var question = await _questionRepository.GetByIdAsync(id, cancellationToken);
+        if (question == null)
+        {
+            return false;
+        }
+
+        // 验证题库是否属于当前用户
+        var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
+        if (questionBank == null || questionBank.UserId != userId)
+        {
+            return false;
+        }
+
+        await _questionRepository.DeleteAsync(id, cancellationToken);
+        return true;
+    }
+
+    public async Task<List<QuestionDto>> SearchAsync(int questionBankId, int userId, string searchTerm, CancellationToken cancellationToken = default)
+    {
+        // 验证题库是否存在且属于当前用户
+        var questionBank = await _questionBankRepository.GetByIdAsync(questionBankId, cancellationToken);
+        if (questionBank == null || questionBank.UserId != userId)
+        {
+            throw new InvalidOperationException("题库不存在或无权访问");
+        }
+
+        var questions = await _questionRepository.SearchAsync(questionBankId, searchTerm, cancellationToken);
+        var result = new List<QuestionDto>();
+
+        foreach (var q in questions)
+        {
+            result.Add(await MapToDtoAsync(q, cancellationToken));
+        }
+
+        return result;
+    }
+
+    private async Task<QuestionDto> MapToDtoAsync(Domain.Entities.Question question, CancellationToken cancellationToken)
+    {
+        // 获取题库信息
+        var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
+
+        return new QuestionDto
+        {
+            Id = question.Id,
+            QuestionBankId = question.QuestionBankId,
+            QuestionBankName = questionBank?.Name ?? string.Empty,
+            QuestionText = question.QuestionText,
+            QuestionType = question.QuestionType,
+            Options = question.Options,
+            CorrectAnswer = question.CorrectAnswer,
+            Explanation = question.Explanation,
+            Difficulty = question.Difficulty,
+            OrderIndex = question.OrderIndex,
+            CreatedAt = question.CreatedAt,
+            UpdatedAt = question.UpdatedAt
+        };
+    }
+}

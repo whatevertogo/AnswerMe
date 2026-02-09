@@ -92,6 +92,10 @@ var jwtSettings = new JwtSettings(
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 builder.Services.AddSingleton(jwtSettings);
 
+// 配置本地模式认证
+builder.Services.Configure<LocalAuthSettings>(builder.Configuration.GetSection(LocalAuthSettings.SectionName));
+Log.Information("本地登录模式: {Enabled}", builder.Configuration.GetValue<bool>("LocalAuth:EnableLocalLogin"));
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -180,6 +184,10 @@ builder.Services.AddScoped<IDataSourceService, DataSourceService>();
 builder.Services.AddScoped<IQuestionBankRepository, QuestionBankRepository>();
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped<IQuestionBankService, QuestionBankService>();
+builder.Services.AddScoped<IQuestionService, QuestionService>();
+builder.Services.AddScoped<IAttemptRepository, AttemptRepository>();
+builder.Services.AddScoped<IAttemptDetailRepository, AttemptDetailRepository>();
+builder.Services.AddScoped<IAttemptService, AttemptService>();
 builder.Services.AddScoped<IAIGenerationService, AIGenerationService>();
 
 // 注册AI Providers
