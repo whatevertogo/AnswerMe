@@ -126,13 +126,56 @@ docker-compose logs -f
 
 **开发进度**:
 - [x] 项目架构设计
-- [ ] 核心功能开发
-- [ ] Docker部署配置
-- [ ] 文档编写
+- [x] 核心功能开发
+- [x] Docker部署配置
+- [x] 基础文档编写
 - [ ] 测试覆盖
 - [ ] 首次发布
 
 查看 [任务列表](openspec/changes/ai-questionbank-mvp/tasks.md) 了解详细开发计划。
+
+## ⚠️ 已知问题
+
+当前 v0.1.0-alpha 版本存在以下已知问题:
+
+### 功能限制
+
+- **数据导入功能**: 暂未实现,仅支持导出。如需迁移数据,可直接备份SQLite数据库文件。
+- **异步任务持久化**: AI异步生成任务当前存储在内存中,应用重启会丢失任务状态。生产环境建议使用Redis。
+
+### 安全建议
+
+- **JWT Token存储**: 当前使用localStorage存储Token,存在XSS理论风险。建议在生产环境使用httpOnly cookie。
+- **本地登录端点**: `/api/auth/local-login` 端点仅用于开发测试,生产环境应在 `.env` 中设置 `ENABLE_LOCAL_AUTH=false` 禁用。
+
+### 数据备份
+
+**手动备份SQLite数据库** (开发环境):
+```bash
+# 备份当前数据库文件
+cp backend/answerme_dev.db backups/answerme_$(date +%Y%m%d_%H%M%S).db
+```
+
+**手动备份PostgreSQL数据库** (生产环境):
+```bash
+# 使用Docker卷备份
+docker-compose exec db pg_dump -U answerme answerme > backup_$(date +%Y%m%d).sql
+
+# 或直接备份整个数据卷
+docker run --rm \
+  -v answerme_db_data:/data \
+  -v $(pwd):/backup \
+  alpine tar czf /backup/answerme_db_$(date +%Y%m%d).tar.gz -C /data .
+```
+
+**恢复备份**:
+```bash
+# SQLite恢复
+cp backups/answerme_20250209.db backend/answerme_dev.db
+
+# PostgreSQL恢复
+docker-compose exec -T db psql -U answerme answerme < backup_20250209.sql
+```
 
 ## 🤝 贡献
 

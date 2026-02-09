@@ -60,6 +60,15 @@ npm install          # 安装依赖
 npm run dev          # 开发服务器 http://localhost:5173
 npm run build        # 生产构建
 npm run preview      # 预览生产构建
+
+# 测试
+npm run test               # 运行测试
+npm run test:ui            # 测试 UI 界面
+npm run test:coverage      # 测试覆盖率报告
+
+# 代码质量
+npm run lint               # ESLint 检查和自动修复
+npm run format             # Prettier 格式化
 ```
 
 ### Docker
@@ -201,6 +210,29 @@ private int GetCurrentUserId()
 }
 ```
 
+### 本地认证模式
+
+**适用场景:** 个人部署，无需注册即可使用
+
+**配置方式:** 在 `.env` 文件中设置:
+```bash
+LOCAL_AUTH__ENABLE_LOCAL_LOGIN=true
+LOCAL_AUTH__DEFAULT_USERNAME=LocalUser
+LOCAL_AUTH__DEFAULT_EMAIL=local@answerme.local
+LOCAL_AUTH__DEFAULT_PASSWORD=local123
+```
+
+启用后，可直接使用默认用户名和密码登录应用。
+```csharp
+private int GetCurrentUserId()
+{
+    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (!int.TryParse(userIdClaim, out var userId))
+        throw new UnauthorizedAccessException("无效的用户身份");
+    return userId;
+}
+```
+
 ## 数据库
 
 **SQLite**（默认）: API 目录下的 `answerme_dev.db` 文件。开发环境启动时自动应用迁移。
@@ -218,7 +250,15 @@ private int GetCurrentUserId()
 
 **Vue 3 Composition API** + TypeScript。
 
-**Pinia stores:** `src/stores/`（auth、questionBank、dataSource 等）
+**Pinia stores:** `src/stores/`
+- **auth** - 认证状态
+- **questionBank** - 题库管理
+- **question** - 题目管理
+- **dataSource** - AI 数据源配置
+- **aiGeneration** - AI 生成状态
+- **aiConfig** - AI 配置
+- **quiz** - 答题会话
+- **app** - 应用全局状态
 
 **Router:** `src/router/` - 路由守卫检查认证状态
 
@@ -283,11 +323,41 @@ _logger.LogError(ex, "操作失败: {Data}", data);
 - `JWT_SECRET` - 至少 32 个字符
 - `ENCRYPTION_KEY` - 生产环境用于 API 密钥加密
 
+### 后端环境变量
+
 **可选:**
 - `DB_TYPE` - "Sqlite"（默认）或 "PostgreSQL"
 - `ConnectionStrings__DefaultConnection` - 数据库连接字符串
 - `JWT__Issuer`、`JWT__Audience`、`JWT__ExpiryDays` - JWT 设置
 - `ALLOWED_ORIGINS` - CORS 源（默认: "http://localhost:3000,http://localhost:5173"）
+
+### 前端环境变量
+
+前端环境变量配置在 `frontend/.env`:
+
+**必需:**
+- `VITE_API_BASE_URL` - 后端 API 地址（默认: `http://localhost:5000`）
+
+**可选:**
+- `VITE_API_TIMEOUT` - API 请求超时时间（毫秒，默认: 10000）
+- `VITE_APP_TITLE` - 应用标题
+- `VITE_ENABLE_MOCK` - 启用模拟数据（默认: false）
+- `VITE_ENABLE_DEBUG` - 启用调试模式（默认: true）
+- `VITE_UPLOAD_MAX_SIZE` - 上传文件最大大小（字节，默认: 10485760）
+
+### 其他可选配置
+
+**限流配置:**
+- `RATE_LIMIT_ENABLED` - 启用 API 限流（默认: false）
+- `RATE_LIMIT_PER_MINUTE` - 每分钟请求限制（默认: 60）
+
+**备份配置:**
+- `BACKUP_ENABLED` - 启用自动备份（默认: false）
+- `BACKUP_RETENTION_DAYS` - 备份保留天数（默认: 7）
+- `BACKUP_CRON` - 备份 cron 表达式（默认: "0 2 * * *"）
+
+**日志配置:**
+- `LOG_LEVEL` - 日志级别（Debug, Information, Warning, Error，默认: Information）
 
 ## 部署
 
