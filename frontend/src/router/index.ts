@@ -82,8 +82,14 @@ const router = createRouter({
 })
 
 // 路由守卫 - 使用 authStore 进行认证检查
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
+
+  // 等待初始化完成（如果有 token）
+  if (!authStore.isInitialized) {
+    await authStore.initialize()
+  }
+
   const isLoggedIn = authStore.isAuthenticated
   const requiresAuth = to.meta.requiresAuth !== false
 
