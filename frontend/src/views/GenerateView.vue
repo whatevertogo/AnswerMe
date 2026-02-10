@@ -15,6 +15,7 @@ import {
   isFillBlankQuestionData,
   isShortAnswerQuestionData,
   DifficultyLabels,
+  DifficultyColors,
   getQuestionTypeLabel
 } from '@/types/question'
 import { formatQuestionForCopy } from '@/composables/useQuestionDisplay'
@@ -237,15 +238,6 @@ function taskStatusText(status: string) {
     partial_success: '部分成功'
   }
   return textMap[status] || status
-}
-
-function getDifficultyType(difficulty: string) {
-  const typeMap: Record<string, any> = {
-    easy: 'success',
-    medium: 'warning',
-    hard: 'danger'
-  }
-  return typeMap[difficulty] || 'info'
 }
 </script>
 
@@ -522,7 +514,7 @@ function getDifficultyType(difficulty: string) {
               <div class="question-header">
                 <span class="question-number">第 {{ index + 1 }} 题</span>
                 <div class="question-tags">
-                  <el-tag size="small" :type="getDifficultyType(question.difficulty)">
+                  <el-tag size="small" :type="DifficultyColors[question.difficulty as keyof typeof DifficultyColors] || 'info'">
                     {{ DifficultyLabels[question.difficulty as keyof typeof DifficultyLabels] || question.difficulty }}
                   </el-tag>
                   <el-tag size="small" type="info">

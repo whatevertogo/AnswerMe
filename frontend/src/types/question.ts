@@ -51,6 +51,15 @@ export const DifficultyLabels: Record<Difficulty, string> = {
 }
 
 /**
+ * 难度颜色类型映射（用于 Element Plus Tag）
+ */
+export const DifficultyColors: Record<Difficulty, 'success' | 'warning' | 'danger'> = {
+  easy: 'success',
+  medium: 'warning',
+  hard: 'danger'
+}
+
+/**
  * 题目数据基类
  *
  * 与后端 AnswerMe.Domain.Models.QuestionData 对应

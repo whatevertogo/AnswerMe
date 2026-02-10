@@ -185,24 +185,4 @@ public class OpenAIProvider : IAIProvider
   ]
 }}";
     }
-
-    private AIQuestionGenerateResponse ParseResponse(string content)
-    {
-        if (!AIResponseParser.TryParseQuestions(content, out var questions, out var error))
-        {
-            return new AIQuestionGenerateResponse
-            {
-                Success = false,
-                ErrorMessage = error ?? "AI响应解析失败",
-                ErrorCode = "PARSE_ERROR"
-            };
-        }
-
-        return new AIQuestionGenerateResponse
-        {
-            Success = true,
-            Questions = questions,
-            TokensUsed = content.Length
-        };
-    }
 }

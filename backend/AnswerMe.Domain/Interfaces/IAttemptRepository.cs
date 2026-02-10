@@ -27,4 +27,9 @@ public interface IAttemptRepository
     /// 获取用户正在进行的答题
     /// </summary>
     Task<Attempt?> GetActiveAttemptAsync(int userId, int questionBankId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 统计用户在指定日期范围内的答题次数
+    /// </summary>
+    Task<int> CountByUserIdAndDateRangeAsync(int userId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
 }

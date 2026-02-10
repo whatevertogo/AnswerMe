@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, markRaw } from 'vue'
+import { ref, markRaw, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Notebook,
@@ -7,39 +7,71 @@ import {
   TrendCharts,
   CollectionTag
 } from '@element-plus/icons-vue'
+import { getHomeStats, type HomeStatsResponse } from '@/api/stats'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
-const stats = ref([
+interface StatCard {
+  icon: any
+  title: string
+  value: string
+  color: string
+  path: string
+}
+
+const stats = ref<StatCard[]>([
   {
     icon: markRaw(Notebook),
     title: '题库总数',
-    value: '12',
+    value: '0',
     color: '#409eff',
     path: '/question-banks'
   },
   {
     icon: markRaw(CollectionTag),
     title: '题目总数',
-    value: '256',
+    value: '0',
     color: '#67c23a',
     path: '/question-banks'
   },
   {
     icon: markRaw(TrendCharts),
     title: '本月练习',
-    value: '45',
+    value: '0',
     color: '#e6a23c',
-    path: '#'
+    path: '/practice'
   },
   {
     icon: markRaw(Setting),
     title: 'AI配置',
-    value: '3',
+    value: '0',
     color: '#f56c6c',
     path: '/ai-config'
   }
 ])
+
+const isLoading = ref(true)
+
+async function loadStats() {
+  try {
+    isLoading.value = true
+    const data: HomeStatsResponse = await getHomeStats()
+    stats.value[0] && (stats.value[0].value = data.questionBanksCount.toString())
+    stats.value[1] && (stats.value[1].value = data.questionsCount.toString())
+    stats.value[2] && (stats.value[2].value = data.monthlyAttempts.toString())
+    stats.value[3] && (stats.value[3].value = data.dataSourcesCount.toString())
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+    ElMessage.error('加载统计数据失败')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => {
+  loadStats()
+})
 
 const quickActions = ref([
   {
@@ -166,7 +198,7 @@ const recentActivities = ref([
     </div>
 
     <!-- 欢迎卡片 -->
-    <el-card class="welcome-card" v-if="stats[0]?.value === '0'">
+    <el-card class="welcome-card" v-if="!isLoading && stats[0]?.value === '0'">
       <div class="welcome-content">
         <div class="welcome-icon">👋</div>
         <h2>欢迎使用 AnswerMe</h2>

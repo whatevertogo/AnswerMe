@@ -3,6 +3,7 @@ using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Entities;
 using AnswerMe.Domain.Interfaces;
 using AnswerMe.Domain.Models;
+using AnswerMe.Domain.Common;
 
 namespace AnswerMe.Application.Services;
 
@@ -267,24 +268,8 @@ public class AttemptService : IAttemptService
 
     private static List<string>? ParseLegacyOptions(string? options)
     {
-        if (string.IsNullOrWhiteSpace(options))
-        {
-            return null;
-        }
-
-        if (options.Trim().StartsWith("["))
-        {
-            try
-            {
-                return System.Text.Json.JsonSerializer.Deserialize<List<string>>(options);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        return options.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        var parsed = LegacyFieldParser.ParseDelimitedList(options);
+        return parsed.Count == 0 ? null : parsed;
     }
 
     public async Task<AttemptStatisticsDto> GetStatisticsAsync(int userId, CancellationToken cancellationToken = default)
@@ -333,103 +318,121 @@ public class AttemptService : IAttemptService
             return false;
         }
 
-        // 标准化答案(去除空格、转小写)
         var normalizedUserAnswer = userAnswer.Trim().ToLower();
+        var answerInfo = ExtractAnswerInfo(question);
 
-        // 从新字段 Data 中获取正确答案
-        List<string>? correctAnswersList = null;
-        bool? boolAnswer = null;
-        string? stringAnswer = null;
+        return question.QuestionTypeEnum switch
+        {
+            Domain.Enums.QuestionType.TrueFalse => CheckBooleanAnswer(normalizedUserAnswer, answerInfo.BoolAnswer),
+            Domain.Enums.QuestionType.SingleChoice => CheckSingleChoiceAnswer(normalizedUserAnswer, answerInfo),
+            Domain.Enums.QuestionType.MultipleChoice => CheckMultipleChoiceAnswer(normalizedUserAnswer, answerInfo.CorrectAnswersList),
+            Domain.Enums.QuestionType.FillBlank => CheckContainsAnswer(normalizedUserAnswer, answerInfo),
+            Domain.Enums.QuestionType.ShortAnswer => CheckContainsAnswer(normalizedUserAnswer, answerInfo),
+            _ => CheckLegacyAnswer(normalizedUserAnswer, question.QuestionType, answerInfo)
+        };
+    }
+
+    private static bool CheckBooleanAnswer(string userAnswer, bool? correctAnswer)
+    {
+        return correctAnswer.HasValue && userAnswer == correctAnswer.Value.ToString().ToLower();
+    }
+
+    private static bool CheckSingleChoiceAnswer(string userAnswer, AnswerInfo info)
+    {
+        if (info.CorrectAnswersList != null && info.CorrectAnswersList.Count > 0)
+        {
+            return userAnswer == info.CorrectAnswersList[0].Trim().ToLower();
+        }
+        if (info.StringAnswer != null)
+        {
+            return userAnswer == info.StringAnswer.Trim().ToLower();
+        }
+        return false;
+    }
+
+    private static bool CheckMultipleChoiceAnswer(string userAnswer, List<string>? correctAnswers)
+    {
+        if (correctAnswers == null) return false;
+
+        var userAnswers = userAnswer.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var sortedCorrect = correctAnswers.Select(a => a.Trim().ToLower()).OrderBy(a => a);
+        var sortedUser = userAnswers.Select(a => a.Trim().ToLower()).OrderBy(a => a);
+        return sortedUser.SequenceEqual(sortedCorrect);
+    }
+
+    private static bool CheckContainsAnswer(string userAnswer, AnswerInfo info)
+    {
+        if (info.StringAnswer != null)
+        {
+            var normalizedAnswer = info.StringAnswer.Trim().ToLower();
+            return userAnswer.Contains(normalizedAnswer) || normalizedAnswer.Contains(userAnswer);
+        }
+        if (info.CorrectAnswersList != null)
+        {
+            return info.CorrectAnswersList.Any(a =>
+                userAnswer.Contains(a.Trim().ToLower()) || a.Trim().ToLower().Contains(userAnswer));
+        }
+        return false;
+    }
+
+    private static bool CheckLegacyAnswer(string userAnswer, string questionType, AnswerInfo info)
+    {
+        return questionType switch
+        {
+            "boolean" => CheckBooleanAnswer(userAnswer, info.BoolAnswer),
+            "single" => CheckSingleChoiceAnswer(userAnswer, info),
+            "multiple" => CheckMultipleChoiceAnswer(userAnswer, info.CorrectAnswersList),
+            "fill" or "essay" => CheckContainsAnswer(userAnswer, info),
+            _ => false
+        };
+    }
+
+    private static AnswerInfo ExtractAnswerInfo(Domain.Entities.Question question)
+    {
+        var info = new AnswerInfo();
 
         if (question.Data is ChoiceQuestionData choiceData)
         {
-            correctAnswersList = choiceData.CorrectAnswers;
+            info.CorrectAnswersList = choiceData.CorrectAnswers;
         }
         else if (question.Data is BooleanQuestionData booleanData)
         {
-            boolAnswer = booleanData.CorrectAnswer;
+            info.BoolAnswer = booleanData.CorrectAnswer;
         }
         else if (question.Data is FillBlankQuestionData fillData)
         {
-            correctAnswersList = fillData.AcceptableAnswers;
+            info.CorrectAnswersList = fillData.AcceptableAnswers;
         }
         else if (question.Data is ShortAnswerQuestionData shortData)
         {
-            stringAnswer = shortData.ReferenceAnswer;
+            info.StringAnswer = shortData.ReferenceAnswer;
         }
-#pragma warning disable CS0618 // 旧字段兼容性代码：如果没有新数据，使用旧字段
-        else
+#pragma warning disable CS0618 // 旧字段兼容性代码
+        else if (!string.IsNullOrWhiteSpace(question.CorrectAnswer))
         {
-            // 旧格式兼容
             var legacyAnswer = question.CorrectAnswer.Trim().ToLower();
             if (question.QuestionType == "boolean" && bool.TryParse(legacyAnswer, out var legacyBool))
             {
-                boolAnswer = legacyBool;
+                info.BoolAnswer = legacyBool;
             }
             else if (question.QuestionType == "multiple")
             {
-                correctAnswersList = legacyAnswer.Split(',').Select(a => a.Trim()).ToList();
+                info.CorrectAnswersList = legacyAnswer.Split(',').Select(a => a.Trim()).ToList();
             }
             else
             {
-                stringAnswer = legacyAnswer;
+                info.StringAnswer = legacyAnswer;
             }
         }
 #pragma warning restore CS0618
 
-        // 判断题
-        if (question.QuestionType == "boolean" || question.QuestionTypeEnum == Domain.Enums.QuestionType.TrueFalse)
-        {
-            if (boolAnswer.HasValue)
-            {
-                return normalizedUserAnswer == boolAnswer.Value.ToString().ToLower();
-            }
-        }
+        return info;
+    }
 
-        // 单选题
-        if (question.QuestionType == "single" || question.QuestionTypeEnum == Domain.Enums.QuestionType.SingleChoice)
-        {
-            if (correctAnswersList != null && correctAnswersList.Count > 0)
-            {
-                return normalizedUserAnswer == correctAnswersList[0].Trim().ToLower();
-            }
-            if (stringAnswer != null)
-            {
-                return normalizedUserAnswer == stringAnswer.Trim().ToLower();
-            }
-        }
-
-        // 多选题(需要排序后比较)
-        if (question.QuestionType == "multiple" || question.QuestionTypeEnum == Domain.Enums.QuestionType.MultipleChoice)
-        {
-            if (correctAnswersList != null)
-            {
-                var userAnswers = normalizedUserAnswer.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                var correctAnswersArray = correctAnswersList.Select(a => a.Trim().ToLower()).OrderBy(a => a);
-                var userAnswersSorted = userAnswers.Select(a => a.Trim().ToLower()).OrderBy(a => a);
-                return userAnswersSorted.SequenceEqual(correctAnswersArray);
-            }
-        }
-
-        // 填空题和简答题(包含匹配即可)
-        if (question.QuestionType == "fill" || question.QuestionType == "essay" ||
-            question.QuestionTypeEnum == Domain.Enums.QuestionType.FillBlank ||
-            question.QuestionTypeEnum == Domain.Enums.QuestionType.ShortAnswer)
-        {
-            if (stringAnswer != null)
-            {
-                var normalizedStringAnswer = stringAnswer.Trim().ToLower();
-                return normalizedUserAnswer.Contains(normalizedStringAnswer) ||
-                       normalizedStringAnswer.Contains(normalizedUserAnswer);
-            }
-            if (correctAnswersList != null)
-            {
-                return correctAnswersList.Any(a =>
-                    normalizedUserAnswer.Contains(a.Trim().ToLower()) ||
-                    a.Trim().ToLower().Contains(normalizedUserAnswer));
-            }
-        }
-
-        return false;
+    private class AnswerInfo
+    {
+        public List<string>? CorrectAnswersList { get; set; }
+        public bool? BoolAnswer { get; set; }
+        public string? StringAnswer { get; set; }
     }
 }

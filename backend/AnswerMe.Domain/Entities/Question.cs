@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using AnswerMe.Domain.Enums;
 using AnswerMe.Domain.Models;
+using AnswerMe.Domain.Common;
 
 namespace AnswerMe.Domain.Entities;
 
@@ -53,73 +54,49 @@ public class Question : BaseEntity
                 using var jsonDocument = JsonDocument.Parse(QuestionDataJson);
                 var root = jsonDocument.RootElement;
 
-                // 根据题型选择正确的类型进行反序列化
-                QuestionData? parsed = QuestionTypeEnum switch
-                {
-                    Domain.Enums.QuestionType.SingleChoice => JsonSerializer.Deserialize<ChoiceQuestionData>(QuestionDataJson, QuestionDataJsonOptions.Default),
-                    Domain.Enums.QuestionType.MultipleChoice => JsonSerializer.Deserialize<ChoiceQuestionData>(QuestionDataJson, QuestionDataJsonOptions.Default),
-                    Domain.Enums.QuestionType.TrueFalse => JsonSerializer.Deserialize<BooleanQuestionData>(QuestionDataJson, QuestionDataJsonOptions.Default),
-                    Domain.Enums.QuestionType.FillBlank => JsonSerializer.Deserialize<FillBlankQuestionData>(QuestionDataJson, QuestionDataJsonOptions.Default),
-                    Domain.Enums.QuestionType.ShortAnswer => JsonSerializer.Deserialize<ShortAnswerQuestionData>(QuestionDataJson, QuestionDataJsonOptions.Default),
-                    _ => null
-                };
-
+                var parsed = DeserializeQuestionData();
                 if (parsed == null)
-                {
                     return BuildDataFromLegacy();
-                }
 
-                switch (parsed)
-                {
-                    case ChoiceQuestionData choiceData:
-                    {
-                        var hasOptions = root.TryGetProperty("options", out _);
-                        var hasCorrectAnswers = root.TryGetProperty("correctAnswers", out _);
-                        if (!hasOptions || !hasCorrectAnswers || choiceData.Options.Count == 0 || choiceData.CorrectAnswers.Count == 0)
-                        {
-                            return BuildDataFromLegacy() ?? parsed;
-                        }
-                        return parsed;
-                    }
-                    case BooleanQuestionData:
-                    {
-                        var hasCorrectAnswer = root.TryGetProperty("correctAnswer", out _);
-                        if (!hasCorrectAnswer)
-                        {
-                            return BuildDataFromLegacy() ?? parsed;
-                        }
-                        return parsed;
-                    }
-                    case FillBlankQuestionData fillData:
-                    {
-                        var hasAcceptableAnswers = root.TryGetProperty("acceptableAnswers", out _);
-                        if (!hasAcceptableAnswers || fillData.AcceptableAnswers.Count == 0)
-                        {
-                            return BuildDataFromLegacy() ?? parsed;
-                        }
-                        return parsed;
-                    }
-                    case ShortAnswerQuestionData shortAnswerData:
-                    {
-                        var hasReferenceAnswer = root.TryGetProperty("referenceAnswer", out _);
-                        if (!hasReferenceAnswer || string.IsNullOrWhiteSpace(shortAnswerData.ReferenceAnswer))
-                        {
-                            return BuildDataFromLegacy() ?? parsed;
-                        }
-                        return parsed;
-                    }
-                    default:
-                        return parsed;
-                }
+                return IsValidQuestionData(root, parsed) ? parsed : BuildDataFromLegacy() ?? parsed;
             }
             catch (JsonException)
             {
-                // JSON 反序列化失败，返回 null
-                // TODO: 添加日志记录（需要注入 ILogger）
                 return BuildDataFromLegacy();
             }
         }
         set => QuestionDataJson = value != null ? JsonSerializer.Serialize(value, QuestionDataJsonOptions.Default) : null;
+    }
+
+    private QuestionData? DeserializeQuestionData()
+    {
+        var json = QuestionDataJson!;
+        return QuestionTypeEnum switch
+        {
+            Domain.Enums.QuestionType.SingleChoice => JsonSerializer.Deserialize<ChoiceQuestionData>(json, QuestionDataJsonOptions.Default),
+            Domain.Enums.QuestionType.MultipleChoice => JsonSerializer.Deserialize<ChoiceQuestionData>(json, QuestionDataJsonOptions.Default),
+            Domain.Enums.QuestionType.TrueFalse => JsonSerializer.Deserialize<BooleanQuestionData>(json, QuestionDataJsonOptions.Default),
+            Domain.Enums.QuestionType.FillBlank => JsonSerializer.Deserialize<FillBlankQuestionData>(json, QuestionDataJsonOptions.Default),
+            Domain.Enums.QuestionType.ShortAnswer => JsonSerializer.Deserialize<ShortAnswerQuestionData>(json, QuestionDataJsonOptions.Default),
+            _ => null
+        };
+    }
+
+    private static bool IsValidQuestionData(JsonElement root, QuestionData data)
+    {
+        return data switch
+        {
+            ChoiceQuestionData cd => root.TryGetProperty("options", out _)
+                && root.TryGetProperty("correctAnswers", out _)
+                && cd.Options.Count > 0
+                && cd.CorrectAnswers.Count > 0,
+            BooleanQuestionData => root.TryGetProperty("correctAnswer", out _),
+            FillBlankQuestionData fd => root.TryGetProperty("acceptableAnswers", out _)
+                && fd.AcceptableAnswers.Count > 0,
+            ShortAnswerQuestionData sad => root.TryGetProperty("referenceAnswer", out _)
+                && !string.IsNullOrWhiteSpace(sad.ReferenceAnswer),
+            _ => true
+        };
     }
 
     /// <summary>
@@ -246,6 +223,6 @@ public class Question : BaseEntity
 
     private static List<string> ParseAnswers(string? answers)
     {
-        return LegacyFieldParser.ParseDelimitedList(answers);
+        return LegacyFieldParser.ParseCorrectAnswers(answers);
     }
 }

@@ -102,19 +102,19 @@ export interface AIGenerateProgress {
  * 生成题目（同步，≤20题）
  */
 export const generateQuestionsApi = (params: AIGenerateRequest): Promise<AxiosResponse<AIGenerateResponse>> => {
-  return request.post<AIGenerateResponse>('/api/AIGeneration/generate', params)
+  return request.post<AIGenerateResponse>('/AIGeneration/generate', params)
 }
 
 /**
  * 生成题目（异步，>20题）
  */
 export const generateQuestionsAsyncApi = (params: AIGenerateRequest): Promise<AxiosResponse<AIGenerateResponse>> => {
-  return request.post<AIGenerateResponse>('/api/AIGeneration/generate-async', params)
+  return request.post<AIGenerateResponse>('/AIGeneration/generate-async', params)
 }
 
 /**
  * 查询生成进度
  */
 export const getGenerationProgressApi = (taskId: string): Promise<AxiosResponse<AIGenerateProgress>> => {
-  return request.get<AIGenerateProgress>(`/api/AIGeneration/progress/${taskId}`)
+  return request.get<AIGenerateProgress>(`/AIGeneration/progress/${taskId}`)
 }

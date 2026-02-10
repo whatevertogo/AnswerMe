@@ -222,35 +222,11 @@ public class AIGenerationService : IAIGenerationService
         CancellationToken cancellationToken,
         Func<int, Task>? onProgress)
     {
-        if (string.IsNullOrWhiteSpace(dto.Subject))
+        // 验证请求参数
+        var validationResult = ValidateRequest(dto);
+        if (validationResult != null)
         {
-            return new AIGenerateResponseDto
-            {
-                Success = false,
-                ErrorMessage = "生成主题不能为空",
-                ErrorCode = "INVALID_SUBJECT"
-            };
-        }
-
-        if (dto.Count <= 0)
-        {
-            return new AIGenerateResponseDto
-            {
-                Success = false,
-                ErrorMessage = "生成数量必须大于0",
-                ErrorCode = "INVALID_COUNT"
-            };
-        }
-
-        var dataSource = await GetDataSourceForUserAsync(userId, dto.ProviderName, cancellationToken);
-        if (dataSource == null)
-        {
-            return new AIGenerateResponseDto
-            {
-                Success = false,
-                ErrorMessage = "未找到有效的AI配置，请先配置API密钥",
-                ErrorCode = "NO_DATA_SOURCE"
-            };
+            return validationResult;
         }
 
         if (dto.QuestionBankId.HasValue)
@@ -267,7 +243,26 @@ public class AIGenerationService : IAIGenerationService
             }
         }
 
-        var provider = _aiProviderFactory.GetProvider(dataSource.Type);
+        // 验证数据源配置
+        var (dataSource, config, provider) = await ValidateDataSourceAsync(userId, dto, cancellationToken);
+        if (dataSource == null)
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "未找到有效的AI配置，请先配置API密钥",
+                ErrorCode = "NO_DATA_SOURCE"
+            };
+        }
+        if (config == null)
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "数据源配置解密失败，请检查配置",
+                ErrorCode = "CONFIG_DECRYPTION_FAILED"
+            };
+        }
         if (provider == null)
         {
             return new AIGenerateResponseDto
@@ -275,18 +270,6 @@ public class AIGenerationService : IAIGenerationService
                 Success = false,
                 ErrorMessage = $"不支持的AI Provider: {dataSource.Type}",
                 ErrorCode = "UNSUPPORTED_PROVIDER"
-            };
-        }
-
-        var config = await _dataSourceService.GetDecryptedConfigAsync(dataSource.Id, userId, cancellationToken);
-        if (config == null || string.IsNullOrEmpty(config.ApiKey))
-        {
-            _logger.LogError("无法获取数据源 {DataSourceId} 的解密配置", dataSource.Id);
-            return new AIGenerateResponseDto
-            {
-                Success = false,
-                ErrorMessage = "数据源配置解密失败，请检查配置",
-                ErrorCode = "CONFIG_DECRYPTION_FAILED"
             };
         }
 
@@ -525,6 +508,52 @@ public class AIGenerationService : IAIGenerationService
             ErrorMessage = lastError?.Message ?? "AI生成失败，已达到最大重试次数",
             ErrorCode = "MAX_RETRIES_EXCEEDED"
         };
+    }
+
+    /// <summary>
+    /// 验证请求参数
+    /// </summary>
+    private static AIGenerateResponseDto? ValidateRequest(AIGenerateRequestDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Subject))
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "生成主题不能为空",
+                ErrorCode = "INVALID_SUBJECT"
+            };
+        }
+
+        if (dto.Count <= 0)
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "生成数量必须大于0",
+                ErrorCode = "INVALID_COUNT"
+            };
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 验证数据源配置
+    /// </summary>
+    private async Task<(Domain.Entities.DataSource? dataSource, DataSourceConfigDto? config, IAIProvider? provider)>
+        ValidateDataSourceAsync(int userId, AIGenerateRequestDto dto, CancellationToken cancellationToken)
+    {
+        var dataSource = await GetDataSourceForUserAsync(userId, dto.ProviderName, cancellationToken);
+        if (dataSource == null)
+        {
+            return (null, null, null);
+        }
+
+        var provider = _aiProviderFactory.GetProvider(dataSource.Type);
+        var config = await _dataSourceService.GetDecryptedConfigAsync(dataSource.Id, userId, cancellationToken);
+
+        return (dataSource, config, provider);
     }
 
     /// <summary>
@@ -789,28 +818,7 @@ public class AIGenerationService : IAIGenerationService
         string? legacyAnswers)
 #pragma warning restore CS0618
     {
-        if (string.IsNullOrWhiteSpace(legacyAnswers))
-        {
-            return new List<string>();
-        }
-
-        var trimmed = legacyAnswers.Trim();
-        if (trimmed.StartsWith("["))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<List<string>>(legacyAnswers) ?? new List<string>();
-            }
-            catch
-            {
-                return new List<string>();
-            }
-        }
-
-        return trimmed
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .ToList();
+        return LegacyFieldParser.ParseCorrectAnswers(legacyAnswers);
     }
 
     private static AIGenerateProgressDto CloneProgress(AIGenerateProgressDto progress)

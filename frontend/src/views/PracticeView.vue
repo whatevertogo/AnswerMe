@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { Search, Refresh, Reading } from '@element-plus/icons-vue'
 import { useQuestionBankStore } from '@/stores/questionBank'
 import type { QuestionBank } from '@/stores/questionBank'
+import { DifficultyLabels, DifficultyColors } from '@/types/question'
 
 const router = useRouter()
 const questionBankStore = useQuestionBankStore()
@@ -69,23 +70,7 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const getDifficultyColor = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return 'success'
-    case 'medium': return 'warning'
-    case 'hard': return 'danger'
-    default: return 'info'
-  }
-}
-
-const getDifficultyLabel = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return '简单'
-    case 'medium': return '中等'
-    case 'hard': return '困难'
-    default: return '未知'
-  }
-}
+// 使用共享的难度颜色
 </script>
 
 <template>
@@ -143,10 +128,10 @@ const getDifficultyLabel = (difficulty: string) => {
           <template #default="{ row }">
             <el-tag
               v-if="row.difficulty"
-              :type="getDifficultyColor(row.difficulty)"
+              :type="DifficultyColors[row.difficulty as keyof typeof DifficultyColors] || 'info'"
               size="small"
             >
-              {{ getDifficultyLabel(row.difficulty) }}
+              {{ DifficultyLabels[row.difficulty as keyof typeof DifficultyLabels] || '未知' }}
             </el-tag>
             <span v-else class="text-muted">-</span>
           </template>

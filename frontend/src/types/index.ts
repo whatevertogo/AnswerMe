@@ -1,63 +1,9 @@
 // ==================== 题目类型定义 ====================
 // 优先使用 @/types/question.ts 中的类型定义
-// 以下为向后兼容保留的导出
+// 使用 export * 进行批量重新导出
 
-import { QuestionType as NewQuestionType } from './question'
-import type {
-  Question as NewQuestion,
-  QuestionData,
-  ChoiceQuestionData,
-  BooleanQuestionData,
-  FillBlankQuestionData,
-  ShortAnswerQuestionData,
-  BaseQuestionData,
-  CreateQuestionDto as NewCreateQuestionDto,
-  UpdateQuestionDto as NewUpdateQuestionDto
-} from './question'
-import {
-  getQuestionTypeLabel,
-  getQuestionOptions,
-  getQuestionCorrectAnswers,
-  isMultipleChoiceQuestion,
-  isSingleChoiceQuestion,
-  isBooleanQuestion,
-  isFillBlankQuestion,
-  isShortAnswerQuestion,
-  isChoiceQuestionData,
-  isBooleanQuestionData,
-  isFillBlankQuestionData,
-  isShortAnswerQuestionData
-} from './question'
-
-// 重新导出
-export { NewQuestionType as QuestionType }
-export type {
-  QuestionData,
-  ChoiceQuestionData,
-  BooleanQuestionData,
-  FillBlankQuestionData,
-  ShortAnswerQuestionData,
-  BaseQuestionData,
-  NewCreateQuestionDto as CreateQuestionDto,
-  NewUpdateQuestionDto as UpdateQuestionDto
-}
-export {
-  getQuestionTypeLabel,
-  getQuestionOptions,
-  getQuestionCorrectAnswers,
-  isMultipleChoiceQuestion,
-  isSingleChoiceQuestion,
-  isBooleanQuestion,
-  isFillBlankQuestion,
-  isShortAnswerQuestion,
-  isChoiceQuestionData,
-  isBooleanQuestionData,
-  isFillBlankQuestionData,
-  isShortAnswerQuestionData
-}
-
-// 导出新 Question 类型
-export type { NewQuestion as Question }
+export * from './question'
+export type { Question } from './question'
 
 // 通用类型定义
 export interface PaginationParams {

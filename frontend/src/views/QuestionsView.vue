@@ -8,6 +8,7 @@ import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionForm from '@/components/QuestionForm.vue'
 import type { Question } from '@/stores/question'
 import { QuestionType, getQuestionCorrectAnswers, getQuestionOptions } from '@/types'
+import { getQuestionTypeLabel, DifficultyLabels, DifficultyColors } from '@/types/question'
 
 const route = useRoute()
 const questionStore = useQuestionStore()
@@ -127,21 +128,7 @@ const handleBackToBank = () => {
   }
 }
 
-const getQuestionTypeLabel = (type: string) => {
-  const labels: Record<string, string> = {
-    'SingleChoice': '单选',
-    'MultipleChoice': '多选',
-    'TrueFalse': '判断',
-    'FillBlank': '填空',
-    'ShortAnswer': '简答',
-    'choice': '单选',
-    'multiple-choice': '多选',
-    'true-false': '判断',
-    'short-answer': '填空'
-  }
-  return labels[type] || '未知'
-}
-
+// 题型颜色映射（与标签不同，保留在本地）
 const getQuestionTypeColor = (type: string) => {
   const colors: Record<string, string> = {
     'SingleChoice': 'primary',
@@ -155,24 +142,6 @@ const getQuestionTypeColor = (type: string) => {
     'short-answer': 'info'
   }
   return colors[type] || 'info'
-}
-
-const getDifficultyColor = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return 'success'
-    case 'medium': return 'warning'
-    case 'hard': return 'danger'
-    default: return 'info'
-  }
-}
-
-const getDifficultyLabel = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return '简单'
-    case 'medium': return '中等'
-    case 'hard': return '困难'
-    default: return '未知'
-  }
 }
 
 const formatCorrectAnswer = (question: Question) => {
@@ -273,10 +242,10 @@ const formatCorrectAnswer = (question: Question) => {
                 </el-tag>
                 <el-tag
                   v-if="row.difficulty"
-                  :type="getDifficultyColor(row.difficulty)"
+                  :type="DifficultyColors[row.difficulty as keyof typeof DifficultyColors] || 'info'"
                   size="small"
                 >
-                  {{ getDifficultyLabel(row.difficulty) }}
+                  {{ DifficultyLabels[row.difficulty as keyof typeof DifficultyLabels] || '未知' }}
                 </el-tag>
               </div>
             </div>

@@ -202,26 +202,11 @@ watch(
   (newType, oldType) => {
     if (newType === oldType) return
 
-    // 判断题
-    if (newType === QuestionTypeEnum.TrueFalse) {
-      form.value.correctAnswer = 'true'
-      form.value.options = undefined
-    }
-    // 选择题
-    else if (newType === QuestionTypeEnum.SingleChoice) {
-      form.value.correctAnswer = ''
-      form.value.options = ['', '', '', '']
-    }
-    // 多选题
-    else if (newType === QuestionTypeEnum.MultipleChoice) {
-      form.value.correctAnswer = ''
-      form.value.options = ['', '', '', '']
-    }
-    // 填空题
-    else if (newType === QuestionTypeEnum.FillBlank || newType === QuestionTypeEnum.ShortAnswer) {
-      form.value.correctAnswer = ''
-      form.value.options = undefined
-    }
+    const needsOptions = newType === QuestionTypeEnum.SingleChoice || newType === QuestionTypeEnum.MultipleChoice
+    const isTrueFalse = newType === QuestionTypeEnum.TrueFalse
+
+    form.value.options = needsOptions ? ['', '', '', ''] : undefined
+    form.value.correctAnswer = isTrueFalse ? 'true' : ''
   }
 )
 

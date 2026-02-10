@@ -121,3 +121,23 @@ int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 6. `API/Controllers/` 控制器
 7. `Program.cs` 注册所有服务
 8. `dotnet ef migrations add`
+
+## 前端代码规范
+
+- 共享常量定义在 `types/question.ts`：`DifficultyLabels`, `DifficultyColors`, `getQuestionTypeLabel`
+- API 函数定义在 `api/xxx.ts`，包含类型定义和请求函数
+- 列表数据加载使用 `onMounted` 钩子 + `isLoading` 状态
+- 路由辅助函数：`authRoute()`, `publicRoute()` (router/index.ts)
+
+## 后端代码规范
+
+- 旧字段解析统一使用 `Domain/Common/LegacyFieldParser.cs`
+- 添加统计功能模式：DTO (`Application/DTOs/`) → Interface (`Application/Interfaces/`) → Service (`Application/Services/`) → Controller (`API/Controllers/`)
+- 仓储计数方法命名：`CountByXxxYyyAsync`
+- Application 层不应直接引用 `Microsoft.EntityFrameworkCore`
+
+## 代码简化工具
+
+- 使用 `code-simplifier` 代理发现和消除重复代码
+- 前端已消除约 150+ 行重复代码（难度/类型标签函数）
+- 后端已创建共享工具类替代重复的解析逻辑

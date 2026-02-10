@@ -17,7 +17,6 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Application", "AnswerMe.API")
-    // ✅ 修复P0-3: 通过配置过滤敏感信息，避免日志记录密码、API密钥等
     // 在 appsettings.json 中配置过滤规则
     .WriteTo.Console(
         outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -34,32 +33,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
 // 配置JWT认证
-var jwtSecretFromConfig = builder.Configuration.GetValue<string>("JWT:Secret");
-var jwtSecretFromEnv = builder.Configuration.GetValue<string>("JWT_SECRET");
+var jwtSecret = GetJwtSecret(builder.Configuration);
+var jwtSettings = CreateJwtSettings(builder.Configuration, jwtSecret);
 
-// 优先使用环境变量，否则使用配置文件
-var jwtSecret = !string.IsNullOrEmpty(jwtSecretFromEnv) ? jwtSecretFromEnv : jwtSecretFromConfig;
-
-if (string.IsNullOrEmpty(jwtSecret))
-{
-    throw new InvalidOperationException(
-        "JWT密钥未配置。请设置环境变量 JWT_SECRET(至少32个字符)或在配置文件中设置JWT:Secret");
-}
-
-if (jwtSecret.Length < 32)
-{
-    throw new InvalidOperationException(
-        "JWT密钥长度不足。环境变量 JWT_SECRET 必须至少包含32个字符以保证安全性");
-}
-
-var jwtSettings = new JwtSettings(
-    builder.Configuration.GetValue<string>("JWT:Issuer", "AnswerMe"),
-    builder.Configuration.GetValue<string>("JWT:Audience", "AnswerMeUsers"),
-    jwtSecret,
-    builder.Configuration.GetValue<int>("JWT:ExpiryDays", 30)
-);
-
-// 统一 JWT 配置来源，确保 AuthService 与验证中间件使用同一套配置
 builder.Services.Configure<JwtSettings>(options =>
 {
     options.Issuer = jwtSettings.Issuer;
@@ -96,7 +72,6 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // 配置Data Protection（用于加密API密钥）
-// ✅ 修复P0-4: 添加密钥持久化到文件系统，应用重启后仍可解密
 var keysDirectory = Path.Combine(Directory.GetCurrentDirectory(), "keys");
 
 // 确保keys目录存在
@@ -299,4 +274,36 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+// 辅助方法
+static string GetJwtSecret(IConfiguration configuration)
+{
+    var jwtSecretFromConfig = configuration.GetValue<string>("JWT:Secret");
+    var jwtSecretFromEnv = configuration.GetValue<string>("JWT_SECRET");
+    var jwtSecret = !string.IsNullOrEmpty(jwtSecretFromEnv) ? jwtSecretFromEnv : jwtSecretFromConfig;
+
+    if (string.IsNullOrEmpty(jwtSecret))
+    {
+        throw new InvalidOperationException(
+            "JWT密钥未配置。请设置环境变量 JWT_SECRET(至少32个字符)或在配置文件中设置JWT:Secret");
+    }
+
+    if (jwtSecret.Length < 32)
+    {
+        throw new InvalidOperationException(
+            "JWT密钥长度不足。环境变量 JWT_SECRET 必须至少包含32个字符以保证安全性");
+    }
+
+    return jwtSecret;
+}
+
+static JwtSettings CreateJwtSettings(IConfiguration configuration, string jwtSecret)
+{
+    return new JwtSettings(
+        configuration.GetValue<string>("JWT:Issuer", "AnswerMe"),
+        configuration.GetValue<string>("JWT:Audience", "AnswerMeUsers"),
+        jwtSecret,
+        configuration.GetValue<int>("JWT:ExpiryDays", 30)
+    );
 }

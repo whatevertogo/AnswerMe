@@ -121,13 +121,7 @@ public class QuestionBankService : IQuestionBankService
         }
 
         // 更新版本号 - 确保数组长度正确
-        if (questionBank.Version == null || questionBank.Version.Length < 8)
-        {
-            questionBank.Version = new byte[8];
-        }
-
-        var version = BitConverter.ToInt64(questionBank.Version);
-        BitConverter.GetBytes(version + 1).CopyTo(questionBank.Version, 0);
+        IncrementVersion(questionBank);
 
         questionBank.UpdatedAt = DateTime.UtcNow;
 
@@ -153,5 +147,16 @@ public class QuestionBankService : IQuestionBankService
     {
         var questionBanks = await _questionBankRepository.SearchAsync(userId, searchTerm, cancellationToken);
         return await questionBanks.ToDtoListAsync(_questionRepository, cancellationToken);
+    }
+
+    private static void IncrementVersion(Domain.Entities.QuestionBank questionBank)
+    {
+        if (questionBank.Version == null || questionBank.Version.Length < 8)
+        {
+            questionBank.Version = new byte[8];
+        }
+
+        var currentVersion = BitConverter.ToInt64(questionBank.Version);
+        BitConverter.GetBytes(currentVersion + 1).CopyTo(questionBank.Version, 0);
     }
 }

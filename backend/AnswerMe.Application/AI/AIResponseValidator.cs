@@ -2,6 +2,7 @@ using System.Text.Json;
 using AnswerMe.Application.AI;
 using AnswerMe.Domain.Enums;
 using AnswerMe.Domain.Models;
+using AnswerMe.Domain.Common;
 
 namespace AnswerMe.Application.AI;
 
@@ -161,28 +162,6 @@ public class AIResponseValidator
 
     private static List<string> ParseCorrectAnswers(string correctAnswer)
     {
-        if (string.IsNullOrWhiteSpace(correctAnswer))
-        {
-            return new List<string>();
-        }
-
-        // 尝试解析 JSON 数组
-        if (correctAnswer.TrimStart().StartsWith('['))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<List<string>>(correctAnswer) ?? new List<string>();
-            }
-            catch
-            {
-                // JSON 解析失败，继续尝试其他方式
-            }
-        }
-
-        // 按分隔符分割
-        return correctAnswer
-            .Split(new[] { ',', ';', '、' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(v => !string.IsNullOrWhiteSpace(v))
-            .ToList();
+        return LegacyFieldParser.ParseCorrectAnswers(correctAnswer);
     }
 }

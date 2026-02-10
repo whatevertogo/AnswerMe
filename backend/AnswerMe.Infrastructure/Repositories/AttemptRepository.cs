@@ -75,4 +75,10 @@ public class AttemptRepository : IAttemptRepository
             .Include(a => a.AttemptDetails)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    public async Task<int> CountByUserIdAndDateRangeAsync(int userId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
+    {
+        return await _context.Attempts
+            .CountAsync(a => a.UserId == userId && a.StartedAt >= startDate && a.StartedAt <= endDate, cancellationToken);
+    }
 }

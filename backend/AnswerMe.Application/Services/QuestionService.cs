@@ -4,6 +4,7 @@ using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Interfaces;
 using AnswerMe.Domain.Enums;
 using AnswerMe.Domain.Models;
+using AnswerMe.Domain.Common;
 using System.Text.Json;
 using System.Linq;
 
@@ -485,37 +486,11 @@ public class QuestionService : IQuestionService
 
     private static List<string> ParseLegacyOptions(string? legacyOptions)
     {
-        return ParseDelimitedList(legacyOptions);
+        return LegacyFieldParser.ParseDelimitedList(legacyOptions);
     }
 
     private static List<string> ParseLegacyAnswers(string? legacyAnswers)
     {
-        return ParseDelimitedList(legacyAnswers);
-    }
-
-    private static List<string> ParseDelimitedList(string? input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return new List<string>();
-        }
-
-        var trimmed = input.Trim();
-        if (trimmed.StartsWith("["))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<List<string>>(input) ?? new List<string>();
-            }
-            catch
-            {
-                return new List<string>();
-            }
-        }
-
-        return trimmed
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .ToList();
+        return LegacyFieldParser.ParseCorrectAnswers(legacyAnswers);
     }
 }
