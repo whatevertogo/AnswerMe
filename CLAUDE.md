@@ -156,6 +156,10 @@ docker-compose up -d redis
 - API 函数定义在 `api/xxx.ts`，包含类型定义和请求函数
 - 列表数据加载使用 `onMounted` 钩子 + `isLoading` 状态
 - 路由辅助函数：`authRoute()`, `publicRoute()` (router/index.ts)
+- **API 调用必须使用命名导入:** `import { request } from '@/utils/request'` 而非 `import request from '@/utils/request'`
+  - 默认导入返回完整 Axios 响应 `{data, status, headers}`，命名导入自动解包 `response.data`
+- **错误处理:** 不要静默吞掉错误，使用 `console.error` + `ElMessage.error` 或向上抛出
+- **Element Plus:** `el-radio`/`el-checkbox` 使用 `value` 属性而非 `label`（v3+ API 变更）
 
 ## 后端代码规范
 
