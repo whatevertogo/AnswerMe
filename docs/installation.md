@@ -159,10 +159,20 @@ docker-compose up -d
 # .env配置
 DEFAULT_AI_PROVIDER=openai
 OPENAI_API_KEY=sk-your-key-here
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_API_BASE=https://api.openai.com/v1
+OPENAI_MODEL=gpt-5.2
+OPENAI_API_BASE=https://api.openai.com/v1/chat/completions
 
 # 或在Web界面: 设置 → AI配置 → 添加OpenAI配置
+```
+
+#### DeepSeek
+
+```bash
+# .env配置
+DEFAULT_AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-your-deepseek-key-here
+DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_API_BASE=https://api.deepseek.com/chat/completions
 ```
 
 #### 通义千问
@@ -172,10 +182,48 @@ OPENAI_API_BASE=https://api.openai.com/v1
 DEFAULT_AI_PROVIDER=qwen
 QWEN_API_KEY=sk-your-qwen-key-here
 QWEN_MODEL=qwen-turbo
-QWEN_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1
-
-# 或在Web界面: 设置 → AI配置 → 添加通义千问配置
+QWEN_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
 ```
+
+#### 智谱GLM
+
+```bash
+# .env配置
+DEFAULT_AI_PROVIDER=zhipu
+ZHIPU_API_KEY=your-zhipu-api-key
+ZHIPU_MODEL=glm-4
+ZHIPU_API_BASE=https://open.bigmodel.cn/api/paas/v4/chat/completions
+```
+
+#### Minimax
+
+Minimax 提供三个端点变体：
+
+**Minimax 国内端点（推荐中国用户）**:
+
+```bash
+# .env配置
+DEFAULT_AI_PROVIDER=minimax_cn
+MINIMAX_CN_API_KEY=your-minimax-api-key
+MINIMAX_CN_MODEL=M2-her
+MINIMAX_CN_API_BASE=https://api.minimaxi.com/v1/text/chatcompletion_v2
+```
+
+**Minimax 国际端点（推荐海外用户）**:
+
+```bash
+# .env配置
+DEFAULT_AI_PROVIDER=minimax_global
+MINIMAX_GLOBAL_API_KEY=your-minimax-api-key
+MINIMAX_GLOBAL_MODEL=M2-her
+MINIMAX_GLOBAL_API_BASE=https://api.minimax.io/v1/text/chatcompletion_v2
+```
+
+**在Web界面配置**:
+
+设置 → AI配置 → 添加 Minimax 配置
+- 类型选择: `Minimax(中文)` 或 `Minimax(英文)`
+- 模型: `M2-her`（默认）
 
 ### 单用户模式
 

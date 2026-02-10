@@ -847,6 +847,25 @@ Authorization: Bearer {token}
 
 ## 数据源管理
 
+### 支持的 AI Provider
+
+| Provider | 类型标识 | 默认模型 | 端点 |
+|----------|---------|----------|------|
+| OpenAI | `openai` | `gpt-5.2` | `https://api.openai.com/v1/chat/completions` |
+| DeepSeek | `deepseek` | `deepseek-chat` | `https://api.deepseek.com/chat/completions` |
+| 通义千问 | `qwen` | `qwen-turbo` | `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions` |
+| 智谱GLM | `zhipu` | `glm-4` | `https://open.bigmodel.cn/api/paas/v4/chat/completions` |
+| Minimax(中文) | `minimax_cn` | `M2-her` | `https://api.minimaxi.com/v1/text/chatcompletion_v2` |
+| Minimax(英文) | `minimax_global` | `M2-her` | `https://api.minimax.io/v1/text/chatcompletion_v2` |
+| Minimax(默认) | `minimax` | `M2-her` | `https://api.minimaxi.com/v1/text/chatcompletion_v2` |
+| 自定义API | `custom_api` | 用户自定义 | 用户自定义 |
+
+**Minimax Provider 说明**:
+- `minimax_cn`: 国内端点，适用于中国大陆用户
+- `minimax_global`: 国际端点，适用于海外用户
+- `minimax`: 默认端点，与 `minimax_cn` 相同
+- Minimax API 使用 `max_completion_tokens` 参数而非 `max_tokens`
+
 ### 获取数据源列表
 
 ```http
@@ -886,8 +905,22 @@ Content-Type: application/json
   "type": "openai",
   "config": {
     "apiKey": "sk-proj-...",
-    "model": "gpt-4o-mini",
-    "apiBase": "https://api.openai.com/v1"
+    "model": "gpt-5.2",
+    "apiBase": "https://api.openai.com/v1/chat/completions"
+  }
+}
+```
+
+**Minimax(中文)示例**:
+
+```json
+{
+  "name": "Minimax 国内",
+  "type": "minimax_cn",
+  "config": {
+    "apiKey": "your-minimax-api-key",
+    "model": "M2-her",
+    "apiBase": "https://api.minimaxi.com/v1/text/chatcompletion_v2"
   }
 }
 ```
@@ -1012,6 +1045,14 @@ Content-Type: application/json
 ```
 
 ## 更新日志
+
+### v1.1.0 (2026-02-10)
+
+- 🐛 修复前端 API 返回类型和类型导出问题
+- 🔧 更新 Minimax API 端点 (`api.minimax.chat` → `api.minimaxi.com`)
+- 🔧 更新 Minimax API 参数 (`max_tokens` → `max_completion_tokens`)
+- ✨ 新增 Minimax 三个 Provider 变体（中文/英文/默认）
+- 📝 默认模型更新: Minimax `abab6.5s-chat` → `M2-her`
 
 ### v1.0.0 (2025-02-10)
 
