@@ -1,74 +1,10 @@
 // ==================== 题目类型定义 ====================
 // 优先使用 @/types/question.ts 中的类型定义
+// 使用 export * 导出所有内容（值和类型）
+export * from './question'
 
-// 从 question.ts 导入所有内容并重新导出
-import {
-  QuestionType,
-  QuestionTypeLabels,
-  DifficultyLabels,
-  DifficultyColors,
-  getQuestionTypeLabel,
-  getQuestionOptions,
-  getQuestionCorrectAnswers,
-  isChoiceQuestionData,
-  isBooleanQuestionData,
-  isFillBlankQuestionData,
-  isShortAnswerQuestionData,
-  isMultipleChoiceQuestion,
-  isSingleChoiceQuestion,
-  isBooleanQuestion,
-  isFillBlankQuestion,
-  isShortAnswerQuestion
-} from './question'
-
-import type {
-  QuestionType as QuestionTypeType,
-  Difficulty,
-  BaseQuestionData,
-  ChoiceQuestionData,
-  BooleanQuestionData,
-  FillBlankQuestionData,
-  ShortAnswerQuestionData,
-  QuestionData,
-  Question,
-  CreateQuestionDto,
-  UpdateQuestionDto
-} from './question'
-
-// 重新导出值
-export {
-  QuestionType,
-  QuestionTypeLabels,
-  DifficultyLabels,
-  DifficultyColors,
-  getQuestionTypeLabel,
-  getQuestionOptions,
-  getQuestionCorrectAnswers,
-  isChoiceQuestionData,
-  isBooleanQuestionData,
-  isFillBlankQuestionData,
-  isShortAnswerQuestionData,
-  isMultipleChoiceQuestion,
-  isSingleChoiceQuestion,
-  isBooleanQuestion,
-  isFillBlankQuestion,
-  isShortAnswerQuestion
-}
-
-// 重新导出类型
-export type {
-  QuestionType as QuestionTypeType,
-  Difficulty,
-  BaseQuestionData,
-  ChoiceQuestionData,
-  BooleanQuestionData,
-  FillBlankQuestionData,
-  ShortAnswerQuestionData,
-  QuestionData,
-  Question,
-  CreateQuestionDto,
-  UpdateQuestionDto
-}
+// 为了在本文件内部使用，显式导入类型
+import type { QuestionType, Question } from './question'
 
 // 通用类型定义
 export interface PaginationParams {
@@ -182,7 +118,7 @@ export interface QuestionLegacy {
 /** 题目查询参数 */
 export interface QuestionQueryParams extends CursorPaginationParams {
   questionBankId?: number
-  questionTypeEnum?: QuestionTypeType
+  questionTypeEnum?: QuestionType
   difficulty?: string
   search?: string
 }

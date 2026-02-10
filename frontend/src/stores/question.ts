@@ -37,15 +37,15 @@ export const useQuestionStore = defineStore('question', () => {
       }
       const response = await questionApi.getQuestions(queryParams)
       if (options?.append) {
-        questions.value = [...questions.value, ...response.data.data]
+        questions.value = [...questions.value, ...response.data]
       } else {
-        questions.value = response.data.data
+        questions.value = response.data
       }
       pagination.value = {
-        totalCount: response.data.totalCount,
+        totalCount: response.totalCount,
         pageSize: queryParams.pageSize,
-        hasMore: response.data.hasMore,
-        nextCursor: response.data.nextCursor ?? null
+        hasMore: response.hasMore,
+        nextCursor: response.nextCursor ?? null
       }
     } catch (err) {
       error.value = extractErrorMessage(err, '获取题目列表失败')
@@ -60,7 +60,7 @@ export const useQuestionStore = defineStore('question', () => {
     error.value = null
     try {
       const response = await questionApi.getQuestionDetail(id)
-      currentQuestion.value = response.data
+      currentQuestion.value = response
       return response
     } catch (err) {
       error.value = extractErrorMessage(err, '获取题目详情失败')
@@ -75,9 +75,8 @@ export const useQuestionStore = defineStore('question', () => {
     error.value = null
     try {
       const result = await questionApi.createQuestion(data)
-      questions.value.unshift(result.data)
-      // 游标分页模式不需要维护 total
-      return result.data
+      questions.value.unshift(result)
+      return result
     } catch (err) {
       error.value = extractErrorMessage(err, '创建题目失败')
       throw error.value
@@ -97,13 +96,13 @@ export const useQuestionStore = defineStore('question', () => {
       // 更新列表中的数据
       const index = questions.value.findIndex(q => q.id === id)
       if (index !== -1) {
-        questions.value[index] = result.data
+        questions.value[index] = result
       }
       // 更新当前题目数据
       if (currentQuestion.value?.id === id) {
-        currentQuestion.value = result.data
+        currentQuestion.value = result
       }
-      return result.data
+      return result
     } catch (err) {
       error.value = extractErrorMessage(err, '更新题目失败')
       throw error.value
@@ -135,8 +134,8 @@ export const useQuestionStore = defineStore('question', () => {
     error.value = null
     try {
       const response = await questionApi.searchQuestions(searchTerm, questionBankId)
-      questions.value = response.data
-      return response.data
+      questions.value = response
+      return response
     } catch (err) {
       error.value = extractErrorMessage(err, '搜索题目失败')
       throw error.value

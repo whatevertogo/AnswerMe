@@ -59,7 +59,7 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
           questionBankId: id,
           pageSize: 1000
         })
-        questions.value = questionsResponse.data.data
+        questions.value = questionsResponse.data
       } catch (questionsError) {
         console.warn('获取题库题目列表失败:', questionsError)
         questions.value = []

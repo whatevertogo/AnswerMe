@@ -1,5 +1,4 @@
 import request from '@/utils/request'
-import type { AxiosResponse } from 'axios'
 import type {
   Question,
   QuestionQueryParams,
@@ -20,29 +19,29 @@ export interface QuestionListResponse {
 /**
  * 获取题目列表（分页）
  */
-export function getQuestions(params: QuestionQueryParams): Promise<AxiosResponse<QuestionListResponse>> {
-  return request.get<QuestionListResponse>('/questions', { params })
+export function getQuestions(params: QuestionQueryParams): Promise<QuestionListResponse> {
+  return request.get('/questions', { params }) as Promise<QuestionListResponse>
 }
 
 /**
  * 获取题目详情
  */
-export function getQuestionDetail(id: number): Promise<AxiosResponse<Question>> {
-  return request.get<Question>(`/questions/${id}`)
+export function getQuestionDetail(id: number): Promise<Question> {
+  return request.get(`/questions/${id}`) as Promise<Question>
 }
 
 /**
  * 创建题目
  */
-export function createQuestion(data: CreateQuestionDto): Promise<AxiosResponse<Question>> {
-  return request.post<Question>('/questions', data)
+export function createQuestion(data: CreateQuestionDto): Promise<Question> {
+  return request.post('/questions', data) as Promise<Question>
 }
 
 /**
  * 批量创建题目
  */
-export function createQuestions(data: CreateQuestionDto[]): Promise<AxiosResponse<Question[]>> {
-  return request.post<Question[]>('/questions/batch', data)
+export function createQuestions(data: CreateQuestionDto[]): Promise<Question[]> {
+  return request.post('/questions/batch', data) as Promise<Question[]>
 }
 
 /**
@@ -51,29 +50,29 @@ export function createQuestions(data: CreateQuestionDto[]): Promise<AxiosRespons
 export function updateQuestion(
   id: number,
   data: UpdateQuestionDto
-): Promise<AxiosResponse<Question>> {
-  return request.put<Question>(`/questions/${id}`, data)
+): Promise<Question> {
+  return request.put(`/questions/${id}`, data) as Promise<Question>
 }
 
 /**
  * 删除题目
  */
-export function deleteQuestion(id: number): Promise<AxiosResponse<{ message: string }>> {
-  return request.delete<{ message: string }>(`/questions/${id}`)
+export function deleteQuestion(id: number): Promise<{ message: string }> {
+  return request.delete(`/questions/${id}`) as Promise<{ message: string }>
 }
 
 /**
  * 批量删除题目
  */
-export function deleteQuestions(ids: number[]): Promise<AxiosResponse<{ message: string; successCount: number; notFoundCount: number }>> {
-  return request.post<{ message: string; successCount: number; notFoundCount: number }>('/questions/batch-delete', ids)
+export function deleteQuestions(ids: number[]): Promise<{ message: string; successCount: number; notFoundCount: number }> {
+  return request.post('/questions/batch-delete', ids) as Promise<{ message: string; successCount: number; notFoundCount: number }>
 }
 
 /**
  * 搜索题目
  */
-export function searchQuestions(searchTerm: string, questionBankId: number): Promise<AxiosResponse<Question[]>> {
-  return request.get<Question[]>('/questions/search', {
+export function searchQuestions(searchTerm: string, questionBankId: number): Promise<Question[]> {
+  return request.get('/questions/search', {
     params: { searchTerm, questionBankId }
-  })
+  }) as Promise<Question[]>
 }
