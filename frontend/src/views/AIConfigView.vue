@@ -454,12 +454,12 @@ function getTypeTagType(type: string) {
 
 .header-left h1 {
   @apply m-0 text-[24px] font-semibold;
-  color: #303133;
+  color: var(--color-text-primary);
 }
 
 .subtitle {
   @apply mt-1 mb-0 text-sm;
-  color: #909399;
+  color: var(--color-text-secondary);
 }
 
 .datasource-list {
@@ -467,10 +467,15 @@ function getTypeTagType(type: string) {
 }
 
 .datasource-item {
-  @apply flex justify-between items-center px-5 py-5
-         border border-[#e4e7ed] rounded-lg
+  @apply flex justify-between items-center px-5 py-5 rounded-lg
          transition-all duration-300
-         hover:border-[#409eff] hover:shadow-[0_2px_12px_rgba(64,158,255,0.1)];
+         hover:shadow-[0_2px_12px_rgba(64,158,255,0.1)];
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+}
+
+.datasource-item:hover {
+  border-color: #409eff;
 }
 
 .datasource-info {
@@ -482,7 +487,8 @@ function getTypeTagType(type: string) {
 }
 
 .type-icon {
-  @apply text-[#409eff] flex-shrink-0;
+  @apply flex-shrink-0;
+  color: var(--color-primary);
 }
 
 .info-text {
@@ -495,7 +501,7 @@ function getTypeTagType(type: string) {
 
 .name {
   @apply text-base font-semibold;
-  color: #303133;
+  color: var(--color-text-primary);
 }
 
 .info-details {
@@ -507,19 +513,38 @@ function getTypeTagType(type: string) {
 }
 
 .label {
-  @apply text-[#909399] whitespace-nowrap;
+  @apply whitespace-nowrap;
+  color: var(--color-text-secondary);
 }
 
 .value {
-  @apply text-[#606266];
+  color: var(--color-text-primary);
 }
 
 .masked {
-  @apply font-mono text-[#909399];
+  @apply font-mono;
+  color: var(--color-text-muted);
 }
 
 .datasource-actions {
   @apply flex items-center gap-2 ml-6;
+}
+
+.datasource-actions :deep(.el-button.is-text) {
+  color: var(--color-text-secondary);
+}
+
+.datasource-actions :deep(.el-button.is-text:hover) {
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.datasource-actions :deep(.el-button.is-text.el-button--danger) {
+  color: var(--color-danger);
+}
+
+.datasource-actions :deep(.el-button.is-text.el-button--danger:hover) {
+  background-color: rgba(220, 38, 38, 0.14);
 }
 
 :deep(.el-form-item__label) {
@@ -543,7 +568,8 @@ function getTypeTagType(type: string) {
 }
 
 .form-tip {
-  @apply mt-1 text-xs text-[#909399] leading-[1.5];
+  @apply mt-1 text-xs leading-[1.5];
+  color: var(--color-text-muted);
 }
 
 </style>

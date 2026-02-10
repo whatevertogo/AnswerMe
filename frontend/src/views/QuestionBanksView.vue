@@ -269,20 +269,12 @@ const getDifficultyLabel = (difficulty: string) => {
 
 .page-title {
   @apply text-[1.5rem] font-bold m-0 mb-1;
-  color: #073642;
-}
-
-.dark .page-title {
-  color: #839496;
+  color: var(--color-text-primary);
 }
 
 .page-subtitle {
   @apply text-sm m-0;
-  color: #586E75;
-}
-
-.dark .page-subtitle {
-  color: #93A1A1;
+  color: var(--color-text-secondary);
 }
 
 /* 筛选栏 */
@@ -309,20 +301,12 @@ const getDifficultyLabel = (difficulty: string) => {
 
 .bank-name {
   @apply font-medium overflow-hidden text-ellipsis whitespace-nowrap;
-  color: #073642;
-}
-
-.dark .bank-name {
-  color: #839496;
+  color: var(--color-text-primary);
 }
 
 .bank-description {
   @apply text-sm overflow-hidden text-ellipsis whitespace-nowrap block;
-  color: #586E75;
-}
-
-.dark .bank-description {
-  color: #93A1A1;
+  color: var(--color-text-secondary);
 }
 
 .text-muted {
@@ -341,11 +325,7 @@ const getDifficultyLabel = (difficulty: string) => {
 /* 分页 */
 .pagination-wrapper {
   @apply flex justify-center px-4 py-4 border-t;
-  border-color: #e5e7eb;
-}
-
-.dark .pagination-wrapper {
-  border-color: #374151;
+  border-color: var(--color-border);
 }
 
 /* 表格样式优化 */
@@ -354,8 +334,8 @@ const getDifficultyLabel = (difficulty: string) => {
 }
 
 :deep(.el-table th.el-table__cell) {
-  background: #EEE8D5;
-  color: #073642;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
   font-weight: 600;
   padding-left: 1.5rem;
   padding-top: 1rem;
@@ -371,25 +351,12 @@ const getDifficultyLabel = (difficulty: string) => {
   padding-left: 1.5rem;
 }
 
-.dark :deep(.el-table th.el-table__cell) {
-  background: #073642;
-  color: #839496;
-}
-
 :deep(.el-table tr:hover > td) {
-  background: #FDF6E3 !important;
-}
-
-.dark :deep(.el-table tr:hover > td) {
-  background: #073642 !important;
+  background: var(--color-bg-secondary) !important;
 }
 
 :deep(.el-table td.el-table__cell) {
-  border-color: #E8E4CE;
-}
-
-.dark :deep(.el-table td.el-table__cell) {
-  border-color: #586E75;
+  border-color: var(--color-border);
 }
 
 /* 响应式 */

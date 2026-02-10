@@ -348,7 +348,7 @@ export default {
 
 .page-header h2 {
   @apply m-0 text-[1.5rem] font-bold;
-  color: #073642;
+  color: var(--color-text-primary);
 }
 
 .bank-info {
@@ -360,11 +360,13 @@ export default {
 }
 
 .description {
-  @apply text-[#657B83] text-[0.9375rem] mb-3 leading-[1.6];
+  @apply text-[0.9375rem] mb-3 leading-[1.6];
+  color: var(--color-text-secondary);
 }
 
 .meta {
-  @apply flex gap-6 text-[0.8125rem] text-[#586E75] flex-wrap;
+  @apply flex gap-6 text-[0.8125rem] flex-wrap;
+  color: var(--color-text-secondary);
 }
 
 .meta span {
@@ -376,7 +378,8 @@ export default {
 }
 
 .action-bar {
-  @apply flex gap-3 mb-6 px-4 py-4 bg-[#EEE8D5] rounded-lg;
+  @apply flex gap-3 mb-6 px-4 py-4 rounded-lg;
+  background-color: var(--color-bg-tertiary);
 }
 
 .questions-section {
@@ -389,9 +392,14 @@ export default {
 }
 
 .question-item {
-  @apply px-4 py-4 border border-[#E8E4CE] rounded-lg bg-bg
+  @apply px-4 py-4 rounded-lg bg-bg
          transition-all duration-150
-         hover:border-[#268BD2] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)];
+         hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)];
+  border: 1px solid var(--color-border);
+}
+
+.question-item:hover {
+  border-color: var(--color-primary);
 }
 
 .question-header {
@@ -399,12 +407,13 @@ export default {
 }
 
 .question-number {
-  @apply font-semibold text-[#268BD2] text-sm;
+  @apply font-semibold text-sm;
+  color: var(--color-primary);
 }
 
 .question-content {
   @apply text-[0.9375rem] leading-[1.6] mb-3;
-  color: #073642;
+  color: var(--color-text-primary);
 }
 
 .question-options {
@@ -412,7 +421,8 @@ export default {
 }
 
 .options-label {
-  @apply text-[#586E75] text-xs mb-2 font-medium;
+  @apply text-xs mb-2 font-medium;
+  color: var(--color-text-secondary);
 }
 
 .question-options ul {
@@ -420,7 +430,8 @@ export default {
 }
 
 .question-options li {
-  @apply py-1 text-[#657B83] text-sm;
+  @apply py-1 text-sm;
+  color: var(--color-text-secondary);
 }
 
 .question-answer {
