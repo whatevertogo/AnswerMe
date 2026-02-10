@@ -10,7 +10,7 @@ import {
   type DataSource,
   type CreateDataSourceParams,
   type UpdateDataSourceParams
-} from '@/api/datasource'
+} from '@/api/dataSource'
 import {
   aiProviders,
   getProviderByValue,

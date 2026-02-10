@@ -1,173 +1,77 @@
 # CLAUDE.md
 
-## 项目架构
+## 项目梗概
 
-**AnswerMe** - 自托管智能题库系统
+**AnswerMe** - 自托管智能题库系统，支持 AI 生成题目、多题库管理、练习/测验模式。
 
-**技术栈:** .NET 10 + Vue 3 + SQLite/PostgreSQL
+### 后端架构 (backend/)
+```
+AnswerMe.Domain/          # 实体、仓储接口（无依赖）
+AnswerMe.Application/     # 业务逻辑、DTOs、服务接口
+AnswerMe.Infrastructure/  # EF Core、仓储实现、AI Providers
+AnswerMe.API/             # 控制器、Program.cs、BackgroundServices
+```
+依赖流: Domain ← Application ← Infrastructure ← API
 
-**Clean Architecture 4层:**
-- `Domain/` - 实体、仓储接口
-- `Application/` - 业务逻辑、DTOs、服务
-- `Infrastructure/` - EF Core、仓储实现、AI Providers
-- `API/` - 控制器、启动配置
+### 前端架构 (frontend/src/)
+```
+api/           # API 请求函数（按模块划分）
+stores/        # Pinia 状态管理
+types/         # TypeScript 类型定义
+views/         # 页面组件
+components/    # 可复用组件
+composables/   # 组合式函数
+router/        # 路由配置
+utils/         # 工具函数（request.ts 统一 HTTP）
+```
 
-**关键规则:** 依赖单向流动 → Domain ← Application ← Infrastructure ← API
-
-## 核心命令
+## 快速启动
 
 ```bash
 # 后端
 cd backend && dotnet run --project AnswerMe.API
-dotnet ef migrations add Name --project Infrastructure --startup-project API
-dotnet test --filter "ClassName~Xxx"
 
 # 前端
 cd frontend && npm run dev
-npm run test -- xxx.test.ts
 
-# Docker
+# 完整服务（含 Redis）
 docker-compose up -d
 ```
 
-## 关键架构模式
+## Question 数据模型（迁移中）
 
-### Question 数据模型（迁移中）
+**已废弃:** `Options`, `CorrectAnswer`
+**当前:** `QuestionTypeEnum`, `QuestionDataJson`, `Data` (运行时)
 
-**旧字段（已废弃）:** `Options`, `CorrectAnswer`
-
-**新字段（当前）:** `QuestionTypeEnum`, `QuestionDataJson`, `Data` (运行时属性)
-
-**Entity → DTO:** 只映射 `QuestionTypeEnum`, `Data`
-**DTO → Entity:** 只写入 `QuestionDataJson`，不更新旧字段
-
-**Data 层次:**
-```
-QuestionData
-├── ChoiceQuestionData (Options[], CorrectAnswers[])
-├── BooleanQuestionData (CorrectAnswer: bool)
-├── FillBlankQuestionData (AcceptableAnswers[])
-└── ShortAnswerQuestionData (ReferenceAnswer)
-```
-
-### 仓储模式
-
-```csharp
-// Domain/Interfaces/ - 接口
-// Infrastructure/Repositories/ - 实现
-builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
-```
-
-### AI Provider 工厂
-
-```csharp
-// Infrastructure/AI/ - IAIProvider 实现
-// 注册为 SINGLETON
-builder.Services.AddSingleton<IAIProvider, OpenAIProvider>();
-var provider = _factory.GetProvider("OpenAI");
-```
-
-### 乐观锁
-
-```csharp
-// QuestionBank.Version: byte[8]
-if (!dto.Version.SequenceEqual(entity.Version))
-    throw new InvalidOperationException("并发冲突");
-BitConverter.GetBytes(BitConverter.ToInt64(entity.Version) + 1)
-    .CopyTo(entity.Version, 0);
-```
-
-### 基于游标分页
-
-```csharp
-query.Take(pageSize + 1)  // 多取1条判断是否有更多
-if (lastId.HasValue) query = query.Where(x => x.Id < lastId);
-```
-
-### JWT 认证
-
-```csharp
-// 控制器中提取用户ID
-int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-```
+**映射规则:**
+- Entity → DTO: 只映射 `QuestionTypeEnum`, `Data`
+- DTO → Entity: 只写入 `QuestionDataJson`
 
 ## 关键文件
 
-- `Program.cs` - DI 注册、中间件、Serilog 配置
+- `Program.cs` - DI、中间件、Serilog
+- `Domain/Common/LegacyFieldParser.cs` - 旧字段解析统一入口
 - `Infrastructure/Data/AnswerMeDbContext.cs` - DbContext
-- `Domain/Entities/Question.cs` - 注意 Data 属性的自动回退逻辑
-- `Application/Common/EntityMappingExtensions.cs` - 实体→DTO 映射
-- `Infrastructure/AI/` - Redis 任务队列和进度存储实现
-- `API/BackgroundServices/AIGenerationWorker.cs` - AI 生成后台服务
 
 ## 环境变量
 
 **必需:** `JWT_SECRET` (≥32字符)
+**可选:** `DB_TYPE` (Sqlite/PostgreSQL), `ConnectionStrings__Redis`
 
-**重要:** `DB_TYPE` (Sqlite/PostgreSQL), `ALLOWED_ORIGINS`
+## 前端规范
 
-**可选:**
-- `ConnectionStrings__Redis` - Redis 连接字符串（用于 AI 异步生成）
-- `AIGeneration__MaxSyncCount` - 同步生成最大题目数（默认 20）
+- 常量: `types/question.ts`
+- API: `api/xxx.ts`，使用 **命名导入** `import { request }`
+- Element Plus v3+: `el-radio`/`el-checkbox` 用 `value` 非 `label`
 
-## Redis 配置（AI 异步生成）
+## 后端规范
 
-Redis 用于 AI 异步生成任务队列：
+- 仓储计数: `CountByXxxYyyAsync`
+- 统计功能: DTO → Interface → Service → Controller
+- Application 层不直接引用 EFCore
 
-**方式一：使用 Docker（推荐）**
-```bash
-# 确保 Docker Desktop 已启动
-docker-compose up -d redis
-```
+## 常见坑点
 
-**方式二：本地安装 Redis**
-- Windows: 下载 Redis for Windows 或使用 WSL
-- macOS: `brew install redis && brew services start redis`
-- Linux: `sudo systemctl start redis`
-
-**生成模式判断：**
-- 题目数 ≤ MaxSyncCount（默认 20）：同步生成，直接返回
-- 题目数 > MaxSyncCount：异步生成，任务进入 Redis 队列
-
-如果 Redis 未配置，异步生成功能将不可用，但不影响同步生成。
-
-## 常见问题
-
-- **EF工具失效:** `dotnet tool install --global dotnet-ef`
-- **SQLite锁定:** 停止API后再运行迁移
-- **Serilog静态方法:** 用 `Log.Information()` 不是 `LogILogger()`
-- **Program.cs中日志:** `Serilog.Events.LogEventLevel` 不是 `Microsoft.Extensions.logging.LogLevel`
-- **Redis 连接失败:** 如果不需要 AI 异步生成，可以忽略；否则运行 `docker-compose up -d redis`
-
-## 添加新实体流程
-
-1. `Domain/Entities/` 创建实体
-2. `Domain/Interfaces/` 仓储接口
-3. `Infrastructure/Repositories/` 仓储实现
-4. `Application/Interfaces/` 服务接口
-5. `Application/Services/` 服务实现
-6. `API/Controllers/` 控制器
-7. `Program.cs` 注册所有服务
-8. `dotnet ef migrations add`
-
-## 前端代码规范
-
-- 共享常量定义在 `types/question.ts`：`DifficultyLabels`, `DifficultyColors`, `getQuestionTypeLabel`
-- API 函数定义在 `api/xxx.ts`，包含类型定义和请求函数
-- 列表数据加载使用 `onMounted` 钩子 + `isLoading` 状态
-- 路由辅助函数：`authRoute()`, `publicRoute()` (router/index.ts)
-- **API 调用必须使用命名导入:** `import { request } from '@/utils/request'` 而非 `import request from '@/utils/request'`
-  - 默认导入返回完整 Axios 响应 `{data, status, headers}`，命名导入自动解包 `response.data`
-- **错误处理:** 不要静默吞掉错误，使用 `console.error` + `ElMessage.error` 或向上抛出
-- **Element Plus:** `el-radio`/`el-checkbox` 使用 `value` 属性而非 `label`（v3+ API 变更）
-
-## 后端代码规范
-
-- 旧字段解析统一使用 `Domain/Common/LegacyFieldParser.cs`
-- 添加统计功能模式：DTO (`Application/DTOs/`) → Interface (`Application/Interfaces/`) → Service (`Application/Services/`) → Controller (`API/Controllers/`)
-- 仓储计数方法命名：`CountByXxxYyyAsync`
-- Application 层不应直接引用 `Microsoft.EntityFrameworkCore`
-
-## 代码简化工具
-
-- 使用 `code-simplifier` 代理发现和消除重复代码
+- 迁移前停止 API（SQLite 锁定）
+- EF 工具失效: `dotnet tool install --global dotnet-ef`
+- AI 异步生成需 Redis（`docker-compose up -d redis`）

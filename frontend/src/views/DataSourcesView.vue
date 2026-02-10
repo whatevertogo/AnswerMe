@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Connection, CircleCheck, Star, Edit, Delete } from '@element-plus/icons-vue'
 import { useDataSourceStore } from '@/stores/dataSource'
-import type { DataSource } from '@/api/datasource'
+import type { DataSource } from '@/api/dataSource'
 import { getProviderLabel, getProviderTagType } from '@/constants/aiProviders'
 
 const router = useRouter()

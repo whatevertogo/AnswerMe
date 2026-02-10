@@ -32,6 +32,10 @@ public class AIGenerationWorker : BackgroundService
         _options = options.Value;
     }
 
+    // 追踪正在执行的任务数量
+    private int _runningTasks = 0;
+    private readonly object _taskLock = new();
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("AI 生成后台服务启动");
@@ -61,8 +65,13 @@ public class AIGenerationWorker : BackgroundService
                 // 等待并发槽位
                 await concurrencySemaphore.WaitAsync(stoppingToken);
 
+                // 记录任务开始
+                lock (_taskLock)
+                {
+                    _runningTasks++;
+                }
+
                 // 在后台线程中处理任务（不阻塞主循环）
-                // 使用 Task.Run 但记录任务以便追踪
                 _ = ProcessTaskWithCleanupAsync(taskId, userId, request, concurrencySemaphore, stoppingToken);
             }
             catch (OperationCanceledException)
@@ -79,12 +88,42 @@ public class AIGenerationWorker : BackgroundService
 
         // 等待所有正在执行的任务完成
         _logger.LogInformation("等待所有任务完成...");
-        for (int i = 0; i < _options.WorkerConcurrency; i++)
-        {
-            await concurrencySemaphore.WaitAsync(stoppingToken);
-        }
+        await WaitForAllTasksToCompleteAsync(stoppingToken);
 
         _logger.LogInformation("AI 生成后台服务停止");
+    }
+
+    /// <summary>
+    /// 等待所有正在执行的任务完成
+    /// </summary>
+    private async Task WaitForAllTasksToCompleteAsync(CancellationToken cancellationToken)
+    {
+        var lastLogged = DateTime.UtcNow;
+        var logInterval = TimeSpan.FromSeconds(5);
+
+        while (true)
+        {
+            int currentRunning;
+            lock (_taskLock)
+            {
+                currentRunning = _runningTasks;
+            }
+
+            if (currentRunning == 0)
+            {
+                _logger.LogInformation("所有任务已完成");
+                break;
+            }
+
+            // 定期记录等待状态
+            if (DateTime.UtcNow - lastLogged > logInterval)
+            {
+                _logger.LogInformation("等待 {Count} 个任务完成...", currentRunning);
+                lastLogged = DateTime.UtcNow;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+        }
     }
 
     /// <summary>
@@ -111,6 +150,11 @@ public class AIGenerationWorker : BackgroundService
             }
             // 释放并发槽位
             semaphore.Release();
+            // 记录任务完成
+            lock (_taskLock)
+            {
+                _runningTasks--;
+            }
         }
     }
 

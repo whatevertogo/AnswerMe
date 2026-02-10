@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { DataSource, CreateDataSourceParams, UpdateDataSourceParams } from '@/api/datasource'
+import type { DataSource, CreateDataSourceParams, UpdateDataSourceParams } from '@/api/dataSource'
 import {
   getDataSourcesApi,
   createDataSourceApi,
@@ -8,7 +8,7 @@ import {
   deleteDataSourceApi,
   setDefaultDataSourceApi,
   validateApiKeyApi
-} from '@/api/datasource'
+} from '@/api/dataSource'
 import { extractErrorMessage } from '@/utils/errorHandler'
 
 export const useDataSourceStore = defineStore('dataSource', () => {

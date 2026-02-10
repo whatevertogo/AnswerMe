@@ -59,8 +59,8 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
           questionBankId: id,
           pageSize: 1000
         })
-        // questionsResponse.data 的结构是 { data: [], hasMore, nextCursor, totalCount }
-        questions.value = questionsResponse.data.data ?? []
+        // questionsResponse 的结构是 { data: [], hasMore, nextCursor, totalCount }
+        questions.value = questionsResponse.data ?? []
       } catch (questionsError) {
         console.error('获取题库题目列表失败:', questionsError)
         questions.value = []

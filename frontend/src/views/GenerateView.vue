@@ -5,7 +5,7 @@ import { Delete, MagicStick, DocumentCopy, ArrowLeft } from '@element-plus/icons
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAIGenerationStore } from '@/stores/aiGeneration'
 import { useDataSourceStore } from '@/stores/dataSource'
-import type { DataSource } from '@/api/datasource'
+import type { DataSource } from '@/api/dataSource'
 import type { AIGenerateRequest } from '@/api/aiGeneration'
 import { getQuestionBanks } from '@/api/questionBank'
 import type { QuestionBank } from '@/types'

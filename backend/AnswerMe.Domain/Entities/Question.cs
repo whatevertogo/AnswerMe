@@ -92,7 +92,9 @@ public class Question : BaseEntity
     }
 
     // 缓存字段，避免重复 JSON 解析
+    [NonSerialized]
     private QuestionData? _cachedData;
+    [NonSerialized]
     private string? _cachedDataJson;
 
     private QuestionData? DeserializeQuestionData()

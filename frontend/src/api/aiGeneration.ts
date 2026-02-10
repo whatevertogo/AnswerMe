@@ -1,5 +1,4 @@
 import { request } from '@/utils/request'
-import type { AxiosResponse } from 'axios'
 import type { QuestionType } from '@/types/question'
 
 // 难度枚举（复用 question.ts 中的定义）
@@ -39,9 +38,7 @@ export interface AIGenerateRequest {
 export interface GeneratedQuestion {
   id: number
   /** 题型枚举（对应后端 QuestionTypeEnum） */
-  questionTypeEnum: QuestionType
-  /** 题型字符串（向后兼容） */
-  questionType?: QuestionType
+  questionType: QuestionType
   questionText: string
   /** 选项（旧格式，向后兼容） */
   options?: string[]
@@ -103,20 +100,20 @@ export interface AIGenerateProgress {
 /**
  * 生成题目（同步，≤20题）
  */
-export const generateQuestionsApi = (params: AIGenerateRequest): Promise<AxiosResponse<AIGenerateResponse>> => {
-  return request.post<AIGenerateResponse>('/AIGeneration/generate', params)
+export const generateQuestionsApi = (params: AIGenerateRequest): Promise<AIGenerateResponse> => {
+  return request.post('/AIGeneration/generate', params)
 }
 
 /**
  * 生成题目（异步，>20题）
  */
-export const generateQuestionsAsyncApi = (params: AIGenerateRequest): Promise<AxiosResponse<AIGenerateResponse>> => {
-  return request.post<AIGenerateResponse>('/AIGeneration/generate-async', params)
+export const generateQuestionsAsyncApi = (params: AIGenerateRequest): Promise<AIGenerateResponse> => {
+  return request.post('/AIGeneration/generate-async', params)
 }
 
 /**
  * 查询生成进度
  */
-export const getGenerationProgressApi = (taskId: string): Promise<AxiosResponse<AIGenerateProgress>> => {
-  return request.get<AIGenerateProgress>(`/AIGeneration/progress/${taskId}`)
+export const getGenerationProgressApi = (taskId: string): Promise<AIGenerateProgress> => {
+  return request.get(`/AIGeneration/progress/${taskId}`)
 }

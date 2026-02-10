@@ -10,7 +10,7 @@ export const authApi = {
    * POST /api/auth/login
    */
   login(data: LoginDto): Promise<AuthResponseDto> {
-    return request.post<AuthResponseDto>('/auth/login', data).then(response => response.data)
+    return request.post('/auth/login', data)
   },
 
   /**
@@ -18,7 +18,7 @@ export const authApi = {
    * POST /api/auth/register
    */
   register(data: RegisterDto): Promise<AuthResponseDto> {
-    return request.post<AuthResponseDto>('/auth/register', data).then(response => response.data)
+    return request.post('/auth/register', data)
   },
 
   /**
@@ -26,7 +26,7 @@ export const authApi = {
    * GET /api/auth/me
    */
   getCurrentUser(): Promise<UserDto> {
-    return request.get<UserDto>('/auth/me').then(response => response.data)
+    return request.get('/auth/me')
   },
 
   /**
@@ -34,6 +34,6 @@ export const authApi = {
    * POST /api/auth/local-login
    */
   localLogin(): Promise<AuthResponseDto> {
-    return request.post<AuthResponseDto>('/auth/local-login').then(response => response.data)
+    return request.post('/auth/local-login')
   }
 }

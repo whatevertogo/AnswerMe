@@ -61,7 +61,7 @@ export interface ApiUsageStats {
  * GET /api/datasource
  */
 export const getDataSourcesApi = (): Promise<DataSource[]> => {
-  return request.get<DataSource[]>('/datasource').then(response => response.data)
+  return request.get('/datasource')
 }
 
 /**
@@ -69,7 +69,7 @@ export const getDataSourcesApi = (): Promise<DataSource[]> => {
  * GET /api/datasource/:id
  */
 export const getDataSourceApi = (id: number): Promise<DataSource> => {
-  return request.get<DataSource>(`/datasource/${id}`).then(response => response.data)
+  return request.get(`/datasource/${id}`)
 }
 
 /**
@@ -77,7 +77,7 @@ export const getDataSourceApi = (id: number): Promise<DataSource> => {
  * GET /api/datasource/default
  */
 export const getDefaultDataSourceApi = (): Promise<DataSource> => {
-  return request.get<DataSource>('/datasource/default').then(response => response.data)
+  return request.get('/datasource/default')
 }
 
 /**
@@ -85,7 +85,7 @@ export const getDefaultDataSourceApi = (): Promise<DataSource> => {
  * POST /api/datasource
  */
 export const createDataSourceApi = (params: CreateDataSourceParams): Promise<DataSource> => {
-  return request.post<DataSource>('/datasource', params).then(response => response.data)
+  return request.post('/datasource', params)
 }
 
 /**
@@ -93,7 +93,7 @@ export const createDataSourceApi = (params: CreateDataSourceParams): Promise<Dat
  * PUT /api/datasource/:id
  */
 export const updateDataSourceApi = (id: number, params: UpdateDataSourceParams): Promise<DataSource> => {
-  return request.put<DataSource>(`/datasource/${id}`, params).then(response => response.data)
+  return request.put(`/datasource/${id}`, params)
 }
 
 /**
@@ -101,7 +101,7 @@ export const updateDataSourceApi = (id: number, params: UpdateDataSourceParams):
  * DELETE /api/datasource/:id
  */
 export const deleteDataSourceApi = (id: number): Promise<{ message: string }> => {
-  return request.delete<{ message: string }>(`/datasource/${id}`).then(response => response.data)
+  return request.delete(`/datasource/${id}`)
 }
 
 /**
@@ -109,7 +109,7 @@ export const deleteDataSourceApi = (id: number): Promise<{ message: string }> =>
  * POST /api/datasource/:id/set-default
  */
 export const setDefaultDataSourceApi = (id: number): Promise<{ message: string }> => {
-  return request.post<{ message: string }>(`/datasource/${id}/set-default`).then(response => response.data)
+  return request.post(`/datasource/${id}/set-default`)
 }
 
 /**
@@ -117,5 +117,5 @@ export const setDefaultDataSourceApi = (id: number): Promise<{ message: string }
  * POST /api/datasource/:id/validate
  */
 export const validateApiKeyApi = (id: number): Promise<{ message: string; valid: boolean }> => {
-  return request.post<{ message: string; valid: boolean }>(`/datasource/${id}/validate`).then(response => response.data)
+  return request.post(`/datasource/${id}/validate`)
 }
