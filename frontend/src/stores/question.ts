@@ -7,11 +7,9 @@ import type {
   UpdateQuestionDto
 } from '@/types'
 import * as questionApi from '@/api/question'
-import { QuestionType, Difficulty } from '@/types'
 import { extractErrorMessage } from '@/utils/errorHandler'
 
 export type { Question }
-export { QuestionType, Difficulty }
 
 export const useQuestionStore = defineStore('question', () => {
   const questions = ref<Question[]>([])
@@ -19,29 +17,35 @@ export const useQuestionStore = defineStore('question', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const pagination = ref({
-    total: 0,
-    page: 1,
-    pageSize: 20
+    totalCount: 0,
+    pageSize: 20,
+    hasMore: false,
+    nextCursor: null as number | null
   })
 
-  async function fetchQuestions(params: QuestionQueryParams) {
+  async function fetchQuestions(params: QuestionQueryParams, options?: { append?: boolean }) {
     loading.value = true
     error.value = null
     try {
       const queryParams: QuestionQueryParams = {
-        page: params.page || 1,
         pageSize: params.pageSize || 20,
+        lastId: params.lastId,
         questionBankId: params.questionBankId,
-        type: params.type,
+        questionTypeEnum: params.questionTypeEnum,
         difficulty: params.difficulty,
         search: params.search
       }
       const response = await questionApi.getQuestions(queryParams)
-      questions.value = response
+      if (options?.append) {
+        questions.value = [...questions.value, ...response.data.data]
+      } else {
+        questions.value = response.data.data
+      }
       pagination.value = {
-        total: response.total,
-        page: response.page,
-        pageSize: response.pageSize
+        totalCount: response.data.totalCount,
+        pageSize: queryParams.pageSize,
+        hasMore: response.data.hasMore,
+        nextCursor: response.data.nextCursor ?? null
       }
     } catch (err) {
       error.value = extractErrorMessage(err, '获取题目列表失败')
@@ -56,7 +60,7 @@ export const useQuestionStore = defineStore('question', () => {
     error.value = null
     try {
       const response = await questionApi.getQuestionDetail(id)
-      currentQuestion.value = response
+      currentQuestion.value = response.data
       return response
     } catch (err) {
       error.value = extractErrorMessage(err, '获取题目详情失败')
@@ -71,9 +75,9 @@ export const useQuestionStore = defineStore('question', () => {
     error.value = null
     try {
       const result = await questionApi.createQuestion(data)
-      questions.value.unshift(result)
+      questions.value.unshift(result.data)
       pagination.value.total += 1
-      return result
+      return result.data
     } catch (err) {
       error.value = extractErrorMessage(err, '创建题目失败')
       throw error.value
@@ -93,13 +97,13 @@ export const useQuestionStore = defineStore('question', () => {
       // 更新列表中的数据
       const index = questions.value.findIndex(q => q.id === id)
       if (index !== -1) {
-        questions.value[index] = result
+        questions.value[index] = result.data
       }
       // 更新当前题目数据
       if (currentQuestion.value?.id === id) {
-        currentQuestion.value = result
+        currentQuestion.value = result.data
       }
-      return result
+      return result.data
     } catch (err) {
       error.value = extractErrorMessage(err, '更新题目失败')
       throw error.value
@@ -126,13 +130,13 @@ export const useQuestionStore = defineStore('question', () => {
     }
   }
 
-  async function searchQuestions(searchTerm: string, questionBankId?: number): Promise<Question[]> {
+  async function searchQuestions(searchTerm: string, questionBankId: number): Promise<Question[]> {
     loading.value = true
     error.value = null
     try {
-      const results = await questionApi.searchQuestions(searchTerm, questionBankId)
-      questions.value = results
-      return results
+      const response = await questionApi.searchQuestions(searchTerm, questionBankId)
+      questions.value = response.data
+      return response.data
     } catch (err) {
       error.value = extractErrorMessage(err, '搜索题目失败')
       throw error.value
@@ -149,9 +153,10 @@ export const useQuestionStore = defineStore('question', () => {
     questions.value = []
     currentQuestion.value = null
     pagination.value = {
-      total: 0,
-      page: 1,
-      pageSize: 20
+      totalCount: 0,
+      pageSize: 20,
+      hasMore: false,
+      nextCursor: null
     }
   }
 

@@ -42,6 +42,7 @@ public static class EntityMappingExtensions
 
     /// <summary>
     /// 将 Question 实体映射为 DTO
+    /// 只映射新字段，旧字段由 Data 属性提供
     /// </summary>
     public static QuestionDto ToDto(this Question entity)
     {
@@ -51,9 +52,8 @@ public static class EntityMappingExtensions
             QuestionBankId = entity.QuestionBankId,
             QuestionBankName = entity.QuestionBank?.Name ?? string.Empty,
             QuestionText = entity.QuestionText,
-            QuestionType = entity.QuestionType,
-            Options = entity.Options,
-            CorrectAnswer = entity.CorrectAnswer,
+            QuestionTypeEnum = entity.QuestionTypeEnum,
+            Data = entity.Data,
             Explanation = entity.Explanation,
             Difficulty = entity.Difficulty,
             OrderIndex = entity.OrderIndex,

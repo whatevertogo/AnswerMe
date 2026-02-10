@@ -10,6 +10,7 @@ import QuizResultModal from '@/components/quiz/QuizResultModal.vue'
 import { useQuizStore } from '@/stores/quiz'
 import { getQuestionDetail } from '@/api/question'
 import type { QuizQuestion } from '@/stores/quiz'
+import { getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,6 +18,8 @@ const quizStore = useQuizStore()
 
 // 从路由参数获取 bankId 和 attemptId (sessionId)
 const bankId = computed(() => parseInt(route.params.bankId as string))
+// 判断是否为新答题会话（根据路由名称或 sessionId 参数）
+const isNewQuiz = computed(() => route.name === 'QuizNew' || route.params.sessionId === 'new')
 const sessionId = computed(() => route.params.sessionId as string)
 
 // 本地状态
@@ -29,13 +32,16 @@ const darkMode = ref(true)
 const loading = ref(true)
 const initializing = ref(true)
 
+// localStorage key 用于保存标记状态
+const STORAGE_KEY_MARKED = 'quiz_marked_questions'
+
 // 计时器
 let timer: number | null = null
 
 // Computed
 const currentQuestion = computed(() => {
   const qid = quizStore.currentQuestionId
-  if (qid === null) return null
+  if (qid === null || qid === undefined) return null
   return questionMap.value.get(qid) || null
 })
 
@@ -71,7 +77,7 @@ onUnmounted(() => {
 
 // 监听路由参数变化
 watch(() => route.params, async () => {
-  if (route.name === 'Quiz') {
+  if (route.name === 'Quiz' || route.name === 'QuizNew') {
     stopTimer()
     await initializeQuiz()
     startTimer()
@@ -83,8 +89,8 @@ async function initializeQuiz() {
   loading.value = true
 
   try {
-    // 如果 sessionId 是 'new' 或不存在，则开始新答题
-    if (!sessionId.value || sessionId.value === 'new' || sessionId.value === 'undefined') {
+    // 如果是新答题路由或 sessionId 是 'new'，则开始新答题
+    if (isNewQuiz.value) {
       // 开始新答题
       await startNewQuiz()
     } else {
@@ -104,10 +110,13 @@ async function initializeQuiz() {
 async function startNewQuiz() {
   try {
     // 调用 startQuiz API
-    const response = await quizStore.startQuiz(bankId.value, 'sequential')
+    await quizStore.startQuiz(bankId.value, 'sequential')
 
     // 获取题目详情
     await loadQuestionsDetails(quizStore.questionIds)
+
+    // 恢复标记状态（如果有保存的）
+    loadMarkedQuestions()
 
     ElMessage.success('答题开始！')
   } catch (error: any) {
@@ -120,7 +129,7 @@ async function loadExistingQuiz() {
     const attemptId = parseInt(sessionId.value)
 
     // 加载答题详情
-    const details = await quizStore.fetchQuizDetails(sessionId.value)
+    const details = await quizStore.fetchQuizDetails(attemptId)
 
     // 从详情中提取题目ID
     const questionIds = details.map((d: any) => d.questionId)
@@ -129,15 +138,21 @@ async function loadExistingQuiz() {
     quizStore.currentAttemptId = attemptId
     quizStore.questionIds = questionIds
 
-    // 恢复答案
+    // 恢复答案和用时
     details.forEach((detail: any) => {
       if (detail.userAnswer) {
         quizStore.answers[detail.questionId] = detail.userAnswer
+      }
+      if (detail.timeSpent) {
+        quizStore.timeSpents[detail.questionId] = detail.timeSpent
       }
     })
 
     // 获取题目详情
     await loadQuestionsDetails(questionIds)
+
+    // 恢复标记状态
+    loadMarkedQuestions()
 
     // 检查是否已完成
     const completedDetail = details.find((d: any) => d.completedAt !== null)
@@ -153,20 +168,23 @@ async function loadExistingQuiz() {
 async function loadQuestionsDetails(questionIds: number[]) {
   try {
     // 批量获取题目详情
-    const questionPromises = questionIds.map(id => getQuestionDetail(id.toString()))
+    const questionPromises = questionIds.map(id => getQuestionDetail(id))
     const questionDetails = await Promise.all(questionPromises)
 
     // 转换为 QuizQuestion 格式
-    questions.value = questionDetails.map((q: any) => ({
-      id: q.id,
-      content: q.questionText,
-      type: convertQuestionType(q.questionType),
-      options: parseOptions(q.options),
-      difficulty: q.difficulty || 'medium',
-      tags: [],
-      correctAnswer: q.correctAnswer,
-      explanation: q.explanation
-    }))
+    questions.value = questionDetails.map((response: any) => {
+      const q = response?.data ?? response
+      return {
+        id: q.id,
+        content: q.questionText,
+        type: convertQuestionType(q.questionTypeEnum || q.questionType),
+        options: extractOptions(q),
+        difficulty: q.difficulty || 'medium',
+        tags: q.tags || [],
+        correctAnswer: extractCorrectAnswer(q),
+        explanation: q.explanation
+      }
+    })
 
     // 创建映射
     questionMap.value = new Map(questions.value.map(q => [q.id, q]))
@@ -176,23 +194,37 @@ async function loadQuestionsDetails(questionIds: number[]) {
   }
 }
 
+// 从新格式 data 中提取选项
+function extractOptions(question: any): string[] {
+  return getQuestionOptions(question)
+}
+
+// 从新格式 data 中提取答案
+function extractCorrectAnswer(question: any): string | undefined {
+  const answer = getQuestionCorrectAnswers(question)
+  if (Array.isArray(answer)) {
+    return answer.join(',')
+  }
+  if (typeof answer === 'boolean') {
+    return answer ? 'true' : 'false'
+  }
+  return answer ? String(answer) : undefined
+}
+
 function convertQuestionType(type: string): QuizQuestion['type'] {
   const typeMap: Record<string, QuizQuestion['type']> = {
+    'SingleChoice': 'single',
+    'MultipleChoice': 'multiple',
+    'TrueFalse': 'boolean',
+    'FillBlank': 'fill',
+    'ShortAnswer': 'essay',
+    // 兼容旧格式
     'choice': 'single',
     'multiple-choice': 'multiple',
     'true-false': 'boolean',
     'short-answer': 'essay'
   }
   return typeMap[type] || 'single'
-}
-
-function parseOptions(optionsStr?: string): string[] {
-  if (!optionsStr) return []
-  try {
-    return JSON.parse(optionsStr)
-  } catch {
-    return []
-  }
 }
 
 function startTimer() {
@@ -217,14 +249,8 @@ const formatTime = (seconds: number) => {
 
 const handleAnswer = async (questionId: number, answer: string | string[]) => {
   try {
-    let answerStr: string
-    if (Array.isArray(answer)) {
-      answerStr = JSON.stringify(answer)
-    } else {
-      answerStr = answer
-    }
-
-    await quizStore.submitAnswer(questionId, answerStr, timeElapsed.value)
+    // 直接传递原始格式，store 内部会转换为逗号分隔字符串
+    await quizStore.submitAnswer(questionId, answer, timeElapsed.value)
   } catch (error: any) {
     ElMessage.error('提交答案失败: ' + (error.message || '未知错误'))
     console.error('提交答案失败:', error)
@@ -236,6 +262,39 @@ const toggleMark = (questionId: number) => {
     markedQuestions.value.delete(questionId)
   } else {
     markedQuestions.value.add(questionId)
+  }
+  // 保存到 localStorage
+  saveMarkedQuestions()
+}
+
+// 保存标记状态到 localStorage
+const saveMarkedQuestions = () => {
+  if (quizStore.currentAttemptId) {
+    const key = `${STORAGE_KEY_MARKED}_${quizStore.currentAttemptId}`
+    localStorage.setItem(key, JSON.stringify([...markedQuestions.value]))
+  }
+}
+
+// 从 localStorage 恢复标记状态
+const loadMarkedQuestions = () => {
+  if (quizStore.currentAttemptId) {
+    const key = `${STORAGE_KEY_MARKED}_${quizStore.currentAttemptId}`
+    const saved = localStorage.getItem(key)
+    if (saved) {
+      try {
+        markedQuestions.value = new Set(JSON.parse(saved))
+      } catch {
+        markedQuestions.value = new Set()
+      }
+    }
+  }
+}
+
+// 清除 localStorage 中的标记状态
+const clearMarkedQuestions = () => {
+  if (quizStore.currentAttemptId) {
+    const key = `${STORAGE_KEY_MARKED}_${quizStore.currentAttemptId}`
+    localStorage.removeItem(key)
   }
 }
 
@@ -254,7 +313,9 @@ const goToPrevious = () => {
 const handleSubmit = async () => {
   try {
     loading.value = true
-    const result = await quizStore.completeQuiz()
+    await quizStore.completeQuiz()
+    // 清除标记状态
+    clearMarkedQuestions()
     showResult.value = true
     ElMessage.success('交卷成功！')
   } catch (error: any) {

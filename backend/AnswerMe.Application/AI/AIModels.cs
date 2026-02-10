@@ -1,3 +1,6 @@
+using AnswerMe.Domain.Enums;
+using AnswerMe.Domain.Models;
+
 namespace AnswerMe.Application.AI;
 
 /// <summary>
@@ -8,7 +11,12 @@ public class AIQuestionGenerateRequest
     public string Subject { get; set; } = string.Empty;
     public int Count { get; set; }
     public string Difficulty { get; set; } = "medium";
-    public List<string> QuestionTypes { get; set; } = new();
+
+    /// <summary>
+    /// 题型列表（新格式：枚举）
+    /// </summary>
+    public List<QuestionType> QuestionTypes { get; set; } = new();
+
     public string? CustomPrompt { get; set; }
     public string Language { get; set; } = "zh-CN";
 }
@@ -30,10 +38,43 @@ public class AIQuestionGenerateResponse
 /// </summary>
 public class GeneratedQuestion
 {
-    public string QuestionType { get; set; } = string.Empty;
+    /// <summary>
+    /// 题型（新格式：枚举）
+    /// </summary>
+    public QuestionType? QuestionTypeEnum { get; set; }
+
+    /// <summary>
+    /// 题型（旧格式：字符串，用于向后兼容）
+    /// TODO: 标记为 Obsolete，计划移除
+    /// </summary>
+    [Obsolete("请使用 QuestionTypeEnum")]
+    public string QuestionType
+    {
+        get => QuestionTypeEnum?.ToString() ?? string.Empty;
+        set => QuestionTypeEnum = QuestionTypeExtensions.ParseFromString(value);
+    }
+
     public string QuestionText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 题目数据（新格式：JSON，支持多选题）
+    /// </summary>
+    public QuestionData? Data { get; set; }
+
+    /// <summary>
+    /// 选项列表（旧格式，向后兼容）
+    /// TODO: 标记为 Obsolete，计划移除
+    /// </summary>
+    [Obsolete("请使用 Data.ChoiceQuestionData.Options")]
     public List<string> Options { get; set; } = new();
+
+    /// <summary>
+    /// 正确答案（旧格式，向后兼容）
+    /// TODO: 标记为 Obsolete，计划移除
+    /// </summary>
+    [Obsolete("请使用 Data.ChoiceQuestionData.CorrectAnswers")]
     public string CorrectAnswer { get; set; } = string.Empty;
+
     public string? Explanation { get; set; }
     public string Difficulty { get; set; } = "medium";
 }

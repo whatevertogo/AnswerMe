@@ -1,7 +1,19 @@
+// ==================== 题目类型定义 ====================
+// 优先使用 @/types/question.ts 中的类型定义
+// 使用 export * 进行批量重新导出
+
+export * from './question'
+export type { Question } from './question'
+
 // 通用类型定义
 export interface PaginationParams {
   page: number
   pageSize: number
+}
+
+export interface CursorPaginationParams {
+  pageSize: number
+  lastId?: number
 }
 
 export interface PaginatedResponse<T> {
@@ -56,25 +68,42 @@ export interface AuthResponseDto {
   user: UserDto
 }
 
-// 题目相关类型
-export const QuestionType = {
+// ==================== 向后兼容的类型定义（已过时）====================
+// TODO: 计划在下一个主版本中移除
+
+/**
+ * @deprecated 使用 QuestionType from './question' 代替
+ */
+export const LegacyQuestionType = {
   CHOICE: 'choice',
   MULTIPLE_CHOICE: 'multiple-choice',
   TRUE_FALSE: 'true-false',
   SHORT_ANSWER: 'short-answer'
 } as const
 
-export type QuestionTypeEnum = (typeof QuestionType)[keyof typeof QuestionType]
+/**
+ * @deprecated 使用 QuestionType from './question' 代替
+ */
+export type QuestionTypeEnum = (typeof LegacyQuestionType)[keyof typeof LegacyQuestionType]
 
+/**
+ * @deprecated 使用 Difficulty from './question' 代替
+ */
 export const Difficulty = {
   EASY: 'easy',
   MEDIUM: 'medium',
   HARD: 'hard'
 } as const
 
+/**
+ * @deprecated 使用 Difficulty from './question' 代替
+ */
 export type DifficultyEnum = (typeof Difficulty)[keyof typeof Difficulty]
 
-export interface Question {
+/**
+ * @deprecated 使用 Question interface from './question' 代替
+ */
+export interface QuestionLegacy {
   id: number
   content: string
   type: QuestionTypeEnum
@@ -86,15 +115,21 @@ export interface Question {
 }
 
 /** 题目查询参数 */
-export interface QuestionQueryParams extends PaginationParams {
+export interface QuestionQueryParams extends CursorPaginationParams {
   questionBankId?: number
-  type?: string
+  questionTypeEnum?: NewQuestionType
   difficulty?: string
   search?: string
 }
 
-/** 创建题目DTO */
-export interface CreateQuestionDto {
+/**
+ * @deprecated 将在未来版本中更新为使用新的 QuestionData 结构
+ */
+/**
+ * @deprecated 将在未来版本中更新为使用新的 QuestionData 结构
+ */
+/** @deprecated 使用 CreateQuestionDto from './question' 代替 */
+export interface LegacyCreateQuestionDto {
   questionBankId: number
   content: string
   type: string
@@ -105,8 +140,8 @@ export interface CreateQuestionDto {
   tags?: string[]
 }
 
-/** 更新题目DTO */
-export interface UpdateQuestionDto {
+/** @deprecated 使用 UpdateQuestionDto from './question' 代替 */
+export interface LegacyUpdateQuestionDto {
   content?: string
   type?: string
   options?: string[]
@@ -183,7 +218,7 @@ export interface GenerateParams {
 export interface QuizSession {
   id: number
   questionBankId: number
-  questions: Question[]
+  questions: NewQuestion[]
   currentQuestionIndex: number
   answers: Map<number, string>
   startTime: string

@@ -17,7 +17,6 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Application", "AnswerMe.API")
-    // ✅ 修复P0-3: 通过配置过滤敏感信息，避免日志记录密码、API密钥等
     // 在 appsettings.json 中配置过滤规则
     .WriteTo.Console(
         outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -34,32 +33,16 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
 // 配置JWT认证
-var jwtSecretFromConfig = builder.Configuration.GetValue<string>("JWT:Secret");
-var jwtSecretFromEnv = builder.Configuration.GetValue<string>("JWT_SECRET");
+var jwtSecret = GetJwtSecret(builder.Configuration);
+var jwtSettings = CreateJwtSettings(builder.Configuration, jwtSecret);
 
-// 优先使用环境变量，否则使用配置文件
-var jwtSecret = !string.IsNullOrEmpty(jwtSecretFromEnv) ? jwtSecretFromEnv : jwtSecretFromConfig;
-
-if (string.IsNullOrEmpty(jwtSecret))
+builder.Services.Configure<JwtSettings>(options =>
 {
-    throw new InvalidOperationException(
-        "JWT密钥未配置。请设置环境变量 JWT_SECRET(至少32个字符)或在配置文件中设置JWT:Secret");
-}
-
-if (jwtSecret.Length < 32)
-{
-    throw new InvalidOperationException(
-        "JWT密钥长度不足。环境变量 JWT_SECRET 必须至少包含32个字符以保证安全性");
-}
-
-var jwtSettings = new JwtSettings(
-    builder.Configuration.GetValue<string>("JWT:Issuer", "AnswerMe"),
-    builder.Configuration.GetValue<string>("JWT:Audience", "AnswerMeUsers"),
-    jwtSecret,
-    builder.Configuration.GetValue<int>("JWT:ExpiryDays", 30)
-);
-
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+    options.Issuer = jwtSettings.Issuer;
+    options.Audience = jwtSettings.Audience;
+    options.Secret = jwtSettings.Secret;
+    options.ExpiryDays = jwtSettings.ExpiryDays;
+});
 builder.Services.AddSingleton(jwtSettings);
 
 // 配置本地模式认证
@@ -89,7 +72,6 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // 配置Data Protection（用于加密API密钥）
-// ✅ 修复P0-4: 添加密钥持久化到文件系统，应用重启后仍可解密
 var keysDirectory = Path.Combine(Directory.GetCurrentDirectory(), "keys");
 
 // 确保keys目录存在
@@ -203,6 +185,69 @@ if (app.Environment.IsDevelopment())
     {
         Log.Error(ex, "数据库迁移失败");
     }
+
+    // 数据一致性检查（开发环境默认启用）
+    var enableConsistencyCheck = builder.Configuration.GetValue<bool>("DataConsistency:EnableCheck", true);
+    if (enableConsistencyCheck)
+    {
+        Log.Information("数据一致性检查已启用，开始执行...");
+
+        try
+        {
+            var checkService = scope.ServiceProvider.GetRequiredService<AnswerMe.Infrastructure.Services.DataConsistencyCheckService>();
+            var report = await checkService.CheckAllQuestionsAsync();
+
+            Log.Information(
+                "数据一致性检查完成: 总题数 {Total}, 不一致数 {Inconsistent}, 一致率 {Rate:F2}%",
+                report.TotalQuestions,
+                report.InconsistentQuestions,
+                report.ConsistencyRate);
+
+            if (report.Issues.Count > 0)
+            {
+                var errorCount = report.Issues.Count(i => i.Severity == "Error");
+                var warningCount = report.Issues.Count(i => i.Severity == "Warning");
+
+                Log.Warning(
+                    "发现 {ErrorCount} 个错误, {WarningCount} 个警告",
+                    errorCount,
+                    warningCount);
+
+                foreach (var issue in report.Issues.Take(10))
+                {
+                    var logLevel = issue.Severity == "Error" ? Serilog.Events.LogEventLevel.Error : Serilog.Events.LogEventLevel.Warning;
+                    Log.Write(logLevel,
+                        "题目 {QuestionId}: {Type} - {Description}. 建议: {Recommendation}",
+                        issue.QuestionId,
+                        issue.IssueType,
+                        issue.Description,
+                        issue.Recommendation);
+                }
+
+                if (report.Issues.Count > 10)
+                {
+                    Log.Warning("还有 {Remaining} 个问题未显示", report.Issues.Count - 10);
+                }
+            }
+
+            if (report.IsHealthy)
+            {
+                Log.Information("✅ 所有题目数据一致性检查通过");
+            }
+            else if (report.ConsistencyRate >= 99.5)
+            {
+                Log.Warning("⚠️ 数据一致性率 {Rate:F2}% 未达到 100%，但接近目标", report.ConsistencyRate);
+            }
+            else
+            {
+                Log.Error("❌ 数据一致性率 {Rate:F2}% 低于目标 99.5%，请执行数据修复", report.ConsistencyRate);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "数据一致性检查失败");
+        }
+    }
 }
 
 // 健康检查端点
@@ -229,4 +274,36 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+// 辅助方法
+static string GetJwtSecret(IConfiguration configuration)
+{
+    var jwtSecretFromConfig = configuration.GetValue<string>("JWT:Secret");
+    var jwtSecretFromEnv = configuration.GetValue<string>("JWT_SECRET");
+    var jwtSecret = !string.IsNullOrEmpty(jwtSecretFromEnv) ? jwtSecretFromEnv : jwtSecretFromConfig;
+
+    if (string.IsNullOrEmpty(jwtSecret))
+    {
+        throw new InvalidOperationException(
+            "JWT密钥未配置。请设置环境变量 JWT_SECRET(至少32个字符)或在配置文件中设置JWT:Secret");
+    }
+
+    if (jwtSecret.Length < 32)
+    {
+        throw new InvalidOperationException(
+            "JWT密钥长度不足。环境变量 JWT_SECRET 必须至少包含32个字符以保证安全性");
+    }
+
+    return jwtSecret;
+}
+
+static JwtSettings CreateJwtSettings(IConfiguration configuration, string jwtSecret)
+{
+    return new JwtSettings(
+        configuration.GetValue<string>("JWT:Issuer", "AnswerMe"),
+        configuration.GetValue<string>("JWT:Audience", "AnswerMeUsers"),
+        jwtSecret,
+        configuration.GetValue<int>("JWT:ExpiryDays", 30)
+    );
 }

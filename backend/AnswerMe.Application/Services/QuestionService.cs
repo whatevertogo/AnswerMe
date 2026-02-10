@@ -2,6 +2,11 @@ using AnswerMe.Application.Common;
 using AnswerMe.Application.DTOs;
 using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Interfaces;
+using AnswerMe.Domain.Enums;
+using AnswerMe.Domain.Models;
+using AnswerMe.Domain.Common;
+using System.Text.Json;
+using System.Linq;
 
 namespace AnswerMe.Application.Services;
 
@@ -34,15 +39,23 @@ public class QuestionService : IQuestionService
         {
             QuestionBankId = dto.QuestionBankId,
             QuestionText = dto.QuestionText,
-            QuestionType = dto.QuestionType,
-            Options = dto.Options,
-            CorrectAnswer = dto.CorrectAnswer,
+            QuestionTypeEnum = ResolveQuestionType(dto.QuestionTypeEnum, dto.Data),
             Explanation = dto.Explanation,
             Difficulty = dto.Difficulty,
             OrderIndex = dto.OrderIndex,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
+
+        var data = NormalizeQuestionData(
+            dto.Data,
+            question.QuestionTypeEnum,
+            dto.Options,
+            dto.CorrectAnswer,
+            dto.Explanation,
+            dto.Difficulty);
+
+        ApplyQuestionData(question, data);
 
         await _questionRepository.AddAsync(question, cancellationToken);
         await _questionRepository.SaveChangesAsync(cancellationToken);
@@ -63,10 +76,11 @@ public class QuestionService : IQuestionService
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var questions = await _questionRepository.SearchAsync(query.QuestionBankId, query.Search, cancellationToken);
+            var typeFilter = query.QuestionTypeEnum?.ToString() ?? query.QuestionType;
             var result = questions
                 .Where(q =>
                     (string.IsNullOrEmpty(query.Difficulty) || q.Difficulty == query.Difficulty) &&
-                    (string.IsNullOrEmpty(query.QuestionType) || q.QuestionType == query.QuestionType))
+                    (string.IsNullOrEmpty(typeFilter) || q.QuestionType == typeFilter))
                 .ToList();
 
             var dtos = result.ToDtoList();
@@ -87,10 +101,11 @@ public class QuestionService : IQuestionService
             cancellationToken);
 
         // 根据难度和类型过滤
+        var typeFilterPaged = query.QuestionTypeEnum?.ToString() ?? query.QuestionType;
         var filteredQuestions = questionsPaged
             .Where(q =>
                 (string.IsNullOrEmpty(query.Difficulty) || q.Difficulty == query.Difficulty) &&
-                (string.IsNullOrEmpty(query.QuestionType) || q.QuestionType == query.QuestionType))
+                (string.IsNullOrEmpty(typeFilterPaged) || q.QuestionType == typeFilterPaged))
             .ToList();
 
         var resultList = filteredQuestions.ToDtoList();
@@ -150,19 +165,10 @@ public class QuestionService : IQuestionService
             question.QuestionText = dto.QuestionText;
         }
 
-        if (dto.QuestionType != null)
+        var resolvedType = ResolveQuestionType(dto.QuestionTypeEnum ?? question.QuestionTypeEnum, dto.Data);
+        if (resolvedType.HasValue)
         {
-            question.QuestionType = dto.QuestionType;
-        }
-
-        if (dto.Options != null)
-        {
-            question.Options = dto.Options;
-        }
-
-        if (dto.CorrectAnswer != null)
-        {
-            question.CorrectAnswer = dto.CorrectAnswer;
+            question.QuestionTypeEnum = resolvedType;
         }
 
         if (dto.Explanation != null)
@@ -178,6 +184,19 @@ public class QuestionService : IQuestionService
         if (dto.OrderIndex.HasValue)
         {
             question.OrderIndex = dto.OrderIndex.Value;
+        }
+
+        var updatedData = NormalizeQuestionData(
+            dto.Data,
+            question.QuestionTypeEnum,
+            dto.Options,
+            dto.CorrectAnswer,
+            dto.Explanation ?? question.Explanation,
+            dto.Difficulty ?? question.Difficulty);
+
+        if (updatedData != null)
+        {
+            ApplyQuestionData(question, updatedData);
         }
 
         question.UpdatedAt = DateTime.UtcNow;
@@ -244,15 +263,22 @@ public class QuestionService : IQuestionService
             {
                 QuestionBankId = dto.QuestionBankId,
                 QuestionText = dto.QuestionText,
-                QuestionType = dto.QuestionType,
-                Options = dto.Options,
-                CorrectAnswer = dto.CorrectAnswer,
+                QuestionTypeEnum = ResolveQuestionType(dto.QuestionTypeEnum, dto.Data),
                 Explanation = dto.Explanation,
                 Difficulty = dto.Difficulty,
                 OrderIndex = dto.OrderIndex,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+            var data = NormalizeQuestionData(
+                dto.Data,
+                question.QuestionTypeEnum,
+                dto.Options,
+                dto.CorrectAnswer,
+                dto.Explanation,
+                dto.Difficulty);
+
+            ApplyQuestionData(question, data);
             questions.Add(question);
         }
 
@@ -294,5 +320,177 @@ public class QuestionService : IQuestionService
         }
 
         return (successCount, notFoundCount);
+    }
+
+    private static QuestionType? ResolveQuestionType(QuestionType? requestedType, QuestionData? data)
+    {
+        if (requestedType.HasValue)
+        {
+            return requestedType;
+        }
+
+        if (data is ChoiceQuestionData choiceData)
+        {
+            return choiceData.CorrectAnswers.Count > 1
+                ? QuestionType.MultipleChoice
+                : QuestionType.SingleChoice;
+        }
+
+        return data switch
+        {
+            BooleanQuestionData => QuestionType.TrueFalse,
+            FillBlankQuestionData => QuestionType.FillBlank,
+            ShortAnswerQuestionData => QuestionType.ShortAnswer,
+            _ => null
+        };
+    }
+
+    private static QuestionData? NormalizeQuestionData(
+        QuestionData? data,
+        QuestionType? questionType,
+#pragma warning disable CS0618 // 旧字段兼容性代码：DTO 中的 Options/CorrectAnswer 用于向后兼容
+        string? legacyOptions,
+        string? legacyCorrectAnswer,
+#pragma warning restore CS0618
+        string? explanation,
+        string? difficulty)
+    {
+        if (data == null)
+        {
+            data = BuildDataFromLegacy(questionType, legacyOptions, legacyCorrectAnswer, explanation, difficulty);
+        }
+
+        if (data == null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(explanation) && string.IsNullOrWhiteSpace(data.Explanation))
+        {
+            data.Explanation = explanation;
+        }
+
+        if (!string.IsNullOrWhiteSpace(difficulty))
+        {
+            data.Difficulty = difficulty;
+        }
+
+        return data;
+    }
+
+    /// <summary>
+    /// 应用题目数据到实体
+    /// 只更新新字段（QuestionDataJson），不再同步更新旧字段
+    /// 旧字段仅用于历史数据兼容
+    /// </summary>
+    private static void ApplyQuestionData(Domain.Entities.Question question, QuestionData? data)
+    {
+        if (data == null)
+        {
+            return;
+        }
+
+        // 只更新新字段
+        question.Data = data;
+
+        // 将 Explanation 和 Difficulty 提取到顶层字段（便于数据库查询）
+        if (!string.IsNullOrWhiteSpace(data.Explanation))
+        {
+            question.Explanation = data.Explanation;
+        }
+
+        if (!string.IsNullOrWhiteSpace(data.Difficulty))
+        {
+            question.Difficulty = data.Difficulty;
+        }
+
+        // 不再更新旧字段（Options、CorrectAnswer）
+        // 历史数据的旧字段保留用于读取兼容，新数据不写入旧字段
+    }
+
+    private static QuestionData? BuildDataFromLegacy(
+        QuestionType? questionType,
+        string? legacyOptions,
+        string? legacyCorrectAnswer,
+        string? explanation,
+        string? difficulty)
+    {
+        if (questionType == null)
+        {
+            return null;
+        }
+
+        switch (questionType)
+        {
+            case QuestionType.SingleChoice:
+            case QuestionType.MultipleChoice:
+            {
+                var options = ParseLegacyOptions(legacyOptions);
+                var correctAnswers = ParseLegacyAnswers(legacyCorrectAnswer);
+                if (options.Count == 0 && correctAnswers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
+                {
+                    return null;
+                }
+                return new ChoiceQuestionData
+                {
+                    Options = options,
+                    CorrectAnswers = correctAnswers,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            case QuestionType.TrueFalse:
+            {
+                if (!bool.TryParse(legacyCorrectAnswer, out var booleanAnswer))
+                {
+                    return null;
+                }
+                return new BooleanQuestionData
+                {
+                    CorrectAnswer = booleanAnswer,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            case QuestionType.FillBlank:
+            {
+                var answers = ParseLegacyAnswers(legacyCorrectAnswer);
+                if (answers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
+                {
+                    return null;
+                }
+                return new FillBlankQuestionData
+                {
+                    AcceptableAnswers = answers,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            case QuestionType.ShortAnswer:
+            {
+                if (string.IsNullOrWhiteSpace(legacyCorrectAnswer) && string.IsNullOrWhiteSpace(explanation))
+                {
+                    return null;
+                }
+                return new ShortAnswerQuestionData
+                {
+                    ReferenceAnswer = legacyCorrectAnswer ?? string.Empty,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            default:
+                return null;
+        }
+    }
+
+    private static List<string> ParseLegacyOptions(string? legacyOptions)
+    {
+        return LegacyFieldParser.ParseDelimitedList(legacyOptions);
+    }
+
+    private static List<string> ParseLegacyAnswers(string? legacyAnswers)
+    {
+        return LegacyFieldParser.ParseCorrectAnswers(legacyAnswers);
     }
 }

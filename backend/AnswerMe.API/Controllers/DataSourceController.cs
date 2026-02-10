@@ -147,7 +147,7 @@ public class DataSourceController : BaseApiController
 
         if (!isValid)
         {
-            return BadRequestWithError("API密钥无效或数据源不存在");
+            return Ok(new { message = "API密钥无效或数据源不存在", valid = false });
         }
 
         return Ok(new { message = "API密钥有效", valid = true });

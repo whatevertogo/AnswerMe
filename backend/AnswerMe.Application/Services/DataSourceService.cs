@@ -38,7 +38,7 @@ public class DataSourceService : IDataSourceService
             Endpoint = dto.Endpoint,
             Model = dto.Model
         };
-        var configJson = JsonSerializer.Serialize(config);
+        var configJson = SerializeConfig(config);
 
         // 如果设置为默认，先取消其他默认
         if (dto.IsDefault)
@@ -50,7 +50,7 @@ public class DataSourceService : IDataSourceService
         {
             UserId = userId,
             Name = dto.Name,
-            Type = dto.Type,
+            Type = dto.Type.Trim().ToLowerInvariant(),
             Config = configJson,
             IsDefault = dto.IsDefault,
             CreatedAt = DateTime.UtcNow,
@@ -60,7 +60,7 @@ public class DataSourceService : IDataSourceService
         await _dataSourceRepository.AddAsync(dataSource, cancellationToken);
         await _dataSourceRepository.SaveChangesAsync(cancellationToken);
 
-        return MapToDto(dataSource, dto.ApiKey);
+        return MapToDto(dataSource, config, MaskApiKey(dto.ApiKey));
     }
 
     public async Task<List<DataSourceDto>> GetUserDataSourcesAsync(int userId, CancellationToken cancellationToken = default)
@@ -70,9 +70,9 @@ public class DataSourceService : IDataSourceService
 
         foreach (var ds in dataSources)
         {
-            var config = JsonSerializer.Deserialize<DataSourceConfig>(ds.Config);
-            var maskedKey = MaskApiKey(config?.ApiKey ?? "");
-            result.Add(MapToDto(ds, maskedKey));
+            var config = DeserializeConfig(ds.Config);
+            var maskedKey = MaskApiKeyFromEncrypted(config.ApiKey ?? string.Empty);
+            result.Add(MapToDto(ds, config, maskedKey));
         }
 
         return result;
@@ -86,10 +86,10 @@ public class DataSourceService : IDataSourceService
             return null;
         }
 
-        var config = JsonSerializer.Deserialize<DataSourceConfig>(dataSource.Config);
-        var maskedKey = MaskApiKey(config?.ApiKey ?? "");
+        var config = DeserializeConfig(dataSource.Config);
+        var maskedKey = MaskApiKeyFromEncrypted(config.ApiKey ?? string.Empty);
 
-        return MapToDto(dataSource, maskedKey);
+        return MapToDto(dataSource, config, maskedKey);
     }
 
     public async Task<DataSourceDto?> GetDefaultAsync(int userId, CancellationToken cancellationToken = default)
@@ -100,10 +100,10 @@ public class DataSourceService : IDataSourceService
             return null;
         }
 
-        var config = JsonSerializer.Deserialize<DataSourceConfig>(dataSource.Config);
-        var maskedKey = MaskApiKey(config?.ApiKey ?? "");
+        var config = DeserializeConfig(dataSource.Config);
+        var maskedKey = MaskApiKeyFromEncrypted(config.ApiKey ?? string.Empty);
 
-        return MapToDto(dataSource, maskedKey);
+        return MapToDto(dataSource, config, maskedKey);
     }
 
     public async Task<DataSourceDto?> UpdateAsync(int id, int userId, UpdateDataSourceDto dto, CancellationToken cancellationToken = default)
@@ -114,12 +114,18 @@ public class DataSourceService : IDataSourceService
             return null;
         }
 
-        var config = JsonSerializer.Deserialize<DataSourceConfig>(dataSource.Config) ?? new DataSourceConfig();
+        var config = DeserializeConfig(dataSource.Config);
 
         // 更新名称
         if (!string.IsNullOrEmpty(dto.Name))
         {
             dataSource.Name = dto.Name;
+        }
+
+        // 更新Provider类型
+        if (!string.IsNullOrEmpty(dto.Type))
+        {
+            dataSource.Type = dto.Type.Trim().ToLowerInvariant();
         }
 
         // 更新API Key（需要加密）
@@ -156,13 +162,13 @@ public class DataSourceService : IDataSourceService
         }
 
         // 保存更新后的配置
-        dataSource.Config = JsonSerializer.Serialize(config);
+        dataSource.Config = SerializeConfig(config);
         dataSource.UpdatedAt = DateTime.UtcNow;
 
         await _dataSourceRepository.SaveChangesAsync(cancellationToken);
 
-        var maskedKey = MaskApiKey(config.ApiKey ?? "");
-        return MapToDto(dataSource, maskedKey);
+        var maskedKey = MaskApiKeyFromEncrypted(config.ApiKey ?? string.Empty);
+        return MapToDto(dataSource, config, maskedKey);
     }
 
     public async Task<bool> DeleteAsync(int id, int userId, CancellationToken cancellationToken = default)
@@ -208,25 +214,24 @@ public class DataSourceService : IDataSourceService
             return null;
         }
 
-        var config = JsonSerializer.Deserialize<DataSourceConfig>(dataSource.Config);
-        if (config == null || string.IsNullOrEmpty(config.ApiKey))
+        var config = DeserializeConfig(dataSource.Config);
+        if (string.IsNullOrEmpty(config.ApiKey))
         {
             return null;
         }
 
-        try
-        {
-            return new DataSourceConfigDto
-            {
-                ApiKey = _dataProtector.Unprotect(config.ApiKey),
-                Endpoint = config.Endpoint,
-                Model = config.Model
-            };
-        }
-        catch
+        var decryptedApiKey = TryUnprotectApiKey(config.ApiKey);
+        if (string.IsNullOrEmpty(decryptedApiKey))
         {
             return null;
         }
+
+        return new DataSourceConfigDto
+        {
+            ApiKey = decryptedApiKey,
+            Endpoint = config.Endpoint,
+            Model = config.Model
+        };
     }
 
     public async Task<bool> ValidateApiKeyAsync(int dataSourceId, int userId, CancellationToken cancellationToken = default)
@@ -255,7 +260,11 @@ public class DataSourceService : IDataSourceService
             }
 
             // 发送真实的 API 验证请求
-            var isValid = await provider.ValidateApiKeyAsync(config.ApiKey, cancellationToken);
+            var isValid = await provider.ValidateApiKeyAsync(
+                config.ApiKey,
+                config.Endpoint,
+                config.Model,
+                cancellationToken);
             return isValid;
         }
         catch
@@ -286,23 +295,69 @@ public class DataSourceService : IDataSourceService
         return $"{apiKey.Substring(0, 4)}...{apiKey.Substring(apiKey.Length - 4)}";
     }
 
-    private static DataSourceDto MapToDto(Domain.Entities.DataSource dataSource, string maskedKey)
+    private static DataSourceDto MapToDto(
+        Domain.Entities.DataSource dataSource,
+        DataSourceConfig config,
+        string maskedKey)
     {
-        var config = JsonSerializer.Deserialize<DataSourceConfig>(dataSource.Config);
-
         return new DataSourceDto
         {
             Id = dataSource.Id,
             UserId = dataSource.UserId,
             Name = dataSource.Name,
             Type = dataSource.Type,
-            Endpoint = config?.Endpoint,
-            Model = config?.Model,
+            Endpoint = config.Endpoint,
+            Model = config.Model,
             MaskedApiKey = maskedKey,
             IsDefault = dataSource.IsDefault,
             CreatedAt = dataSource.CreatedAt,
             UpdatedAt = dataSource.UpdatedAt
         };
+    }
+
+    private static DataSourceConfig DeserializeConfig(string configJson)
+    {
+        if (string.IsNullOrWhiteSpace(configJson))
+        {
+            return new DataSourceConfig();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<DataSourceConfig>(configJson) ?? new DataSourceConfig();
+        }
+        catch
+        {
+            return new DataSourceConfig();
+        }
+    }
+
+    private static string SerializeConfig(DataSourceConfig config)
+    {
+        return JsonSerializer.Serialize(config);
+    }
+
+    private string? TryUnprotectApiKey(string encrypted)
+    {
+        if (string.IsNullOrEmpty(encrypted))
+        {
+            return null;
+        }
+
+        try
+        {
+            return _dataProtector.Unprotect(encrypted);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string MaskApiKeyFromEncrypted(string encrypted)
+    {
+        var decrypted = TryUnprotectApiKey(encrypted);
+        return string.IsNullOrEmpty(decrypted) ? "****" : MaskApiKey(decrypted);
     }
 
     #endregion

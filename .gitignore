@@ -176,11 +176,21 @@ temp/
 !release-*.tar.gz
 
 # ==========================================
+# AI工具配置
+# ==========================================
+.zencoder/
+.claude-code/
+
+# ==========================================
 # AI生成文件
 # ==========================================
 .ai-generated/
 DRAFT.md
 NOTES.md
+
+# 测试报告（临时）
+TEST_SUMMARY.md
+TEST_REPORT.md
 
 # ==========================================
 # Misc
@@ -192,3 +202,8 @@ NOTES.md
 keys/
 *.key
 *.xml
+backend/AnswerMe.API/answerme.db*
+
+# 数据库旧文件
+*.db.old
+*.old.db 

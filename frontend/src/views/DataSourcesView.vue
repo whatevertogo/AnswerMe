@@ -2,8 +2,10 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Search, Connection, CircleCheck, Star, Edit, Delete } from '@element-plus/icons-vue'
 import { useDataSourceStore } from '@/stores/dataSource'
 import type { DataSource } from '@/api/datasource'
+import { getProviderLabel, getProviderTagType } from '@/constants/aiProviders'
 
 const router = useRouter()
 const dataSourceStore = useDataSourceStore()
@@ -89,25 +91,11 @@ const handleValidate = async (dataSource: DataSource) => {
 }
 
 const getTypeLabel = (type: string) => {
-  const typeMap: Record<string, string> = {
-    openai: 'OpenAI',
-    qwen: '通义千问',
-    zhipu: '智谱GLM',
-    minimax: 'Minimax',
-    custom_api: '自定义API'
-  }
-  return typeMap[type] || type
+  return getProviderLabel(type)
 }
 
 const getTypeTagType = (type: string) => {
-  const typeColorMap: Record<string, any> = {
-    openai: 'success',
-    qwen: 'primary',
-    zhipu: 'warning',
-    minimax: 'info',
-    custom_api: 'info'
-  }
-  return typeColorMap[type] || 'info'
+  return getProviderTagType(type)
 }
 </script>
 
@@ -115,7 +103,7 @@ const getTypeTagType = (type: string) => {
   <div class="datasources-view">
     <div class="header">
       <h1>AI配置管理</h1>
-      <el-button type="primary" :icon="'Plus'" @click="handleAdd">
+      <el-button type="primary" :icon="Plus" @click="handleAdd">
         添加配置
       </el-button>
     </div>
@@ -124,7 +112,7 @@ const getTypeTagType = (type: string) => {
       <el-input
         v-model="searchQuery"
         placeholder="搜索数据源名称或类型..."
-        :prefix-icon="'Search'"
+        :prefix-icon="Search"
         clearable
       />
     </el-card>

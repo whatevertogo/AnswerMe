@@ -3,9 +3,13 @@ using AnswerMe.Application.DTOs;
 using AnswerMe.Application.AI;
 using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Entities;
+using AnswerMe.Domain.Enums;
+using AnswerMe.Domain.Models;
 using AnswerMe.Domain.Interfaces;
+using AnswerMe.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace AnswerMe.Application.Services;
 
@@ -25,6 +29,7 @@ public class AIGenerationService : IAIGenerationService
     // 内存中的异步任务存储（生产环境应使用Redis或数据库）
     private static readonly Dictionary<string, AIGenerateProgressDto> _asyncTasks = new();
     private static readonly object _taskLock = new();
+    private const int GenerationBatchSize = 5;
 
     public AIGenerationService(
         IQuestionRepository questionRepository,
@@ -49,7 +54,6 @@ public class AIGenerationService : IAIGenerationService
         AIGenerateRequestDto dto,
         CancellationToken cancellationToken = default)
     {
-        // 验证输入
         if (dto.Count > 20)
         {
             return new AIGenerateResponseDto
@@ -60,163 +64,7 @@ public class AIGenerationService : IAIGenerationService
             };
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Subject))
-        {
-            return new AIGenerateResponseDto
-            {
-                Success = false,
-                ErrorMessage = "生成主题不能为空",
-                ErrorCode = "INVALID_SUBJECT"
-            };
-        }
-
-        // 获取用户的AI配置
-        var dataSource = await GetDataSourceForUserAsync(userId, dto.ProviderName, cancellationToken);
-        if (dataSource == null)
-        {
-            return new AIGenerateResponseDto
-            {
-                Success = false,
-                ErrorMessage = "未找到有效的AI配置，请先配置API密钥",
-                ErrorCode = "NO_DATA_SOURCE"
-            };
-        }
-
-        // 验证题库是否存在
-        if (dto.QuestionBankId.HasValue)
-        {
-            var questionBank = await _questionBankRepository.GetByIdAsync(dto.QuestionBankId.Value, cancellationToken);
-            if (questionBank == null || questionBank.UserId != userId)
-            {
-                return new AIGenerateResponseDto
-                {
-                    Success = false,
-                    ErrorMessage = "题库不存在或无权访问",
-                    ErrorCode = "QUESTIONBANK_NOT_FOUND"
-                };
-            }
-        }
-
-        // 获取AI Provider
-        var provider = _aiProviderFactory.GetProvider(dataSource.Type);
-        if (provider == null)
-        {
-            return new AIGenerateResponseDto
-            {
-                Success = false,
-                ErrorMessage = $"不支持的AI Provider: {dataSource.Type}",
-                ErrorCode = "UNSUPPORTED_PROVIDER"
-            };
-        }
-
-        // 构建AI请求
-        var aiRequest = new AIQuestionGenerateRequest
-        {
-            Subject = dto.Subject,
-            Count = dto.Count,
-            Difficulty = dto.Difficulty,
-            QuestionTypes = dto.QuestionTypes,
-            Language = dto.Language,
-            CustomPrompt = dto.CustomPrompt
-        };
-
-        // 调用AI生成（带重试机制）
-        // 获取完整的解密配置（包括 API Key、Endpoint、Model）
-        var config = await _dataSourceService.GetDecryptedConfigAsync(dataSource.Id, userId, cancellationToken);
-        if (config == null || string.IsNullOrEmpty(config.ApiKey))
-        {
-            _logger.LogError("无法获取数据源 {DataSourceId} 的解密配置", dataSource.Id);
-            return new AIGenerateResponseDto
-            {
-                Success = false,
-                ErrorMessage = "数据源配置解密失败，请检查配置",
-                ErrorCode = "CONFIG_DECRYPTION_FAILED"
-            };
-        }
-
-        var aiResponse = await CallAIWithRetryAsync(
-            provider,
-            config.ApiKey,
-            aiRequest,
-            config.Model,
-            config.Endpoint,
-            maxRetries: 3,
-            cancellationToken);
-
-        if (!aiResponse.Success || aiResponse.Questions.Count == 0)
-        {
-            return new AIGenerateResponseDto
-            {
-                Success = false,
-                ErrorMessage = aiResponse.ErrorMessage ?? "AI生成失败",
-                ErrorCode = aiResponse.ErrorCode ?? "AI_GENERATION_FAILED"
-            };
-        }
-
-        // 保存生成的题目
-        var savedQuestions = new List<GeneratedQuestionDto>();
-        var questionBankId = dto.QuestionBankId ?? await CreateDefaultQuestionBankAsync(userId, cancellationToken);
-
-        foreach (var question in aiResponse.Questions)
-        {
-            try
-            {
-                var questionEntity = new Question
-                {
-                    QuestionType = question.QuestionType,
-                    QuestionText = question.QuestionText,
-                    Options = JsonSerializer.Serialize(question.Options),
-                    CorrectAnswer = question.CorrectAnswer,
-                    Explanation = question.Explanation,
-                    Difficulty = question.Difficulty,
-                    QuestionBankId = questionBankId,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await _questionRepository.AddAsync(questionEntity, cancellationToken);
-
-                // 添加到已保存列表
-                savedQuestions.Add(new GeneratedQuestionDto
-                {
-                    Id = questionEntity.Id,
-                    QuestionType = question.QuestionType,
-                    QuestionText = question.QuestionText,
-                    Options = question.Options,
-                    CorrectAnswer = question.CorrectAnswer,
-                    Explanation = question.Explanation,
-                    Difficulty = question.Difficulty,
-                    QuestionBankId = questionBankId,
-                    CreatedAt = questionEntity.CreatedAt
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "保存题目失败: {QuestionText}", question.QuestionText);
-            }
-        }
-
-        // 提交事务
-        try
-        {
-            await _questionRepository.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "提交保存题目事务失败");
-        }
-
-        // 判断是否部分成功
-        var isPartialSuccess = savedQuestions.Count > 0 && savedQuestions.Count < aiResponse.Questions.Count;
-        
-        return new AIGenerateResponseDto
-        {
-            Success = savedQuestions.Count > 0,
-            Questions = savedQuestions,
-            TokensUsed = aiResponse.TokensUsed,
-            PartialSuccessCount = isPartialSuccess ? savedQuestions.Count : null,
-            ErrorMessage = isPartialSuccess ? $"成功保存 {savedQuestions.Count}/{aiResponse.Questions.Count} 道题目，部分题目保存失败" : null,
-            ErrorCode = isPartialSuccess ? "PARTIAL_SUCCESS" : null
-        };
+        return await GenerateQuestionsInternalAsync(userId, dto, cancellationToken, null);
     }
 
     public Task<string> StartAsyncGeneration(
@@ -268,9 +116,8 @@ public class AIGenerationService : IAIGenerationService
                         return null;  // 返回 null 表示任务不存在（不泄露其他用户任务信息）
                     }
 
-                    // 返回副本避免外部修改
-                    return JsonSerializer.Deserialize<AIGenerateProgressDto>(
-                        JsonSerializer.Serialize(progress));
+                    // 返回副本避免外部修改（避免序列化抽象类型导致异常）
+                    return CloneProgress(progress);
                 }
             }
             return null;
@@ -292,9 +139,18 @@ public class AIGenerationService : IAIGenerationService
 
             // 从新作用域获取服务实例（通过接口）
             var aiGenerationService = scope.ServiceProvider.GetRequiredService<IAIGenerationService>();
+            var concreteService = aiGenerationService as AIGenerationService
+                ?? throw new InvalidOperationException("无法解析 AIGenerationService");
 
-            // 调用同步生成逻辑
-            var response = await aiGenerationService.GenerateQuestionsAsync(userId, dto, CancellationToken.None);
+            var response = await concreteService.GenerateQuestionsInternalAsync(
+                userId,
+                dto,
+                CancellationToken.None,
+                generatedCount =>
+                {
+                    UpdateTaskProgress(taskId, generatedCount);
+                    return Task.CompletedTask;
+                });
 
             if (response.Success)
             {
@@ -302,11 +158,17 @@ public class AIGenerationService : IAIGenerationService
             }
             else if (response.PartialSuccessCount.HasValue && response.PartialSuccessCount.Value > 0)
             {
-                UpdateTaskStatus(taskId, "partial_success", response.Questions, response.ErrorMessage);
+                var errorMessage = string.IsNullOrWhiteSpace(response.ErrorMessage)
+                    ? "生成部分成功，但存在失败题目"
+                    : response.ErrorMessage;
+                UpdateTaskStatus(taskId, "partial_success", response.Questions, errorMessage);
             }
             else
             {
-                UpdateTaskStatus(taskId, "failed", errorMessage: response.ErrorMessage);
+                var errorMessage = string.IsNullOrWhiteSpace(response.ErrorMessage)
+                    ? "AI生成失败，请查看服务器日志"
+                    : response.ErrorMessage;
+                UpdateTaskStatus(taskId, "failed", errorMessage: errorMessage);
             }
         }
         catch (Exception ex)
@@ -340,6 +202,254 @@ public class AIGenerationService : IAIGenerationService
                 }
             }
         }
+    }
+
+    private void UpdateTaskProgress(string taskId, int generatedCount)
+    {
+        lock (_taskLock)
+        {
+            if (_asyncTasks.TryGetValue(taskId, out var progress))
+            {
+                progress.Status = "processing";
+                progress.GeneratedCount = generatedCount;
+            }
+        }
+    }
+
+    private async Task<AIGenerateResponseDto> GenerateQuestionsInternalAsync(
+        int userId,
+        AIGenerateRequestDto dto,
+        CancellationToken cancellationToken,
+        Func<int, Task>? onProgress)
+    {
+        // 验证请求参数
+        var validationResult = ValidateRequest(dto);
+        if (validationResult != null)
+        {
+            return validationResult;
+        }
+
+        if (dto.QuestionBankId.HasValue)
+        {
+            var questionBank = await _questionBankRepository.GetByIdAsync(dto.QuestionBankId.Value, cancellationToken);
+            if (questionBank == null || questionBank.UserId != userId)
+            {
+                return new AIGenerateResponseDto
+                {
+                    Success = false,
+                    ErrorMessage = "题库不存在或无权访问",
+                    ErrorCode = "QUESTIONBANK_NOT_FOUND"
+                };
+            }
+        }
+
+        // 验证数据源配置
+        var (dataSource, config, provider) = await ValidateDataSourceAsync(userId, dto, cancellationToken);
+        if (dataSource == null)
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "未找到有效的AI配置，请先配置API密钥",
+                ErrorCode = "NO_DATA_SOURCE"
+            };
+        }
+        if (config == null)
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "数据源配置解密失败，请检查配置",
+                ErrorCode = "CONFIG_DECRYPTION_FAILED"
+            };
+        }
+        if (provider == null)
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = $"不支持的AI Provider: {dataSource.Type}",
+                ErrorCode = "UNSUPPORTED_PROVIDER"
+            };
+        }
+
+        var savedQuestions = new List<GeneratedQuestionDto>();
+        var totalRequested = dto.Count;
+        var remaining = dto.Count;
+        var questionBankId = dto.QuestionBankId ?? await CreateDefaultQuestionBankAsync(userId, cancellationToken);
+        var tokensUsedTotal = 0;
+        var hasTokens = false;
+
+        while (remaining > 0)
+        {
+            var batchSize = Math.Min(GenerationBatchSize, remaining);
+            var aiRequest = new AIQuestionGenerateRequest
+            {
+                Subject = dto.Subject,
+                Count = batchSize,
+                Difficulty = dto.Difficulty,
+                QuestionTypes = dto.QuestionTypes,
+                Language = dto.Language,
+                CustomPrompt = dto.CustomPrompt
+            };
+
+            var aiResponse = await CallAIWithRetryAsync(
+                provider,
+                config.ApiKey,
+                aiRequest,
+                config.Model,
+                config.Endpoint,
+                maxRetries: 3,
+                cancellationToken);
+
+            if (!aiResponse.Success || aiResponse.Questions.Count == 0)
+            {
+                return new AIGenerateResponseDto
+                {
+                    Success = savedQuestions.Count > 0,
+                    Questions = savedQuestions,
+                    ErrorMessage = aiResponse.ErrorMessage ?? "AI生成失败",
+                    ErrorCode = aiResponse.ErrorCode ?? "AI_GENERATION_FAILED",
+                    PartialSuccessCount = savedQuestions.Count > 0 ? savedQuestions.Count : null,
+                    TokensUsed = hasTokens ? tokensUsedTotal : null
+                };
+            }
+
+            if (aiResponse.TokensUsed.HasValue)
+            {
+                tokensUsedTotal += aiResponse.TokensUsed.Value;
+                hasTokens = true;
+            }
+
+            var savedBeforeBatch = savedQuestions.Count;
+
+            foreach (var question in aiResponse.Questions)
+            {
+                try
+                {
+#pragma warning disable CS0618 // 旧字段兼容性代码：从 GeneratedQuestion 读取
+                    var resolvedType = ResolveQuestionType(question.QuestionTypeEnum, question.Data, question.QuestionType);
+#pragma warning restore CS0618
+                    if (resolvedType == null && dto.QuestionTypes.Count == 1)
+                    {
+                        resolvedType = dto.QuestionTypes[0];
+                    }
+                    if (resolvedType == null || string.IsNullOrWhiteSpace(question.QuestionText))
+                    {
+                        _logger.LogWarning(
+                            "跳过无效题目: Type={Type}, TextLength={Length}",
+                            resolvedType?.ToString() ?? "null",
+                            question.QuestionText?.Length ?? 0);
+                        continue;
+                    }
+
+#pragma warning disable CS0618 // 旧字段兼容性代码：从 GeneratedQuestion 读取
+                    var data = NormalizeQuestionData(
+                        question.Data,
+                        resolvedType,
+                        question.Options,
+                        question.CorrectAnswer,
+                        question.Explanation,
+                        question.Difficulty);
+#pragma warning restore CS0618
+
+                    if (data == null)
+                    {
+                        _logger.LogWarning(
+                            "跳过无效题目数据: Type={Type}, TextLength={Length}",
+                            resolvedType?.ToString() ?? "null",
+                            question.QuestionText?.Length ?? 0);
+                        continue;
+                    }
+
+                    var questionEntity = new Question
+                    {
+                        QuestionTypeEnum = resolvedType,
+                        QuestionText = question.QuestionText,
+                        Explanation = question.Explanation,
+                        Difficulty = question.Difficulty,
+                        QuestionBankId = questionBankId,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    ApplyQuestionData(questionEntity, data);
+                    await _questionRepository.AddAsync(questionEntity, cancellationToken);
+
+                    var resultDto = new GeneratedQuestionDto
+                    {
+                        Id = questionEntity.Id,
+                        QuestionTypeEnum = questionEntity.QuestionTypeEnum,
+                        QuestionText = question.QuestionText,
+                        Data = questionEntity.Data,
+#pragma warning disable CS0618 // 旧字段兼容性代码：填充 DTO 旧字段
+                        Options = question.Options,
+                        CorrectAnswer = question.CorrectAnswer,
+#pragma warning restore CS0618
+                        Explanation = question.Explanation,
+                        Difficulty = question.Difficulty,
+                        QuestionBankId = questionBankId,
+                        CreatedAt = questionEntity.CreatedAt
+                    };
+                    resultDto.PopulateLegacyFieldsFromData();
+                    savedQuestions.Add(resultDto);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "保存题目失败: {QuestionText}", question.QuestionText);
+                }
+            }
+
+            try
+            {
+                await _questionRepository.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "提交保存题目事务失败");
+            }
+
+            if (savedQuestions.Count == savedBeforeBatch)
+            {
+                return new AIGenerateResponseDto
+                {
+                    Success = savedQuestions.Count > 0,
+                    Questions = savedQuestions,
+                    ErrorMessage = "AI响应格式不正确或题目内容为空，请调整提示词或模型",
+                    ErrorCode = "INVALID_AI_RESPONSE",
+                    PartialSuccessCount = savedQuestions.Count > 0 ? savedQuestions.Count : null,
+                    TokensUsed = hasTokens ? tokensUsedTotal : null
+                };
+            }
+
+            remaining -= batchSize;
+
+            if (onProgress != null)
+            {
+                await onProgress(savedQuestions.Count);
+            }
+        }
+
+        if (savedQuestions.Count == 0)
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "AI响应格式不正确或题目内容为空，请调整提示词或模型",
+                ErrorCode = "INVALID_AI_RESPONSE"
+            };
+        }
+
+        var isPartialSuccess = savedQuestions.Count < totalRequested;
+
+        return new AIGenerateResponseDto
+        {
+            Success = true,
+            Questions = savedQuestions,
+            TokensUsed = hasTokens ? tokensUsedTotal : null,
+            PartialSuccessCount = isPartialSuccess ? savedQuestions.Count : null,
+            ErrorMessage = isPartialSuccess ? $"成功保存 {savedQuestions.Count}/{totalRequested} 道题目，部分题目保存失败" : null,
+            ErrorCode = isPartialSuccess ? "PARTIAL_SUCCESS" : null
+        };
     }
 
     /// <summary>
@@ -401,6 +511,52 @@ public class AIGenerationService : IAIGenerationService
     }
 
     /// <summary>
+    /// 验证请求参数
+    /// </summary>
+    private static AIGenerateResponseDto? ValidateRequest(AIGenerateRequestDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Subject))
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "生成主题不能为空",
+                ErrorCode = "INVALID_SUBJECT"
+            };
+        }
+
+        if (dto.Count <= 0)
+        {
+            return new AIGenerateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "生成数量必须大于0",
+                ErrorCode = "INVALID_COUNT"
+            };
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 验证数据源配置
+    /// </summary>
+    private async Task<(Domain.Entities.DataSource? dataSource, DataSourceConfigDto? config, IAIProvider? provider)>
+        ValidateDataSourceAsync(int userId, AIGenerateRequestDto dto, CancellationToken cancellationToken)
+    {
+        var dataSource = await GetDataSourceForUserAsync(userId, dto.ProviderName, cancellationToken);
+        if (dataSource == null)
+        {
+            return (null, null, null);
+        }
+
+        var provider = _aiProviderFactory.GetProvider(dataSource.Type);
+        var config = await _dataSourceService.GetDecryptedConfigAsync(dataSource.Id, userId, cancellationToken);
+
+        return (dataSource, config, provider);
+    }
+
+    /// <summary>
     /// 获取用户的数据源
     /// </summary>
     private async Task<DataSource?> GetDataSourceForUserAsync(
@@ -443,6 +599,7 @@ public class AIGenerationService : IAIGenerationService
     /// </summary>
     private static GeneratedQuestionDto MapToGeneratedQuestionDto(Question question)
     {
+#pragma warning disable CS0618 // 旧字段兼容性代码：读取旧字段
         var options = new List<string>();
         if (!string.IsNullOrEmpty(question.Options))
         {
@@ -455,14 +612,243 @@ public class AIGenerationService : IAIGenerationService
                 options = new List<string>();
             }
         }
+#pragma warning restore CS0618
 
+        var dto = new GeneratedQuestionDto
+        {
+            Id = question.Id,
+            QuestionTypeEnum = question.QuestionTypeEnum,
+            QuestionText = question.QuestionText,
+            Data = question.Data,
+#pragma warning disable CS0618 // 旧字段兼容性代码：填充 DTO 旧字段
+            Options = options,
+            CorrectAnswer = question.CorrectAnswer,
+#pragma warning restore CS0618
+            Explanation = question.Explanation,
+            Difficulty = question.Difficulty,
+            QuestionBankId = question.QuestionBankId,
+            CreatedAt = question.CreatedAt
+        };
+        dto.PopulateLegacyFieldsFromData();
+        return dto;
+    }
+
+    private static QuestionType? ResolveQuestionType(
+        QuestionType? requestedType,
+        QuestionData? data,
+#pragma warning disable CS0618 // 旧字段兼容性代码：legacyType 参数
+        string? legacyType)
+#pragma warning restore CS0618
+    {
+        if (requestedType.HasValue)
+        {
+            return requestedType;
+        }
+
+        if (data is ChoiceQuestionData choiceData)
+        {
+            return choiceData.CorrectAnswers.Count > 1
+                ? QuestionType.MultipleChoice
+                : QuestionType.SingleChoice;
+        }
+
+        if (!string.IsNullOrWhiteSpace(legacyType))
+        {
+            return QuestionTypeExtensions.ParseFromString(legacyType);
+        }
+
+        return data switch
+        {
+            BooleanQuestionData => QuestionType.TrueFalse,
+            FillBlankQuestionData => QuestionType.FillBlank,
+            ShortAnswerQuestionData => QuestionType.ShortAnswer,
+            _ => null
+        };
+    }
+
+    private static QuestionData? NormalizeQuestionData(
+        QuestionData? data,
+        QuestionType? questionType,
+#pragma warning disable CS0618 // 旧字段兼容性代码：legacyOptions/legacyCorrectAnswer 参数
+        List<string>? legacyOptions,
+        string? legacyCorrectAnswer,
+#pragma warning restore CS0618
+        string? explanation,
+        string? difficulty)
+    {
+        if (data == null)
+        {
+#pragma warning disable CS0618 // 旧字段兼容性代码：从旧字段构建数据
+            data = BuildDataFromLegacy(questionType, legacyOptions, legacyCorrectAnswer, explanation, difficulty);
+#pragma warning restore CS0618
+        }
+
+        if (data == null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(explanation) && string.IsNullOrWhiteSpace(data.Explanation))
+        {
+            data.Explanation = explanation;
+        }
+
+        if (!string.IsNullOrWhiteSpace(difficulty))
+        {
+            data.Difficulty = difficulty;
+        }
+
+        return data;
+    }
+
+    private static void ApplyQuestionData(Question question, QuestionData? data)
+    {
+        if (data == null)
+        {
+            return;
+        }
+
+        // 只更新新字段，与 QuestionService 保持一致
+        question.Data = data;
+
+        if (!string.IsNullOrWhiteSpace(data.Explanation))
+        {
+            question.Explanation = data.Explanation;
+        }
+
+        if (!string.IsNullOrWhiteSpace(data.Difficulty))
+        {
+            question.Difficulty = data.Difficulty;
+        }
+
+        // 不再同步更新旧字段
+        // 历史数据的旧字段保留用于读取兼容（通过 Question.Data getter 的 fallback 机制）
+    }
+
+    private static QuestionData? BuildDataFromLegacy(
+        QuestionType? questionType,
+#pragma warning disable CS0618 // 旧字段兼容性代码：legacyOptions/legacyCorrectAnswer 参数
+        List<string>? legacyOptions,
+        string? legacyCorrectAnswer,
+#pragma warning restore CS0618
+        string? explanation,
+        string? difficulty)
+    {
+        if (questionType == null)
+        {
+            return null;
+        }
+
+        switch (questionType)
+        {
+            case QuestionType.SingleChoice:
+            case QuestionType.MultipleChoice:
+            {
+#pragma warning disable CS0618 // 旧字段兼容性代码
+                var options = legacyOptions ?? new List<string>();
+                var correctAnswers = ParseLegacyAnswers(legacyCorrectAnswer);
+#pragma warning restore CS0618
+                if (options.Count == 0 && correctAnswers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
+                {
+                    return null;
+                }
+                return new ChoiceQuestionData
+                {
+                    Options = options,
+                    CorrectAnswers = correctAnswers,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            case QuestionType.TrueFalse:
+            {
+#pragma warning disable CS0618 // 旧字段兼容性代码
+                if (!bool.TryParse(legacyCorrectAnswer, out var booleanAnswer))
+#pragma warning restore CS0618
+                {
+                    return null;
+                }
+                return new BooleanQuestionData
+                {
+                    CorrectAnswer = booleanAnswer,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            case QuestionType.FillBlank:
+            {
+#pragma warning disable CS0618 // 旧字段兼容性代码
+                var answers = ParseLegacyAnswers(legacyCorrectAnswer);
+#pragma warning restore CS0618
+                if (answers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
+                {
+                    return null;
+                }
+                return new FillBlankQuestionData
+                {
+                    AcceptableAnswers = answers,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            case QuestionType.ShortAnswer:
+            {
+#pragma warning disable CS0618 // 旧字段兼容性代码
+                if (string.IsNullOrWhiteSpace(legacyCorrectAnswer) && string.IsNullOrWhiteSpace(explanation))
+#pragma warning restore CS0618
+                {
+                    return null;
+                }
+                return new ShortAnswerQuestionData
+                {
+#pragma warning disable CS0618 // 旧字段兼容性代码
+                    ReferenceAnswer = legacyCorrectAnswer ?? string.Empty,
+#pragma warning restore CS0618
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            default:
+                return null;
+        }
+    }
+
+    private static List<string> ParseLegacyAnswers(
+#pragma warning disable CS0618 // 旧字段兼容性代码
+        string? legacyAnswers)
+#pragma warning restore CS0618
+    {
+        return LegacyFieldParser.ParseCorrectAnswers(legacyAnswers);
+    }
+
+    private static AIGenerateProgressDto CloneProgress(AIGenerateProgressDto progress)
+    {
+        return new AIGenerateProgressDto
+        {
+            TaskId = progress.TaskId,
+            UserId = progress.UserId,
+            Status = progress.Status,
+            GeneratedCount = progress.GeneratedCount,
+            TotalCount = progress.TotalCount,
+            ErrorMessage = progress.ErrorMessage,
+            Questions = progress.Questions?.Select(CloneGeneratedQuestion).ToList(),
+            CreatedAt = progress.CreatedAt,
+            CompletedAt = progress.CompletedAt
+        };
+    }
+
+    private static GeneratedQuestionDto CloneGeneratedQuestion(GeneratedQuestionDto question)
+    {
         return new GeneratedQuestionDto
         {
             Id = question.Id,
-            QuestionType = question.QuestionType,
+            QuestionTypeEnum = question.QuestionTypeEnum,
             QuestionText = question.QuestionText,
-            Options = options,
+            Data = question.Data,
+#pragma warning disable CS0618 // 旧字段兼容性代码：克隆 DTO 旧字段
+            Options = question.Options != null ? new List<string>(question.Options) : new List<string>(),
             CorrectAnswer = question.CorrectAnswer,
+#pragma warning restore CS0618
             Explanation = question.Explanation,
             Difficulty = question.Difficulty,
             QuestionBankId = question.QuestionBankId,

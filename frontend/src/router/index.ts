@@ -2,78 +2,43 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-const routes: Array<RouteRecordRaw> = [
-  {
-    path: '/',
-    name: 'Home',
-    redirect: '/home'
-  },
-  {
-    path: '/home',
-    name: 'Dashboard',
-    component: () => import('@/views/HomeView.vue'),
-    meta: { requiresAuth: true, layout: 'app' }
-  },
-  {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/LoginView.vue'),
-    meta: { requiresAuth: false, layout: 'auth' }
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: () => import('@/views/RegisterView.vue'),
-    meta: { requiresAuth: false, layout: 'auth' }
-  },
-  {
-    path: '/question-banks',
-    name: 'QuestionBanks',
-    component: () => import('@/views/QuestionBanksView.vue'),
-    meta: { requiresAuth: true, layout: 'app' }
-  },
-  {
-    path: '/question-banks/:id',
-    name: 'QuestionBankDetail',
-    component: () => import('@/views/QuestionBankDetailView.vue'),
-    meta: { requiresAuth: true, layout: 'app' }
-  },
-  {
-    path: '/questions',
-    name: 'Questions',
-    component: () => import('@/views/QuestionsView.vue'),
-    meta: { requiresAuth: true, layout: 'app' }
-  },
-  {
-    path: '/question-banks/:bankId/questions',
-    name: 'BankQuestions',
-    component: () => import('@/views/QuestionsView.vue'),
-    meta: { requiresAuth: true, layout: 'app' }
-  },
-  {
-    path: '/ai-config',
-    name: 'AIConfig',
-    component: () => import('@/views/AIConfigView.vue'),
-    meta: { requiresAuth: true, layout: 'app' }
-  },
-  {
-    path: '/generate',
-    name: 'Generate',
-    component: () => import('@/views/GenerateView.vue'),
-    meta: { requiresAuth: true, layout: 'app' }
-  },
-  {
-    path: '/quiz/:bankId/:sessionId',
-    name: 'Quiz',
-    component: () => import('@/views/QuizView.vue'),
-    meta: { requiresAuth: true, layout: 'app' }
-  },
-  {
-    path: '/result/:sessionId',
-    name: 'Result',
-    component: () => import('@/views/ResultView.vue'),
+// Helper function to create authenticated routes
+function authRoute(path: string, name: string, component: () => Promise<any>): RouteRecordRaw {
+  return {
+    path,
+    name,
+    component,
     meta: { requiresAuth: true, layout: 'app' }
   }
+}
+
+// Helper function to create public routes
+function publicRoute(path: string, name: string, component: () => Promise<any>, layout: 'auth' | 'app' = 'auth'): RouteRecordRaw {
+  return {
+    path,
+    name,
+    component,
+    meta: { requiresAuth: false, layout }
+  }
+}
+
+const routes: Array<RouteRecordRaw> = [
+  { path: '/', name: 'Home', redirect: '/home' },
+  authRoute('/home', 'Dashboard', () => import('@/views/HomeView.vue')),
+  publicRoute('/login', 'Login', () => import('@/views/LoginView.vue')),
+  publicRoute('/register', 'Register', () => import('@/views/RegisterView.vue')),
+  authRoute('/question-banks', 'QuestionBanks', () => import('@/views/QuestionBanksView.vue')),
+  authRoute('/question-banks/:id', 'QuestionBankDetail', () => import('@/views/QuestionBankDetailView.vue')),
+  authRoute('/questions', 'Questions', () => import('@/views/QuestionsView.vue')),
+  authRoute('/question-banks/:bankId/questions', 'BankQuestions', () => import('@/views/QuestionsView.vue')),
+  authRoute('/practice', 'Practice', () => import('@/views/PracticeView.vue')),
+  authRoute('/ai-config', 'AIConfig', () => import('@/views/AIConfigView.vue')),
+  authRoute('/generate', 'Generate', () => import('@/views/GenerateView.vue')),
+  // 新答题路由：使用固定的 'new' 路径
+  authRoute('/quiz/:bankId/new', 'QuizNew', () => import('@/views/QuizView.vue')),
+  // 已有答题会话路由
+  authRoute('/quiz/:bankId/:sessionId', 'Quiz', () => import('@/views/QuizView.vue')),
+  authRoute('/result/:sessionId', 'Result', () => import('@/views/ResultView.vue'))
 ]
 
 const router = createRouter({
@@ -82,8 +47,14 @@ const router = createRouter({
 })
 
 // 路由守卫 - 使用 authStore 进行认证检查
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
+
+  // 等待初始化完成（如果有 token）
+  if (!authStore.isInitialized) {
+    await authStore.initialize()
+  }
+
   const isLoggedIn = authStore.isAuthenticated
   const requiresAuth = to.meta.requiresAuth !== false
 

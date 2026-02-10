@@ -15,9 +15,9 @@ public class QwenProvider : IAIProvider
 
     public string ProviderName => "Qwen";
 
-    public QwenProvider(HttpClient httpClient, ILogger<QwenProvider> logger)
+    public QwenProvider(IHttpClientFactory httpClientFactory, ILogger<QwenProvider> logger)
     {
-        _httpClient = httpClient;
+        _httpClient = httpClientFactory.CreateClient("AI");
         _logger = logger;
     }
 
@@ -37,7 +37,7 @@ public class QwenProvider : IAIProvider
 
             // ✅ 根据题目数量动态计算max_tokens
             var estimatedTokensPerQuestion = 250;
-            var maxTokens = Math.Max(8000, request.Count * estimatedTokensPerQuestion + 1000);
+            var maxTokens = Math.Clamp(request.Count * estimatedTokensPerQuestion + 1000, 1000, 8000);
 
             _logger.LogInformation("通义千问配置: Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
                 modelToUse, request.Count, maxTokens);
@@ -79,7 +79,8 @@ public class QwenProvider : IAIProvider
                 Content = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json")
             };
 
-            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+            // 使用重试机制发送请求（支持指数退避）
+            var response = await HttpRetryHelper.SendWithRetryAsync(_httpClient, httpRequest, _logger, cancellationToken);
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)
@@ -111,27 +112,36 @@ public class QwenProvider : IAIProvider
         }
     }
 
-    public async Task<bool> ValidateApiKeyAsync(string apiKey, CancellationToken cancellationToken = default)
+    public async Task<bool> ValidateApiKeyAsync(
+        string apiKey,
+        string? endpoint = null,
+        string? model = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
+            var actualEndpoint = string.IsNullOrEmpty(endpoint)
+                ? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+                : endpoint;
+            var modelToUse = string.IsNullOrEmpty(model) ? "qwen-turbo" : model;
+
             var httpRequest = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"),
+                RequestUri = new Uri(actualEndpoint),
                 Headers =
                 {
                     { "Authorization", $"Bearer {apiKey}" }
                 },
                 Content = new StringContent(JsonSerializer.Serialize(new
                 {
-                    model = "qwen-turbo",
+                    model = modelToUse,
                     messages = new[]
                     {
                         new { role = "user", content = "hi" }
                     },
                     max_tokens = 5
-                }))
+                }), System.Text.Encoding.UTF8, "application/json")
             };
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
@@ -177,59 +187,21 @@ public class QwenProvider : IAIProvider
 
     private AIQuestionGenerateResponse ParseResponse(string content)
     {
-        try
+        if (!AIResponseParser.TryParseQuestions(content, out var questions, out var error))
         {
-            // 提取JSON部分
-            var jsonStart = content.IndexOf("{");
-            var jsonEnd = content.LastIndexOf("}");
-
-            if (jsonStart == -1 || jsonEnd == -1)
-            {
-                return new AIQuestionGenerateResponse
-                {
-                    Success = false,
-                    ErrorMessage = "响应中未找到有效的JSON格式",
-                    ErrorCode = "PARSE_ERROR"
-                };
-            }
-
-            var jsonContent = content.Substring(jsonStart, jsonEnd - jsonStart + 1);
-            var jsonDoc = JsonDocument.Parse(jsonContent);
-
-            var questions = new List<GeneratedQuestion>();
-
-            if (jsonDoc.RootElement.TryGetProperty("questions", out var questionsElement))
-            {
-                foreach (var q in questionsElement.EnumerateArray())
-                {
-                    questions.Add(new GeneratedQuestion
-                    {
-                        QuestionType = q.GetProperty("questionType").GetString() ?? "",
-                        QuestionText = q.GetProperty("questionText").GetString() ?? "",
-                        Options = q.GetProperty("options").EnumerateArray().Select(x => x.GetString() ?? "").ToList(),
-                        CorrectAnswer = q.GetProperty("correctAnswer").GetString() ?? "",
-                        Explanation = q.GetProperty("explanation").GetString() ?? "",
-                        Difficulty = q.GetProperty("difficulty").GetString() ?? "medium"
-                    });
-                }
-            }
-
-            return new AIQuestionGenerateResponse
-            {
-                Success = questions.Count > 0,
-                Questions = questions,
-                TokensUsed = jsonContent.Length
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "解析AI响应失败");
             return new AIQuestionGenerateResponse
             {
                 Success = false,
-                ErrorMessage = $"解析响应失败: {ex.Message}",
+                ErrorMessage = error ?? "解析响应失败",
                 ErrorCode = "PARSE_ERROR"
             };
         }
+
+        return new AIQuestionGenerateResponse
+        {
+            Success = true,
+            Questions = questions,
+            TokensUsed = content.Length
+        };
     }
 }

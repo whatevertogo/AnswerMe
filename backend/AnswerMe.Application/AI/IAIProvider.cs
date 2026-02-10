@@ -30,9 +30,13 @@ public interface IAIProvider
     /// 验证API密钥是否有效
     /// </summary>
     /// <param name="apiKey">API密钥</param>
+    /// <param name="endpoint">自定义端点（可选，部分Provider需要）</param>
+    /// <param name="model">模型名称（可选）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>是否有效</returns>
     Task<bool> ValidateApiKeyAsync(
         string apiKey,
+        string? endpoint = null,
+        string? model = null,
         CancellationToken cancellationToken = default);
 }

@@ -165,6 +165,9 @@ namespace AnswerMe.Infrastructure.Migrations
                     b.Property<int>("QuestionBankId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("QuestionDataJson")
+                        .HasColumnType("json");
+
                     b.Property<string>("QuestionText")
                         .IsRequired()
                         .HasColumnType("TEXT");

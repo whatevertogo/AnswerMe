@@ -46,8 +46,9 @@ public static class DependencyInjection
         services.AddScoped<IAttemptRepository, AttemptRepository>();
         services.AddScoped<IAttemptDetailRepository, AttemptDetailRepository>();
 
-        services.AddHttpClient("AI", client => { client.Timeout = TimeSpan.FromSeconds(120); });
+        services.AddHttpClient("AI", client => { client.Timeout = TimeSpan.FromSeconds(180); });
         services.AddSingleton<IAIProvider, OpenAIProvider>();
+        services.AddSingleton<IAIProvider, DeepSeekProvider>();
         services.AddSingleton<IAIProvider, QwenProvider>();
         services.AddSingleton<IAIProvider, ZhipuProvider>();
         services.AddSingleton<IAIProvider, MinimaxProvider>();
@@ -56,4 +57,3 @@ public static class DependencyInjection
         return services;
     }
 }
-

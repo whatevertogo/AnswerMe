@@ -1,5 +1,8 @@
 using System.Text.Json;
 using AnswerMe.Application.AI;
+using AnswerMe.Domain.Enums;
+using AnswerMe.Domain.Models;
+using AnswerMe.Domain.Common;
 
 namespace AnswerMe.Application.AI;
 
@@ -104,17 +107,44 @@ public class AIResponseValidator
 
             foreach (var q in jsonDoc.RootElement.GetProperty("questions").EnumerateArray())
             {
+                var questionTypeStr = q.GetProperty("questionType").GetString() ?? "";
+                var questionTypeEnum = QuestionTypeExtensions.ParseFromString(questionTypeStr);
+                var questionText = q.GetProperty("questionText").GetString() ?? "";
+                var explanation = q.GetProperty("explanation").GetString() ?? "";
+                var difficulty = q.GetProperty("difficulty").GetString() ?? "medium";
+
+                var options = q.GetProperty("options").EnumerateArray()
+                    .Select(x => x.GetString() ?? "")
+                    .ToList();
+                var correctAnswer = q.GetProperty("correctAnswer").GetString() ?? "";
+
+                // 构建新格式的 Data
+                QuestionData? data = null;
+                if (options.Count > 0)
+                {
+                    // 选择题
+                    var correctAnswers = ParseCorrectAnswers(correctAnswer);
+                    data = new ChoiceQuestionData
+                    {
+                        Options = options,
+                        CorrectAnswers = correctAnswers,
+                        Explanation = explanation,
+                        Difficulty = difficulty
+                    };
+                }
+
+#pragma warning disable CS0618 // 旧字段兼容性代码
                 questions.Add(new GeneratedQuestion
                 {
-                    QuestionType = q.GetProperty("questionType").GetString() ?? "",
-                    QuestionText = q.GetProperty("questionText").GetString() ?? "",
-                    Options = q.GetProperty("options").EnumerateArray()
-                        .Select(x => x.GetString() ?? "")
-                        .ToList(),
-                    CorrectAnswer = q.GetProperty("correctAnswer").GetString() ?? "",
-                    Explanation = q.GetProperty("explanation").GetString() ?? "",
-                    Difficulty = q.GetProperty("difficulty").GetString() ?? "medium"
+                    QuestionTypeEnum = questionTypeEnum,
+                    QuestionText = questionText,
+                    Data = data,
+                    Options = options,
+                    CorrectAnswer = correctAnswer,
+                    Explanation = explanation,
+                    Difficulty = difficulty
                 });
+#pragma warning restore CS0618
             }
 
             return (new AIQuestionGenerateResponse
@@ -128,5 +158,10 @@ public class AIResponseValidator
             errors.Add($"解析失败: {ex.Message}");
             return (null, errors);
         }
+    }
+
+    private static List<string> ParseCorrectAnswers(string correctAnswer)
+    {
+        return LegacyFieldParser.ParseCorrectAnswers(correctAnswer);
     }
 }

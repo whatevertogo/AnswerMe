@@ -13,7 +13,9 @@ import {
 } from '@element-plus/icons-vue'
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionBankForm from '@/components/QuestionBankForm.vue'
-import type { QuestionBank, Question } from '@/stores/questionBank'
+import type { QuestionBank } from '@/stores/questionBank'
+import { QuestionType, getQuestionTypeLabel, getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
+import { isChoiceQuestionData } from '@/types/question'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,7 +26,7 @@ const formDialogVisible = ref(false)
 const formMode = ref<'edit'>('edit')
 const currentBank = ref<QuestionBank | null>(null)
 
-const bankId = computed(() => route.params.id as string)
+const bankId = computed(() => parseInt(route.params.id as string))
 const currentQuestionBank = computed(() => questionBankStore.currentBank)
 const questions = computed(() => questionBankStore.questions)
 
@@ -140,24 +142,52 @@ const handleFormClose = () => {
 }
 
 // 题目类型标签颜色
-const getQuestionTypeTagType = (type: Question['type']): string => {
+const getQuestionTypeTagType = (type: string): string => {
   const typeMap: Record<string, string> = {
-    choice: 'success',
-    'multiple-choice': 'warning',
-    'true-false': 'info',
-    'short-answer': ''
+    'SingleChoice': 'success',
+    'MultipleChoice': 'warning',
+    'TrueFalse': 'info',
+    'FillBlank': '',
+    'ShortAnswer': ''
   }
   return typeMap[type] || ''
 }
 
 // 题目难度标签颜色
-const getDifficultyTagType = (difficulty: Question['difficulty']): string => {
+const getDifficultyTagType = (difficulty: string): string => {
   const typeMap: Record<string, string> = {
-    easy: 'success',
-    medium: 'warning',
-    hard: 'danger'
+    'easy': 'success',
+    'medium': 'warning',
+    'hard': 'danger'
   }
   return typeMap[difficulty] || ''
+}
+
+// 获取题目显示文本
+const getQuestionDisplayText = (question: any) => {
+  return question.questionText || ''
+}
+
+// 获取题型显示文本
+const getQuestionTypeDisplay = (question: any) => {
+  return getQuestionTypeLabel(question.questionTypeEnum)
+}
+
+// 获取正确答案显示文本
+const getCorrectAnswerDisplay = (question: any): string => {
+  const answer = getQuestionCorrectAnswers(question)
+  if (Array.isArray(answer)) {
+    return answer.join(', ')
+  }
+  if (typeof answer === 'boolean') {
+    return answer ? '正确' : '错误'
+  }
+  return String(answer)
+}
+
+// 获取题目索引（用于选项字母）
+const getOptionIndex = (index: number) => {
+  return String.fromCharCode(65 + index)
 }
 </script>
 
@@ -228,14 +258,8 @@ const getDifficultyTagType = (difficulty: Question['difficulty']): string => {
         >
           <div class="question-header">
             <span class="question-number">#{{ index + 1 }}</span>
-            <el-tag size="small" :type="getQuestionTypeTagType(question.type)">
-              {{ question.type === 'choice'
-                ? '单选'
-                : question.type === 'multiple-choice'
-                  ? '多选'
-                  : question.type === 'true-false'
-                    ? '判断'
-                    : '问答' }}
+            <el-tag size="small" :type="getQuestionTypeTagType(question.questionTypeEnum)">
+              {{ getQuestionTypeDisplay(question) }}
             </el-tag>
             <el-tag size="small" :type="getDifficultyTagType(question.difficulty)">
               {{ question.difficulty === 'easy'
@@ -247,21 +271,21 @@ const getDifficultyTagType = (difficulty: Question['difficulty']): string => {
           </div>
 
           <div class="question-content">
-            <p>{{ question.content }}</p>
+            <p>{{ getQuestionDisplayText(question) }}</p>
           </div>
 
-          <div v-if="question.options && question.options.length > 0" class="question-options">
+          <div v-if="getQuestionOptions(question).length > 0" class="question-options">
             <p class="options-label">选项：</p>
             <ul>
-              <li v-for="(option, optIndex) in question.options" :key="optIndex">
-                {{ String.fromCharCode(65 + optIndex) }}. {{ option }}
+              <li v-for="(option, optIndex) in getQuestionOptions(question)" :key="optIndex">
+                {{ getOptionIndex(optIndex as number) }}. {{ option }}
               </li>
             </ul>
           </div>
 
           <div class="question-answer">
             <span class="answer-label">答案：</span>
-            <span>{{ question.correctAnswer }}</span>
+            <span>{{ getCorrectAnswerDisplay(question) }}</span>
           </div>
 
           <div v-if="question.explanation" class="question-explanation">

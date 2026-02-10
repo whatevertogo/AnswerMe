@@ -1,9 +1,8 @@
 import request from '@/utils/request'
+import type { AxiosResponse } from 'axios'
+import type { QuestionType } from '@/types/question'
 
-// 题型枚举
-export type QuestionType = 'single' | 'multiple' | 'essay' | 'boolean' | 'fill'
-
-// 难度枚举
+// 难度枚举（复用 question.ts 中的定义）
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
 // 语言枚举
@@ -39,14 +38,20 @@ export interface AIGenerateRequest {
  */
 export interface GeneratedQuestion {
   id: number
-  questionType: string
+  /** 题型 */
+  questionType: QuestionType
   questionText: string
-  options: string[]
-  correctAnswer: string
+  /** 选项（旧格式，向后兼容） */
+  options?: string[]
+  /** 正确答案（旧格式，向后兼容） */
+  correctAnswer?: string
   explanation?: string
-  difficulty: string
+  /** 难度等级 */
+  difficulty: Difficulty
   questionBankId: number
   createdAt: string
+  /** 题目数据（新格式） */
+  data?: any
 }
 
 /**
@@ -96,31 +101,20 @@ export interface AIGenerateProgress {
 /**
  * 生成题目（同步，≤20题）
  */
-export const generateQuestionsApi = (params: AIGenerateRequest) => {
-  return request<AIGenerateResponse>({
-    url: '/aigeneration/generate',
-    method: 'POST',
-    data: params
-  })
+export const generateQuestionsApi = (params: AIGenerateRequest): Promise<AxiosResponse<AIGenerateResponse>> => {
+  return request.post<AIGenerateResponse>('/AIGeneration/generate', params)
 }
 
 /**
  * 生成题目（异步，>20题）
  */
-export const generateQuestionsAsyncApi = (params: AIGenerateRequest) => {
-  return request<AIGenerateResponse>({
-    url: '/aigeneration/generate-async',
-    method: 'POST',
-    data: params
-  })
+export const generateQuestionsAsyncApi = (params: AIGenerateRequest): Promise<AxiosResponse<AIGenerateResponse>> => {
+  return request.post<AIGenerateResponse>('/AIGeneration/generate-async', params)
 }
 
 /**
  * 查询生成进度
  */
-export const getGenerationProgressApi = (taskId: string) => {
-  return request<AIGenerateProgress>({
-    url: `/aigeneration/progress/${taskId}`,
-    method: 'GET'
-  })
+export const getGenerationProgressApi = (taskId: string): Promise<AxiosResponse<AIGenerateProgress>> => {
+  return request.get<AIGenerateProgress>(`/AIGeneration/progress/${taskId}`)
 }

@@ -2,6 +2,8 @@ using AnswerMe.Application.DTOs;
 using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Entities;
 using AnswerMe.Domain.Interfaces;
+using AnswerMe.Domain.Models;
+using AnswerMe.Domain.Common;
 
 namespace AnswerMe.Application.Services;
 
@@ -215,6 +217,36 @@ public class AttemptService : IAttemptService
 
         foreach (var detail in details)
         {
+            var question = detail.Question;
+            string correctAnswer = string.Empty;
+            List<string>? options = null;
+
+            // 从新字段 Data 中提取答案和选项
+            if (question?.Data is ChoiceQuestionData choiceData)
+            {
+                options = choiceData.Options;
+                correctAnswer = string.Join(",", choiceData.CorrectAnswers);
+            }
+            else if (question?.Data is BooleanQuestionData booleanData)
+            {
+                correctAnswer = booleanData.CorrectAnswer.ToString().ToLower();
+            }
+            else if (question?.Data is FillBlankQuestionData fillData)
+            {
+                correctAnswer = string.Join(",", fillData.AcceptableAnswers);
+            }
+            else if (question?.Data is ShortAnswerQuestionData shortData)
+            {
+                correctAnswer = shortData.ReferenceAnswer;
+            }
+#pragma warning disable CS0618 // 旧字段兼容性代码：如果没有新数据，使用旧字段
+            else if (question != null)
+            {
+                options = ParseLegacyOptions(question.Options);
+                correctAnswer = question.CorrectAnswer;
+            }
+#pragma warning restore CS0618
+
             result.Add(new AttemptDetailDto
             {
                 Id = detail.Id,
@@ -222,9 +254,9 @@ public class AttemptService : IAttemptService
                 QuestionId = detail.QuestionId,
                 QuestionText = detail.Question?.QuestionText ?? string.Empty,
                 QuestionType = detail.Question?.QuestionType ?? string.Empty,
-                Options = detail.Question?.Options,
+                Options = options != null ? string.Join(",", options) : null,
                 UserAnswer = detail.UserAnswer,
-                CorrectAnswer = detail.Question?.CorrectAnswer ?? string.Empty,
+                CorrectAnswer = correctAnswer,
                 IsCorrect = detail.IsCorrect,
                 TimeSpent = detail.TimeSpent,
                 Explanation = detail.Question?.Explanation
@@ -234,24 +266,35 @@ public class AttemptService : IAttemptService
         return result;
     }
 
+    private static List<string>? ParseLegacyOptions(string? options)
+    {
+        var parsed = LegacyFieldParser.ParseDelimitedList(options);
+        return parsed.Count == 0 ? null : parsed;
+    }
+
     public async Task<AttemptStatisticsDto> GetStatisticsAsync(int userId, CancellationToken cancellationToken = default)
     {
         var attempts = await _attemptRepository.GetByUserIdAsync(userId, cancellationToken);
-        var details = await _attemptDetailRepository.GetByAttemptIdWithQuestionsAsync(
-            attempts.SelectMany(a => a.AttemptDetails).Select(d => d.Id).FirstOrDefault(),
-            cancellationToken);
 
         int totalAttempts = attempts.Count;
         int completedAttempts = attempts.Count(a => a.CompletedAt != null);
         decimal? averageScore = completedAttempts > 0 ?
             (decimal)attempts.Where(a => a.CompletedAt != null).Average(a => a.Score ?? 0) : null;
 
-        // 获取所有答题详情
+        // 获取所有答题详情（优化：一次性获取所有 attemptId 对应的详情）
+        var attemptIds = attempts.Select(a => a.Id).ToList();
         var allDetails = new List<Domain.Entities.AttemptDetail>();
-        foreach (var attempt in attempts)
+
+        // 分批查询，避免一次性加载过多数据
+        const int batchSize = 100;
+        for (int i = 0; i < attemptIds.Count; i += batchSize)
         {
-            var attemptDetails = await _attemptDetailRepository.GetByAttemptIdAsync(attempt.Id, cancellationToken);
-            allDetails.AddRange(attemptDetails);
+            var batchIds = attemptIds.Skip(i).Take(batchSize).ToList();
+            foreach (var attemptId in batchIds)
+            {
+                var attemptDetails = await _attemptDetailRepository.GetByAttemptIdAsync(attemptId, cancellationToken);
+                allDetails.AddRange(attemptDetails);
+            }
         }
 
         int totalQuestionsAnswered = allDetails.Count;
@@ -273,44 +316,149 @@ public class AttemptService : IAttemptService
     /// <summary>
     /// 检查答案是否正确
     /// </summary>
-    private bool CheckAnswer(Question question, string userAnswer)
+    private bool CheckAnswer(Domain.Entities.Question question, string userAnswer)
     {
         if (string.IsNullOrWhiteSpace(userAnswer))
         {
             return false;
         }
 
-        // 标准化答案(去除空格、转小写)
         var normalizedUserAnswer = userAnswer.Trim().ToLower();
-        var normalizedCorrectAnswer = question.CorrectAnswer.Trim().ToLower();
+        var answerInfo = ExtractAnswerInfo(question);
 
-        // 判断题
-        if (question.QuestionType == "boolean")
+        return question.QuestionTypeEnum switch
         {
-            return normalizedUserAnswer == normalizedCorrectAnswer;
-        }
+            Domain.Enums.QuestionType.TrueFalse => CheckBooleanAnswer(normalizedUserAnswer, answerInfo.BoolAnswer),
+            Domain.Enums.QuestionType.SingleChoice => CheckSingleChoiceAnswer(normalizedUserAnswer, answerInfo),
+            Domain.Enums.QuestionType.MultipleChoice => CheckMultipleChoiceAnswer(normalizedUserAnswer, answerInfo.CorrectAnswersList),
+            Domain.Enums.QuestionType.FillBlank => CheckContainsAnswer(normalizedUserAnswer, answerInfo),
+            Domain.Enums.QuestionType.ShortAnswer => CheckContainsAnswer(normalizedUserAnswer, answerInfo),
+            _ => CheckLegacyAnswer(normalizedUserAnswer, question.QuestionType, answerInfo)
+        };
+    }
 
-        // 单选题
-        if (question.QuestionType == "single")
+    private static bool CheckBooleanAnswer(string userAnswer, bool? correctAnswer)
+    {
+        return correctAnswer.HasValue && userAnswer == correctAnswer.Value.ToString().ToLower();
+    }
+
+    private static bool CheckSingleChoiceAnswer(string userAnswer, AnswerInfo info)
+    {
+        if (info.CorrectAnswersList != null && info.CorrectAnswersList.Count > 0)
         {
-            return normalizedUserAnswer == normalizedCorrectAnswer;
+            return userAnswer == info.CorrectAnswersList[0].Trim().ToLower();
         }
-
-        // 多选题(需要排序后比较)
-        if (question.QuestionType == "multiple")
+        if (info.StringAnswer != null)
         {
-            var userAnswers = normalizedUserAnswer.Split(',').Select(a => a.Trim()).OrderBy(a => a);
-            var correctAnswers = normalizedCorrectAnswer.Split(',').Select(a => a.Trim()).OrderBy(a => a);
-            return userAnswers.SequenceEqual(correctAnswers);
+            return userAnswer == info.StringAnswer.Trim().ToLower();
         }
-
-        // 填空题和简答题(包含匹配即可)
-        if (question.QuestionType == "fill" || question.QuestionType == "essay")
-        {
-            return normalizedUserAnswer.Contains(normalizedCorrectAnswer) ||
-                   normalizedCorrectAnswer.Contains(normalizedUserAnswer);
-        }
-
         return false;
+    }
+
+    private static bool CheckMultipleChoiceAnswer(string userAnswer, List<string>? correctAnswers)
+    {
+        if (correctAnswers == null) return false;
+
+        // 尝试解析用户答案（兼容 JSON 数组和逗号分隔格式）
+        List<string> userAnswers;
+        if (userAnswer.TrimStart().StartsWith('['))
+        {
+            // JSON 数组格式: ["A", "B"] 或 ["A","B"]
+            try
+            {
+                userAnswers = System.Text.Json.JsonSerializer.Deserialize<List<string>>(userAnswer) ?? new List<string>();
+            }
+            catch
+            {
+                // JSON 解析失败，回退到逗号分隔
+                userAnswers = userAnswer.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            }
+        }
+        else
+        {
+            // 逗号分隔格式: A,B 或 A, B
+            userAnswers = userAnswer.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        }
+
+        var sortedCorrect = correctAnswers.Select(a => a.Trim().ToLower()).OrderBy(a => a);
+        var sortedUser = userAnswers.Select(a => a.Trim().ToLower()).OrderBy(a => a);
+        return sortedUser.SequenceEqual(sortedCorrect);
+    }
+
+    private static bool CheckContainsAnswer(string userAnswer, AnswerInfo info)
+    {
+        if (info.StringAnswer != null)
+        {
+            var normalizedAnswer = info.StringAnswer.Trim().ToLower();
+            return userAnswer.Contains(normalizedAnswer) || normalizedAnswer.Contains(userAnswer);
+        }
+        if (info.CorrectAnswersList != null)
+        {
+            return info.CorrectAnswersList.Any(a =>
+                userAnswer.Contains(a.Trim().ToLower()) || a.Trim().ToLower().Contains(userAnswer));
+        }
+        return false;
+    }
+
+    private static bool CheckLegacyAnswer(string userAnswer, string questionType, AnswerInfo info)
+    {
+        return questionType switch
+        {
+            "boolean" => CheckBooleanAnswer(userAnswer, info.BoolAnswer),
+            "single" => CheckSingleChoiceAnswer(userAnswer, info),
+            "multiple" => CheckMultipleChoiceAnswer(userAnswer, info.CorrectAnswersList),
+            "fill" or "essay" => CheckContainsAnswer(userAnswer, info),
+            _ => false
+        };
+    }
+
+    private static AnswerInfo ExtractAnswerInfo(Domain.Entities.Question question)
+    {
+        var info = new AnswerInfo();
+
+        switch (question.Data)
+        {
+            case ChoiceQuestionData choiceData:
+                info.CorrectAnswersList = choiceData.CorrectAnswers;
+                break;
+            case BooleanQuestionData booleanData:
+                info.BoolAnswer = booleanData.CorrectAnswer;
+                break;
+            case FillBlankQuestionData fillData:
+                info.CorrectAnswersList = fillData.AcceptableAnswers;
+                break;
+            case ShortAnswerQuestionData shortData:
+                info.StringAnswer = shortData.ReferenceAnswer;
+                break;
+            default:
+#pragma warning disable CS0618 // 旧字段兼容性代码
+                if (!string.IsNullOrWhiteSpace(question.CorrectAnswer))
+                {
+                    var legacyAnswer = question.CorrectAnswer.Trim().ToLower();
+                    switch (question.QuestionType)
+                    {
+                        case "boolean" when bool.TryParse(legacyAnswer, out var legacyBool):
+                            info.BoolAnswer = legacyBool;
+                            break;
+                        case "multiple":
+                            info.CorrectAnswersList = legacyAnswer.Split(',').Select(a => a.Trim()).ToList();
+                            break;
+                        default:
+                            info.StringAnswer = legacyAnswer;
+                            break;
+                    }
+                }
+#pragma warning restore CS0618
+                break;
+        }
+
+        return info;
+    }
+
+    private class AnswerInfo
+    {
+        public List<string>? CorrectAnswersList { get; set; }
+        public bool? BoolAnswer { get; set; }
+        public string? StringAnswer { get; set; }
     }
 }

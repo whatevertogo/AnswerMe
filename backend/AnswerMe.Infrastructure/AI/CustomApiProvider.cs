@@ -15,9 +15,9 @@ public class CustomApiProvider : IAIProvider
 
     public string ProviderName => "custom_api";
 
-    public CustomApiProvider(HttpClient httpClient, ILogger<CustomApiProvider> logger)
+    public CustomApiProvider(IHttpClientFactory httpClientFactory, ILogger<CustomApiProvider> logger)
     {
-        _httpClient = httpClient;
+        _httpClient = httpClientFactory.CreateClient("AI");
         _logger = logger;
     }
 
@@ -50,13 +50,13 @@ public class CustomApiProvider : IAIProvider
             }
 
             // ✅ 使用配置的模型（如果为空则使用默认模型）
-            var modelToUse = string.IsNullOrEmpty(model) ? "gpt-3.5-turbo" : model;
+            var modelToUse = string.IsNullOrEmpty(model) ? "gpt-5.2" : model;
 
             // ✅ 根据题目数量动态计算max_tokens
             // 每道题平均需要约250个tokens（题目+选项+答案+解析）
             // 加上prompt本身的tokens，留一些余量
-            var estimatedTokensPerQuestion = 250;
-            var maxTokens = Math.Max(8000, request.Count * estimatedTokensPerQuestion + 1000);
+            var estimatedTokensPerQuestion = 300;
+            var maxTokens = Math.Clamp(request.Count * estimatedTokensPerQuestion + 1000, 1000, 8000);
 
             _logger.LogInformation("AI配置: Endpoint={Endpoint}, Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
                 actualEndpoint.Replace(apiKey.Substring(0, Math.Min(10, apiKey.Length)), "***"),
@@ -74,7 +74,7 @@ public class CustomApiProvider : IAIProvider
                     new
                     {
                         role = "system",
-                        content = "你是一个专业的题目生成助手。请根据用户要求生成题目，返回JSON格式。"
+                        content = "你是一个专业的题目生成助手。请根据用户要求和主题生成题目(这很重要),返回JSON格式,返回json格式很重要。"
                     },
                     new
                     {
@@ -100,7 +100,8 @@ public class CustomApiProvider : IAIProvider
                 Content = new StringContent(requestBodyJson, System.Text.Encoding.UTF8, "application/json")
             };
 
-            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+            // 使用重试机制发送请求（支持指数退避）
+            var response = await HttpRetryHelper.SendWithRetryAsync(_httpClient, httpRequest, _logger, cancellationToken);
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)
@@ -129,7 +130,18 @@ public class CustomApiProvider : IAIProvider
             }
 
             var content = choices[0].GetProperty("message").GetProperty("content").GetString();
-            var questions = ParseQuestionsFromResponse(content ?? "");
+            var contentText = content ?? string.Empty;
+
+            if (!AIResponseParser.TryParseQuestions(contentText, out var questions, out var error))
+            {
+                _logger.LogWarning("自定义API响应解析失败: {Error}", error);
+                return new AIQuestionGenerateResponse
+                {
+                    Success = false,
+                    ErrorMessage = error ?? "AI响应解析失败",
+                    ErrorCode = "PARSE_ERROR"
+                };
+            }
 
             return new AIQuestionGenerateResponse
             {
@@ -172,13 +184,70 @@ public class CustomApiProvider : IAIProvider
         }
     }
 
-    public async Task<bool> ValidateApiKeyAsync(string apiKey, CancellationToken cancellationToken = default)
+    public async Task<bool> ValidateApiKeyAsync(
+        string apiKey,
+        string? endpoint = null,
+        string? model = null,
+        CancellationToken cancellationToken = default)
     {
-        // 自定义 API 的验证需要端点信息，但 ValidateApiKeyAsync 接口没有提供端点参数
-        // 所以我们暂时返回 true，实际验证会在生成题目时进行
-        // 更好的方案是修改接口以支持端点参数
-        await Task.CompletedTask;
-        return !string.IsNullOrEmpty(apiKey);
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(endpoint))
+        {
+            // 无端点时无法验证，自定义API需要端点
+            return true;
+        }
+
+        try
+        {
+            var actualEndpoint = NormalizeEndpoint(endpoint);
+            var modelToUse = string.IsNullOrEmpty(model) ? "gpt-3.5-turbo" : model;
+
+            var requestBody = new
+            {
+                model = modelToUse,
+                messages = new[]
+                {
+                    new { role = "user", content = "hi" }
+                },
+                max_tokens = 5
+            };
+
+            var httpRequest = new HttpRequestMessage
+            {
+                Method = HttpMethod.Post,
+                RequestUri = new Uri(actualEndpoint),
+                Headers =
+                {
+                    { "Authorization", $"Bearer {apiKey}" }
+                },
+                Content = new StringContent(
+                    JsonSerializer.Serialize(requestBody),
+                    System.Text.Encoding.UTF8,
+                    "application/json")
+            };
+
+            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+
+        string NormalizeEndpoint(string ep)
+        {
+            if ((ep.Contains("api/coding/paas/v4") || ep.Contains("api/paas/v4")) &&
+                !ep.EndsWith("/chat/completions"))
+            {
+                var normalized = ep.TrimEnd('/');
+                return normalized + "/chat/completions";
+            }
+            return ep;
+        }
     }
 
     private string BuildPrompt(AIQuestionGenerateRequest request)
@@ -204,24 +273,5 @@ public class CustomApiProvider : IAIProvider
         return prompt;
     }
 
-    private List<GeneratedQuestion> ParseQuestionsFromResponse(string content)
-    {
-        try
-        {
-            // 尝试提取 JSON（可能包含在代码块中）
-            var jsonMatch = System.Text.RegularExpressions.Regex.Match(content, @"\[\s*\{.*\}\s*\]", System.Text.RegularExpressions.RegexOptions.Singleline);
-            if (jsonMatch.Success)
-            {
-                content = jsonMatch.Value;
-            }
-
-            var questions = JsonSerializer.Deserialize<List<GeneratedQuestion>>(content);
-            return questions ?? new List<GeneratedQuestion>();
-        }
-        catch (JsonException)
-        {
-            // 如果解析失败，返回空列表
-            return new List<GeneratedQuestion>();
-        }
-    }
+    // 解析逻辑统一由 AIResponseParser 处理
 }

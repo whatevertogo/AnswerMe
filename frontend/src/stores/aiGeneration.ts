@@ -47,30 +47,30 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
     generatedQuestions.value = []
 
     try {
-      // 根据题目数量选择同步或异步
-      // ≥20题使用异步，<20题使用同步（与后端逻辑一致）
-      const useAsync = params.count >= 20
+      // 根据题目数量/耗时选择同步或异步
+      // ≥10题或自定义API默认使用异步，避免长时间阻塞
+      const useAsync = params.count >= 10 || params.providerName === 'custom_api'
 
       if (useAsync) {
         // 异步生成
         const response = await generateQuestionsAsyncApi(params)
-        currentResponse.value = response
+        currentResponse.value = response.data
 
-        if (response.success && response.taskId) {
-          currentTaskId.value = response.taskId
-          await startProgressPolling(response.taskId)
+        if (response.data.success && response.data.taskId) {
+          currentTaskId.value = response.data.taskId
+          await startProgressPolling(response.data.taskId)
         } else {
-          error.value = response.errorMessage || '创建异步任务失败'
+          error.value = response.data.errorMessage || '创建异步任务失败'
         }
       } else {
         // 同步生成
         const response = await generateQuestionsApi(params)
-        currentResponse.value = response
+        currentResponse.value = response.data
 
-        if (response.success) {
-          generatedQuestions.value = response.questions
+        if (response.data.success) {
+          generatedQuestions.value = response.data.questions
         } else {
-          error.value = response.errorMessage || '生成失败'
+          error.value = response.data.errorMessage || '生成失败'
         }
       }
     } catch (err: any) {
@@ -113,20 +113,20 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
   async function updateProgress(taskId: string) {
     try {
       const response = await getGenerationProgressApi(taskId)
-      progress.value = response
+      progress.value = response.data
 
       // 如果任务完成，停止轮询
       if (isCompleted.value) {
         stopProgressPolling()
 
         // 如果有生成的题目，保存到结果中
-        if (response.questions && response.questions.length > 0) {
-          generatedQuestions.value = response.questions
+        if (response.data.questions && response.data.questions.length > 0) {
+          generatedQuestions.value = response.data.questions
         }
 
         // 如果失败，设置错误信息
-        if (response.status === 'failed' && response.errorMessage) {
-          error.value = response.errorMessage
+        if (response.data.status === 'failed' && response.data.errorMessage) {
+          error.value = response.data.errorMessage
         }
       }
     } catch (err: any) {

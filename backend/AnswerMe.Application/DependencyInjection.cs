@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IAttemptService, AttemptService>();
         services.AddScoped<IAIGenerationService, AIGenerationService>();
+        services.AddScoped<IStatsService, StatsService>();
 
         services.AddSingleton<AIProviderFactory>();
         services.AddScoped<IResourceAuthorizationService, ResourceAuthorizationService>();

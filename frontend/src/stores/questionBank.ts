@@ -8,6 +8,7 @@ import type {
   UpdateQuestionBankDto
 } from '@/types'
 import * as questionBankApi from '@/api/questionBank'
+import * as questionApi from '@/api/question'
 import { extractErrorMessage } from '@/utils/errorHandler'
 
 export type { QuestionBank, Question }
@@ -52,7 +53,18 @@ export const useQuestionBankStore = defineStore('questionBank', () => {
     try {
       const response = await questionBankApi.getQuestionBankDetail(id)
       currentBank.value = response
-      questions.value = response.questions || []
+
+      try {
+        const questionsResponse = await questionApi.getQuestions({
+          questionBankId: id,
+          pageSize: 1000
+        })
+        questions.value = questionsResponse.data.data
+      } catch (questionsError) {
+        console.warn('获取题库题目列表失败:', questionsError)
+        questions.value = []
+      }
+
       return response
     } catch (err) {
       error.value = extractErrorMessage(err, '获取题库详情失败')

@@ -4,23 +4,27 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { Plus, Edit, Delete, Star, CircleCheck, Connection } from '@element-plus/icons-vue'
+import { storeToRefs } from 'pinia'
+import { useDataSourceStore } from '@/stores/dataSource'
 import {
-  getDataSourcesApi,
-  createDataSourceApi,
-  updateDataSourceApi,
-  deleteDataSourceApi,
-  setDefaultDataSourceApi,
-  validateApiKeyApi,
   type DataSource,
   type CreateDataSourceParams,
   type UpdateDataSourceParams
 } from '@/api/datasource'
+import {
+  aiProviders,
+  getProviderByValue,
+  getProviderLabel,
+  getProviderTagType,
+  getProviderDefaultEndpoint,
+  getProviderDefaultModel
+} from '@/constants/aiProviders'
 
 const route = useRoute()
+const dataSourceStore = useDataSourceStore()
+const { dataSources, loading } = storeToRefs(dataSourceStore)
 
 // State
-const dataSources = ref<DataSource[]>([])
-const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
 const currentDataSource = ref<DataSource | null>(null)
@@ -37,57 +41,34 @@ const formData = ref<CreateDataSourceParams>({
   isDefault: false
 })
 
-// Provider options - 所有 Provider 使用 OpenAI 兼容的 API 格式
-// endpoint 和 model 作为默认值显示，用户可以选择性覆盖
-const providerOptions = [
-  {
-    label: 'OpenAI',
-    value: 'openai',
-    model: 'gpt-3.5-turbo',
-    endpoint: 'https://api.openai.com/v1/chat/completions'
-  },
-  {
-    label: '通义千问',
-    value: 'qwen',
-    model: 'qwen-turbo',
-    endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
-  },
-  {
-    label: '智谱GLM',
-    value: 'zhipu',
-    model: 'glm-4',
-    endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
-  },
-  {
-    label: 'Minimax',
-    value: 'minimax',
-    model: 'abab6.5s-chat',
-    endpoint: 'https://api.minimax.chat/v1/text/chatcompletion_v2'
-  },
-  {
-    label: '自定义API (OpenAI兼容)',
-    value: 'custom_api',
-    model: '',
-    endpoint: 'https://your-api-endpoint.com/v1/chat/completions'
+const validateApiKey = (_rule: any, value: string, callback: (error?: Error) => void) => {
+  if (dialogMode.value === 'create' && (!value || !value.trim())) {
+    callback(new Error('请输入API密钥'))
+    return
   }
-]
+  callback()
+}
 
 const formRules = {
   name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
   type: [{ required: true, message: '请选择提供商', trigger: 'change' }],
-  apiKey: [{ required: true, message: '请输入API密钥', trigger: 'blur' }]
+  apiKey: [{ validator: validateApiKey, trigger: 'blur' }]
 }
 
 onMounted(() => {
-  fetchDataSources()
-  // 检查路由参数，自动触发创建/编辑对话框
-  handleRouteQuery()
+  fetchDataSources().then(() => {
+    handleRouteQuery()
+  })
 })
 
 // 监听路由查询参数变化
-watch(() => route.query, () => {
-  handleRouteQuery()
-}, { immediate: true })
+watch(
+  [() => route.query, () => dataSources.value.length],
+  () => {
+    handleRouteQuery()
+  },
+  { immediate: true }
+)
 
 // 根据路由参数自动打开对话框
 function handleRouteQuery() {
@@ -107,38 +88,26 @@ function handleRouteQuery() {
 
 // Methods
 async function fetchDataSources() {
-  loading.value = true
   try {
-    const response = await getDataSourcesApi()
-    dataSources.value = response
+    await dataSourceStore.fetchDataSources()
   } catch (error: any) {
     ElMessage.error('加载数据源列表失败: ' + (error.message || '未知错误'))
-  } finally {
-    loading.value = false
   }
 }
 
 function handleAdd() {
-  console.log('[AIConfigView] handleAdd 被调用')
   dialogMode.value = 'create'
   currentDataSource.value = null
-  const defaultProvider = providerOptions[0]  // OpenAI
-  if (defaultProvider) {
-    formData.value = {
-      name: '',
-      type: 'openai',
-      apiKey: '',
-      endpoint: defaultProvider.endpoint,
-      model: defaultProvider.model,
-      isDefault: false
-    }
+  const defaultProvider = aiProviders[0]
+  formData.value = {
+    name: '',
+    type: defaultProvider?.value || 'openai',
+    apiKey: '',
+    endpoint: defaultProvider?.defaultEndpoint || '',
+    model: defaultProvider?.defaultModel || '',
+    isDefault: false
   }
   dialogVisible.value = true
-  console.log('[AIConfigView] dialogVisible 已设置为:', dialogVisible.value)
-  // 强制触发响应式更新
-  setTimeout(() => {
-    console.log('[AIConfigView] dialogVisible 当前值:', dialogVisible.value)
-  }, 100)
 }
 
 function handleEdit(dataSource: DataSource) {
@@ -167,7 +136,7 @@ async function handleDelete(dataSource: DataSource) {
       }
     )
 
-    await deleteDataSourceApi(dataSource.id)
+    await dataSourceStore.deleteDataSource(dataSource.id)
     ElMessage.success('删除成功')
     await fetchDataSources()
   } catch (error: any) {
@@ -179,7 +148,7 @@ async function handleDelete(dataSource: DataSource) {
 
 async function handleSetDefault(dataSource: DataSource) {
   try {
-    await setDefaultDataSourceApi(dataSource.id)
+    await dataSourceStore.setDefault(dataSource.id)
     ElMessage.success(`已将"${dataSource.name}"设置为默认数据源`)
     await fetchDataSources()
   } catch (error: any) {
@@ -190,8 +159,8 @@ async function handleSetDefault(dataSource: DataSource) {
 async function handleValidate(dataSource: DataSource) {
   validatingId.value = dataSource.id
   try {
-    const response = await validateApiKeyApi(dataSource.id)
-    if (response.valid) {
+    const isValid = await dataSourceStore.validateApiKey(dataSource.id)
+    if (isValid) {
       ElMessage.success('API密钥有效')
     } else {
       ElMessage.error('API密钥无效')
@@ -205,26 +174,38 @@ async function handleValidate(dataSource: DataSource) {
 
 async function handleSubmit() {
   if (!formRef.value) return
-  
+
   await formRef.value.validate(async (valid) => {
     if (!valid) return
-    
+
     try {
+      const provider = getProviderByValue(formData.value.type)
+      const endpointInput = (formData.value.endpoint ?? '').trim()
+      const modelInput = (formData.value.model ?? '').trim()
+      const normalizedEndpoint = endpointInput || provider?.defaultEndpoint || ''
+      const normalizedModel = modelInput || provider?.defaultModel || ''
+
       if (dialogMode.value === 'create') {
-        await createDataSourceApi(formData.value)
+        const createData: CreateDataSourceParams = {
+          ...formData.value,
+          endpoint: normalizedEndpoint,
+          model: normalizedModel
+        }
+        await dataSourceStore.createDataSource(createData)
         ElMessage.success('创建成功')
       } else if (currentDataSource.value) {
         const updateData: UpdateDataSourceParams = {
           name: formData.value.name,
-          endpoint: formData.value.endpoint || undefined,
-          model: formData.value.model || undefined,
+          type: formData.value.type,
+          endpoint: normalizedEndpoint,
+          model: normalizedModel,
           isDefault: formData.value.isDefault
         }
         // 只有当用户输入了新密钥时才更新
         if (formData.value.apiKey) {
           updateData.apiKey = formData.value.apiKey
         }
-        await updateDataSourceApi(currentDataSource.value.id, updateData)
+        await dataSourceStore.updateDataSource(currentDataSource.value.id, updateData)
         ElMessage.success('更新成功')
       }
       dialogVisible.value = false
@@ -236,63 +217,49 @@ async function handleSubmit() {
 }
 
 function handleProviderChange() {
-  const provider = providerOptions.find(p => p.value === formData.value.type)
+  const provider = getProviderByValue(formData.value.type)
   if (provider) {
-    // 自动填充默认端点和模型
-    formData.value.endpoint = provider.endpoint || ''
-    formData.value.model = provider.model || ''
+    formData.value.endpoint = provider.defaultEndpoint || ''
+    formData.value.model = provider.defaultModel || ''
   }
 }
 
 function handleDialogClose() {
-  const defaultProvider = providerOptions[0]
+  const defaultProvider = aiProviders[0]
   formData.value = {
     name: '',
-    type: 'openai',
+    type: defaultProvider?.value || 'openai',
     apiKey: '',
-    endpoint: defaultProvider?.endpoint || '',
-    model: defaultProvider?.model || 'gpt-3.5-turbo',
+    endpoint: defaultProvider?.defaultEndpoint || '',
+    model: defaultProvider?.defaultModel || 'gpt-3.5-turbo',
     isDefault: false
   }
   formRef.value?.resetFields()
+  formRef.value?.clearValidate()
 }
 
 function getTypeLabel(type: string) {
-  const typeMap: Record<string, string> = {
-    openai: 'OpenAI',
-    qwen: '通义千问',
-    zhipu: '智谱GLM',
-    minimax: 'Minimax',
-    custom_api: '自定义API'
-  }
-  return typeMap[type] || type
+  return getProviderLabel(type)
 }
 
 function getCurrentProviderEndpoint() {
-  const provider = providerOptions.find(p => p.value === formData.value.type)
-  if (provider?.endpoint) {
-    return `默认端点: ${provider.endpoint}`
+  const endpoint = getProviderDefaultEndpoint(formData.value.type)
+  if (endpoint) {
+    return `默认端点: ${endpoint}`
   }
   return '请输入自定义端点地址'
 }
 
 function getCurrentProviderModel() {
-  const provider = providerOptions.find(p => p.value === formData.value.type)
-  if (provider?.model) {
-    return `默认模型: ${provider.model}`
+  const model = getProviderDefaultModel(formData.value.type)
+  if (model) {
+    return `默认模型: ${model}`
   }
   return '请输入模型名称'
 }
 
 function getTypeTagType(type: string) {
-  const typeColorMap: Record<string, any> = {
-    openai: 'success',
-    qwen: 'primary',
-    zhipu: 'warning',
-    minimax: 'info',
-    custom_api: 'info'
-  }
-  return typeColorMap[type] || 'info'
+  return getProviderTagType(type)
 }
 </script>
 
@@ -424,7 +391,7 @@ function getTypeTagType(type: string) {
             @change="handleProviderChange"
           >
             <el-option
-              v-for="option in providerOptions"
+              v-for="option in aiProviders"
               :key="option.value"
               :label="option.label"
               :value="option.value"

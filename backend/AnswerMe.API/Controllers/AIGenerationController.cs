@@ -68,7 +68,7 @@ public class AIGenerationController : BaseApiController
     }
 
     /// <summary>
-    /// 生成题目（异步，>20题）
+    /// 生成题目（异步，推荐用于耗时任务）
     /// </summary>
     /// <param name="dto">生成请求</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -83,9 +83,9 @@ public class AIGenerationController : BaseApiController
             return BadRequest(ModelState);
         }
 
-        if (dto.Count < 20)
+        if (dto.Count <= 0)
         {
-            return BadRequestWithError("异步生成适用于≥20题的场景，<20题请使用同步生成接口");
+            return BadRequestWithError("题目数量必须大于0");
         }
 
         var userId = GetCurrentUserId();
