@@ -7,8 +7,7 @@ import { useQuestionStore } from '@/stores/question'
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionForm from '@/components/QuestionForm.vue'
 import type { Question } from '@/stores/question'
-import { QuestionType, getQuestionCorrectAnswers, getQuestionOptions } from '@/types'
-import { getQuestionTypeLabel, DifficultyLabels, DifficultyColors } from '@/types/question'
+import { getQuestionCorrectAnswers, getQuestionOptions, getQuestionTypeLabel, DifficultyLabels, DifficultyColors, QuestionType } from '@/types/question'
 
 const route = useRoute()
 const questionStore = useQuestionStore()
@@ -16,7 +15,7 @@ const questionBankStore = useQuestionBankStore()
 
 const loading = ref(false)
 const searchKeyword = ref('')
-const selectedType = ref<string>('')
+const selectedType = ref<QuestionType | ''>('')
 const selectedDifficulty = ref<string>('')
 const searchTimer = ref<number | null>(null)
 

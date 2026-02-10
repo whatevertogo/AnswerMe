@@ -12,13 +12,23 @@ public class MinimaxProvider : IAIProvider
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<MinimaxProvider> _logger;
+    private readonly string _providerName;
+    private readonly string _defaultEndpoint;
 
-    public string ProviderName => "Minimax";
+    public string ProviderName => _providerName;
 
-    public MinimaxProvider(IHttpClientFactory httpClientFactory, ILogger<MinimaxProvider> logger)
+    public MinimaxProvider(
+        IHttpClientFactory httpClientFactory,
+        ILogger<MinimaxProvider> logger,
+        string? providerName = null,
+        string? defaultEndpoint = null)
     {
         _httpClient = httpClientFactory.CreateClient("AI");
         _logger = logger;
+        _providerName = string.IsNullOrWhiteSpace(providerName) ? "minimax" : providerName;
+        _defaultEndpoint = string.IsNullOrWhiteSpace(defaultEndpoint)
+            ? "https://api.minimaxi.com/v1/text/chatcompletion_v2"
+            : defaultEndpoint;
     }
 
     public async Task<AIQuestionGenerateResponse> GenerateQuestionsAsync(
@@ -32,8 +42,8 @@ public class MinimaxProvider : IAIProvider
         {
             var prompt = BuildPrompt(request);
 
-            // 使用配置的模型，如果为空则使用默认模型 abab6.5s-chat
-            var modelToUse = string.IsNullOrEmpty(model) ? "abab6.5s-chat" : model;
+            // 使用配置的模型，如果为空则使用默认模型 M2-her
+            var modelToUse = string.IsNullOrEmpty(model) ? "M2-her" : model;
 
             // ✅ 根据题目数量动态计算max_tokens
             var estimatedTokensPerQuestion = 250;
@@ -45,7 +55,7 @@ public class MinimaxProvider : IAIProvider
             // ✅ 支持自定义端点（如代理或镜像）
             // 如果用户提供了自定义端点则使用，否则使用 Minimax 官方端点
             var actualEndpoint = string.IsNullOrEmpty(endpoint)
-                ? "https://api.minimaxi.com/v1/text/chatcompletion_v2"  // 默认官方端点
+                ? _defaultEndpoint  // 默认官方端点
                 : endpoint;  // 用户自定义端点
 
             var requestBody = new
@@ -121,9 +131,9 @@ public class MinimaxProvider : IAIProvider
         try
         {
             var actualEndpoint = string.IsNullOrEmpty(endpoint)
-                ? "https://api.minimaxi.com/v1/text/chatcompletion_v2"
+                ? _defaultEndpoint
                 : endpoint;
-            var modelToUse = string.IsNullOrEmpty(model) ? "abab6.5s-chat" : model;
+            var modelToUse = string.IsNullOrEmpty(model) ? "M2-her" : model;
 
             var httpRequest = new HttpRequestMessage
             {

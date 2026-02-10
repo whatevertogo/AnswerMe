@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as quizApi from '@/api/quiz'
+import type { QuizResult as ApiQuizResult, QuizDetail as ApiQuizDetail } from '@/api/quiz'
 
 export interface QuizQuestion {
   id: number
@@ -19,24 +20,15 @@ export interface QuizAnswer {
   timeSpent?: number
 }
 
-export interface QuizResult {
+// 使用 API 返回的 QuizResult 类型，但添加本地需要的 userId 和 details 字段
+export interface QuizResult extends Omit<ApiQuizResult, 'id'> {
   id: number
   userId: number
-  questionBankId: number
-  score: number
-  totalQuestions: number
-  correctCount: number
-  completedAt: string
   details: QuizDetail[]
 }
 
-export interface QuizDetail {
-  questionId: number
-  userAnswer: string | string[]
-  correctAnswer: string | string[]
-  isCorrect: boolean
-  timeSpent: number
-}
+// 使用 API 返回的 QuizDetail 类型
+export type QuizDetail = ApiQuizDetail
 
 export interface QuizStatistics {
   totalAttempts: number
@@ -127,13 +119,13 @@ export const useQuizStore = defineStore('quiz', () => {
     error.value = null
     try {
       const response = await quizApi.startQuiz({ questionBankId, mode })
-      currentAttemptId.value = response.data.attemptId
-      questionIds.value = response.data.questionIds || []
+      currentAttemptId.value = response.attemptId
+      questionIds.value = response.questionIds || []
       currentQuestionIndex.value = 0
       answers.value = {}
       timeSpents.value = {}
       startedAt.value = new Date()
-      return response.data
+      return response
     } catch (err: any) {
       error.value = err.response?.data?.message || '开始答题失败'
       throw error.value
@@ -188,8 +180,12 @@ export const useQuizStore = defineStore('quiz', () => {
       const response = await quizApi.completeQuiz({
         attemptId: currentAttemptId.value
       })
-      result.value = response.data
-      return response.data
+      result.value = {
+        ...response,
+        userId: 0, // 从 API 响应中可能不包含，需要从上下文获取
+        details: []
+      }
+      return response
     } catch (err: any) {
       error.value = err.response?.data?.message || '完成答题失败'
       throw error.value
@@ -203,8 +199,12 @@ export const useQuizStore = defineStore('quiz', () => {
     error.value = null
     try {
       const response = await quizApi.getQuizResult(attemptId)
-      result.value = response.data
-      return response.data
+      result.value = {
+        ...response,
+        userId: 0,
+        details: []
+      }
+      return response
     } catch (err: any) {
       error.value = err.response?.data?.message || '获取答题结果失败'
       throw error.value
@@ -218,8 +218,8 @@ export const useQuizStore = defineStore('quiz', () => {
     error.value = null
     try {
       const response = await quizApi.getQuizDetails(attemptId)
-      details.value = response.data
-      return response.data
+      details.value = response
+      return response
     } catch (err: any) {
       error.value = err.response?.data?.message || '获取答题详情失败'
       throw error.value

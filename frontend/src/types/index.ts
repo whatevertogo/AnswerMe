@@ -1,9 +1,74 @@
 // ==================== 题目类型定义 ====================
 // 优先使用 @/types/question.ts 中的类型定义
-// 使用 export * 进行批量重新导出
 
-export * from './question'
-export type { Question } from './question'
+// 从 question.ts 导入所有内容并重新导出
+import {
+  QuestionType,
+  QuestionTypeLabels,
+  DifficultyLabels,
+  DifficultyColors,
+  getQuestionTypeLabel,
+  getQuestionOptions,
+  getQuestionCorrectAnswers,
+  isChoiceQuestionData,
+  isBooleanQuestionData,
+  isFillBlankQuestionData,
+  isShortAnswerQuestionData,
+  isMultipleChoiceQuestion,
+  isSingleChoiceQuestion,
+  isBooleanQuestion,
+  isFillBlankQuestion,
+  isShortAnswerQuestion
+} from './question'
+
+import type {
+  QuestionType as QuestionTypeType,
+  Difficulty,
+  BaseQuestionData,
+  ChoiceQuestionData,
+  BooleanQuestionData,
+  FillBlankQuestionData,
+  ShortAnswerQuestionData,
+  QuestionData,
+  Question,
+  CreateQuestionDto,
+  UpdateQuestionDto
+} from './question'
+
+// 重新导出值
+export {
+  QuestionType,
+  QuestionTypeLabels,
+  DifficultyLabels,
+  DifficultyColors,
+  getQuestionTypeLabel,
+  getQuestionOptions,
+  getQuestionCorrectAnswers,
+  isChoiceQuestionData,
+  isBooleanQuestionData,
+  isFillBlankQuestionData,
+  isShortAnswerQuestionData,
+  isMultipleChoiceQuestion,
+  isSingleChoiceQuestion,
+  isBooleanQuestion,
+  isFillBlankQuestion,
+  isShortAnswerQuestion
+}
+
+// 重新导出类型
+export type {
+  QuestionType as QuestionTypeType,
+  Difficulty,
+  BaseQuestionData,
+  ChoiceQuestionData,
+  BooleanQuestionData,
+  FillBlankQuestionData,
+  ShortAnswerQuestionData,
+  QuestionData,
+  Question,
+  CreateQuestionDto,
+  UpdateQuestionDto
+}
 
 // 通用类型定义
 export interface PaginationParams {
@@ -84,12 +149,12 @@ export const LegacyQuestionType = {
 /**
  * @deprecated 使用 QuestionType from './question' 代替
  */
-export type QuestionTypeEnum = (typeof LegacyQuestionType)[keyof typeof LegacyQuestionType]
+export type LegacyQuestionTypeEnum = (typeof LegacyQuestionType)[keyof typeof LegacyQuestionType]
 
 /**
  * @deprecated 使用 Difficulty from './question' 代替
  */
-export const Difficulty = {
+export const LegacyDifficulty = {
   EASY: 'easy',
   MEDIUM: 'medium',
   HARD: 'hard'
@@ -98,7 +163,7 @@ export const Difficulty = {
 /**
  * @deprecated 使用 Difficulty from './question' 代替
  */
-export type DifficultyEnum = (typeof Difficulty)[keyof typeof Difficulty]
+export type DifficultyEnum = (typeof LegacyDifficulty)[keyof typeof LegacyDifficulty]
 
 /**
  * @deprecated 使用 Question interface from './question' 代替
@@ -106,7 +171,7 @@ export type DifficultyEnum = (typeof Difficulty)[keyof typeof Difficulty]
 export interface QuestionLegacy {
   id: number
   content: string
-  type: QuestionTypeEnum
+  type: LegacyQuestionTypeEnum
   options?: string[]
   correctAnswer: string
   explanation?: string
@@ -117,7 +182,7 @@ export interface QuestionLegacy {
 /** 题目查询参数 */
 export interface QuestionQueryParams extends CursorPaginationParams {
   questionBankId?: number
-  questionTypeEnum?: NewQuestionType
+  questionTypeEnum?: QuestionTypeType
   difficulty?: string
   search?: string
 }
@@ -210,7 +275,7 @@ export interface GenerateParams {
   topic: string
   count: number
   difficulty: DifficultyEnum
-  questionTypes: QuestionTypeEnum[]
+  questionTypes: LegacyQuestionTypeEnum[]
   aiConfigId: number
 }
 
@@ -218,7 +283,7 @@ export interface GenerateParams {
 export interface QuizSession {
   id: number
   questionBankId: number
-  questions: NewQuestion[]
+  questions: Question[]
   currentQuestionIndex: number
   answers: Map<number, string>
   startTime: string

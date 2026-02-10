@@ -11,7 +11,7 @@ export const aiProviders: AIProviderOption[] = [
   {
     label: 'OpenAI',
     value: 'openai',
-    defaultModel: 'gpt-3.5-turbo',
+    defaultModel: 'gpt-5.2',
     defaultEndpoint: 'https://api.openai.com/v1/chat/completions',
     tagType: 'success'
   },
@@ -21,7 +21,7 @@ export const aiProviders: AIProviderOption[] = [
     defaultModel: 'deepseek-chat',
     defaultEndpoint: 'https://api.deepseek.com/chat/completions',
     tagType: 'success',
-    description: 'V3.2 (128K context, 8K max output)'
+    description: 'V3.2 (128K context, 32K max output)'
   },
   {
     label: '通义千问',
@@ -38,10 +38,17 @@ export const aiProviders: AIProviderOption[] = [
     tagType: 'warning'
   },
   {
-    label: 'Minimax',
-    value: 'minimax',
-    defaultModel: 'abab6.5s-chat',
-    defaultEndpoint: 'https://api.minimax.chat/v1/text/chatcompletion_v2',
+    label: 'Minimax(中文)',
+    value: 'minimax_cn',
+    defaultModel: 'M2-her',
+    defaultEndpoint: 'https://api.minimaxi.com/v1/text/chatcompletion_v2',
+    tagType: 'info'
+  },
+  {
+    label: 'Minimax(英文)',
+    value: 'minimax_global',
+    defaultModel: 'M2-her',
+    defaultEndpoint: 'https://api.minimax.io/v1/text/chatcompletion_v2',
     tagType: 'info'
   },
   {

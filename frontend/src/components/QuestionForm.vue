@@ -61,7 +61,8 @@ const inputTagRef = ref<HTMLInputElement>()
 
 // 判断是否需要选项
 const needsOptions = computed(() => {
-  return [QuestionTypeEnum.SingleChoice, QuestionTypeEnum.MultipleChoice].includes(form.value.questionTypeEnum)
+  const choiceTypes: QuestionType[] = [QuestionTypeEnum.SingleChoice, QuestionTypeEnum.MultipleChoice]
+  return choiceTypes.includes(form.value.questionTypeEnum)
 })
 
 // 判断是否为多选题
@@ -193,7 +194,15 @@ function extractCorrectAnswer(question: Question): string {
       return (data as ShortAnswerQuestionData).referenceAnswer
     }
   }
-  return question.correctAnswer || ''
+  // 处理旧字段格式（可能是 string, string[], boolean）
+  const legacyAnswer = question.correctAnswer
+  if (typeof legacyAnswer === 'boolean') {
+    return legacyAnswer ? 'true' : 'false'
+  }
+  if (Array.isArray(legacyAnswer)) {
+    return legacyAnswer.join(',')
+  }
+  return legacyAnswer || ''
 }
 
 // 监听题型变化,自动调整答案格式

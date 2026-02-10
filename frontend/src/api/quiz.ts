@@ -1,5 +1,4 @@
 import request from '@/utils/request'
-import type { AxiosResponse } from 'axios'
 
 /**
  * 答题开始参数
@@ -73,15 +72,15 @@ export interface QuizStatistics {
 /**
  * 开始答题
  */
-export function startQuiz(data: QuizStartParams): Promise<AxiosResponse<QuizStartResponse>> {
-  return request.post<QuizStartResponse>('/attempts/start', data)
+export function startQuiz(data: QuizStartParams): Promise<QuizStartResponse> {
+  return request.post('/attempts/start', data)
 }
 
 /**
  * 提交答案
  */
-export function submitAnswer(data: QuizSubmitParams): Promise<AxiosResponse<boolean>> {
-  return request.post<boolean>('/attempts/submit-answer', data)
+export function submitAnswer(data: QuizSubmitParams): Promise<boolean> {
+  return request.post('/attempts/submit-answer', data)
 }
 
 /**
@@ -89,27 +88,27 @@ export function submitAnswer(data: QuizSubmitParams): Promise<AxiosResponse<bool
  */
 export function completeQuiz(data: {
   attemptId: number
-}): Promise<AxiosResponse<QuizResult>> {
-  return request.post<QuizResult>('/attempts/complete', data)
+}): Promise<QuizResult> {
+  return request.post('/attempts/complete', data)
 }
 
 /**
  * 获取答题记录详情
  */
-export function getQuizResult(attemptId: number): Promise<AxiosResponse<QuizResult>> {
-  return request.get<QuizResult>(`/attempts/${attemptId}`)
+export function getQuizResult(attemptId: number): Promise<QuizResult> {
+  return request.get(`/attempts/${attemptId}`)
 }
 
 /**
  * 获取答题详情列表
  */
-export function getQuizDetails(attemptId: number): Promise<AxiosResponse<QuizDetail[]>> {
-  return request.get<QuizDetail[]>(`/attempts/${attemptId}/details`)
+export function getQuizDetails(attemptId: number): Promise<QuizDetail[]> {
+  return request.get(`/attempts/${attemptId}/details`)
 }
 
 /**
  * 获取答题统计
  */
-export function getQuizStatistics(): Promise<AxiosResponse<QuizStatistics>> {
-  return request.get<QuizStatistics>('/attempts/statistics')
+export function getQuizStatistics(): Promise<QuizStatistics> {
+  return request.get('/attempts/statistics')
 }

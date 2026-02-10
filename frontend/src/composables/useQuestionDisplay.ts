@@ -1,4 +1,3 @@
-import { computed } from 'vue'
 import type { GeneratedQuestion } from '@/api/aiGeneration'
 import {
   isChoiceQuestionData,

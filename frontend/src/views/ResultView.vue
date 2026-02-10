@@ -5,7 +5,6 @@ import { ArrowLeft, TrendCharts, Check, Close, Clock, Document } from '@element-
 import { ElMessage } from 'element-plus'
 import { getQuizResult, getQuizDetails } from '@/api/quiz'
 import type { QuizResult, QuizDetail } from '@/api/quiz'
-import { getQuestionTypeLabel } from '@/types/question'
 
 const route = useRoute()
 const router = useRouter()
@@ -68,8 +67,8 @@ async function loadResult() {
       getQuizDetails(attemptId.value)
     ])
 
-    result.value = resultRes.data
-    details.value = detailsRes.data
+    result.value = resultRes
+    details.value = detailsRes
   } catch (error: any) {
     ElMessage.error('加载结果失败: ' + (error.message || '未知错误'))
     console.error('加载结果失败:', error)

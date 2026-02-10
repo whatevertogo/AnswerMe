@@ -14,8 +14,7 @@ import {
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionBankForm from '@/components/QuestionBankForm.vue'
 import type { QuestionBank } from '@/stores/questionBank'
-import { QuestionType, getQuestionTypeLabel, getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
-import { isChoiceQuestionData } from '@/types/question'
+import { getQuestionTypeLabel, getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
 
 const route = useRoute()
 const router = useRouter()

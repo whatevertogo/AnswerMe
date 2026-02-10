@@ -76,7 +76,7 @@ export const useQuestionStore = defineStore('question', () => {
     try {
       const result = await questionApi.createQuestion(data)
       questions.value.unshift(result.data)
-      pagination.value.total += 1
+      // 游标分页模式不需要维护 total
       return result.data
     } catch (err) {
       error.value = extractErrorMessage(err, '创建题目失败')
@@ -118,7 +118,7 @@ export const useQuestionStore = defineStore('question', () => {
     try {
       await questionApi.deleteQuestion(id)
       questions.value = questions.value.filter(q => q.id !== id)
-      pagination.value.total -= 1
+      // 游标分页模式不需要维护 total
       if (currentQuestion.value?.id === id) {
         currentQuestion.value = null
       }

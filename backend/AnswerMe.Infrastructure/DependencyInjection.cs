@@ -6,6 +6,7 @@ using AnswerMe.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace AnswerMe.Infrastructure;
 
@@ -51,7 +52,24 @@ public static class DependencyInjection
         services.AddSingleton<IAIProvider, DeepSeekProvider>();
         services.AddSingleton<IAIProvider, QwenProvider>();
         services.AddSingleton<IAIProvider, ZhipuProvider>();
-        services.AddSingleton<IAIProvider, MinimaxProvider>();
+        services.AddSingleton<IAIProvider>(sp =>
+            new MinimaxProvider(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                sp.GetRequiredService<ILogger<MinimaxProvider>>(),
+                "minimax_cn",
+                "https://api.minimaxi.com/v1/text/chatcompletion_v2"));
+        services.AddSingleton<IAIProvider>(sp =>
+            new MinimaxProvider(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                sp.GetRequiredService<ILogger<MinimaxProvider>>(),
+                "minimax_global",
+                "https://api.minimax.io/v1/text/chatcompletion_v2"));
+        services.AddSingleton<IAIProvider>(sp =>
+            new MinimaxProvider(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                sp.GetRequiredService<ILogger<MinimaxProvider>>(),
+                "minimax",
+                "https://api.minimaxi.com/v1/text/chatcompletion_v2"));
         services.AddSingleton<IAIProvider, CustomApiProvider>();
 
         return services;

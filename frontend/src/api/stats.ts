@@ -14,5 +14,5 @@ export interface HomeStatsResponse {
  * 获取首页统计数据
  */
 export function getHomeStats(): Promise<HomeStatsResponse> {
-  return request.get<HomeStatsResponse>('/stats/home')
+  return request.get('/stats/home') as Promise<HomeStatsResponse>
 }
