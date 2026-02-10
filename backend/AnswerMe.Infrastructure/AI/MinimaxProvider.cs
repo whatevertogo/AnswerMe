@@ -45,7 +45,7 @@ public class MinimaxProvider : IAIProvider
             // ✅ 支持自定义端点（如代理或镜像）
             // 如果用户提供了自定义端点则使用，否则使用 Minimax 官方端点
             var actualEndpoint = string.IsNullOrEmpty(endpoint)
-                ? "https://api.minimax.chat/v1/text/chatcompletion_v2"  // 默认官方端点
+                ? "https://api.minimaxi.com/v1/text/chatcompletion_v2"  // 默认官方端点
                 : endpoint;  // 用户自定义端点
 
             var requestBody = new
@@ -65,7 +65,7 @@ public class MinimaxProvider : IAIProvider
                     }
                 },
                 temperature = 0.7,
-                max_tokens = maxTokens
+                max_completion_tokens = maxTokens
             };
 
             var httpRequest = new HttpRequestMessage
@@ -121,7 +121,7 @@ public class MinimaxProvider : IAIProvider
         try
         {
             var actualEndpoint = string.IsNullOrEmpty(endpoint)
-                ? "https://api.minimax.chat/v1/text/chatcompletion_v2"
+                ? "https://api.minimaxi.com/v1/text/chatcompletion_v2"
                 : endpoint;
             var modelToUse = string.IsNullOrEmpty(model) ? "abab6.5s-chat" : model;
 
@@ -140,7 +140,7 @@ public class MinimaxProvider : IAIProvider
                     {
                         new { role = "user", content = "hi" }
                     },
-                    max_tokens = 5
+                    max_completion_tokens = 5
                 }), System.Text.Encoding.UTF8, "application/json")
             };
 
