@@ -47,7 +47,33 @@
 
 ### 一键启动
 
-#### 方式一：本地开发服务器（推荐开发）
+#### 方式一：使用启动脚本（推荐）
+
+**Linux/macOS:**
+```bash
+# Docker Compose 全栈启动
+./start.sh docker
+
+# 本地开发模式（仅 Redis）
+./start.sh dev
+
+# 仅启动 Redis
+./start.sh redis-only
+```
+
+**Windows (PowerShell):**
+```powershell
+# Docker Compose 全栈启动
+.\start.ps1 docker
+
+# 本地开发模式（仅 Redis）
+.\start.ps1 dev
+
+# 仅启动 Redis
+.\start.ps1 redis-only
+```
+
+#### 方式二：本地开发服务器
 
 ```bash
 # 1. 克隆仓库
@@ -77,7 +103,7 @@ npm run dev           # 启动 Vite 开发服务器
 # 打开浏览器访问前端地址（如 http://localhost:5173）
 ```
 
-#### 方式二：Docker Compose（推荐生产）
+#### 方式三：Docker Compose（推荐生产）
 
 ```bash
 # 1. 配置环境变量
@@ -91,7 +117,6 @@ docker-compose up -d
 docker-compose logs -f
 
 # 4. 访问应用
-# 前端: http://localhost:3000
 # 后端API: http://localhost:5000/swagger
 ```
 
