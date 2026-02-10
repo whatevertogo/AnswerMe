@@ -166,183 +166,143 @@ const getOptionLabel = (index: number) => {
 
 <style scoped>
 .answer-panel {
-  max-width: 48rem;
+  @apply max-w-3xl;
 }
 
 .options-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  @apply flex flex-col gap-3;
 }
 
 .option-item {
-  padding: 0.75rem 1rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  transition: all 0.15s;
+  @apply px-5 py-4 border-2 border-border rounded-md
+         transition-all duration-400 ease-smooth;
 }
 
 .dark .option-item {
-  border-color: #374151;
+  @apply border-border;
 }
 
 .option-item:hover {
-  border-color: #d1d5db;
+  @apply border-primary;
 }
 
 .dark .option-item:hover {
-  border-color: #4b5563;
+  @apply border-primary;
 }
 
 .option-item.is-selected {
-  border-color: #3b82f6;
-  background: #eff6ff;
+  @apply border-primary bg-bg-secondary;
 }
 
 .dark .option-item.is-selected {
-  border-color: #3b82f6;
-  background: #1e3a8a33;
+  @apply border-primary bg-bg-secondary;
 }
 
 .option-item.is-disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  @apply opacity-50 cursor-not-allowed;
 }
 
 .option-label {
-  font-weight: 500;
-  color: #6b7280;
-  margin-right: 0.5rem;
+  @apply font-medium text-text-secondary mr-2;
 }
 
 .dark .option-label {
-  color: #9ca3af;
+  @apply text-text-secondary;
 }
 
 .option-text {
-  color: #374151;
+  @apply text-text-primary;
 }
 
 .dark .option-text {
-  color: #d1d5db;
+  @apply text-text-primary;
 }
 
 .essay-input {
-  width: 100%;
+  @apply w-full;
 }
 
 .essay-input :deep(.el-textarea__inner) {
-  font-size: 0.875rem;
-  line-height: 1.625;
+  @apply text-sm leading-[1.625];
 }
 
 .multiple-choice-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  @apply flex flex-col gap-4;
 }
 
 .selection-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0.75rem;
-  background: #f9fafb;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
+  @apply flex justify-between items-center px-4 py-3 bg-bg-secondary rounded-md text-sm;
 }
 
 .dark .selection-info {
-  background: #1f2937;
+  @apply bg-bg-secondary;
 }
 
 .selection-hint {
-  color: #6b7280;
-  font-weight: 500;
+  @apply text-text-secondary font-medium;
 }
 
 .dark .selection-hint {
-  color: #9ca3af;
+  @apply text-text-secondary;
 }
 
 .selection-count {
-  color: #3b82f6;
-  font-weight: 600;
+  @apply text-primary font-semibold;
 }
 
 /* 判断题 */
 .boolean-container {
-  display: flex;
-  justify-content: center;
-  padding: 1rem 0;
+  @apply flex justify-center py-4;
 }
 
 .boolean-options {
-  display: flex;
-  gap: 2rem;
+  @apply flex gap-8;
 }
 
 .boolean-option {
-  padding: 1rem 2rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
+  @apply px-10 py-4 border-2 border-border rounded-lg
+         transition-all duration-400 ease-smooth;
 }
 
 .dark .boolean-option {
-  border-color: #374151;
+  @apply border-border;
 }
 
 .boolean-option:hover {
-  border-color: #3b82f6;
+  @apply border-primary;
 }
 
 .boolean-option.is-checked {
-  border-color: #3b82f6;
-  background: #eff6ff;
+  @apply border-primary bg-bg-secondary;
 }
 
 .dark .boolean-option.is-checked {
-  border-color: #3b82f6;
-  background: #1e3a8a33;
+  @apply border-primary bg-bg-secondary;
 }
 
 .boolean-option-text {
-  font-size: 1rem;
-  font-weight: 500;
+  @apply text-base font-medium;
 }
 
 /* 填空题 */
 .fill-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  @apply flex flex-col gap-4;
 }
 
 .fill-hint {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  color: #0369a1;
+  @apply flex items-center gap-2 px-4 py-3.5
+         bg-bg-secondary border border-border rounded-md text-sm text-text-primary;
 }
 
 .dark .fill-hint {
-  background: #0c4a6e33;
-  border-color: #075985;
-  color: #7dd3fc;
+  @apply bg-bg-secondary border-border text-text-primary;
 }
 
 .fill-input {
-  width: 100%;
+  @apply w-full;
 }
 
 .fill-input :deep(.el-textarea__inner) {
-  font-size: 0.875rem;
-  line-height: 1.625;
+  @apply text-sm leading-[1.625];
 }
 </style>

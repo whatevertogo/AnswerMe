@@ -445,122 +445,85 @@ function getTypeTagType(type: string) {
 
 <style scoped>
 .ai-config-view {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+  @apply p-6 max-w-[1400px] mx-auto;
 }
 
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
+  @apply flex justify-between items-start mb-6;
 }
 
 .header-left h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
+  @apply m-0 text-[24px] font-semibold;
   color: #303133;
 }
 
 .subtitle {
-  margin: 4px 0 0 0;
-  font-size: 14px;
+  @apply mt-1 mb-0 text-sm;
   color: #909399;
 }
 
 .datasource-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  @apply flex flex-col gap-4;
 }
 
 .datasource-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  transition: all 0.3s;
-}
-
-.datasource-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.1);
+  @apply flex justify-between items-center px-5 py-5
+         border border-[#e4e7ed] rounded-lg
+         transition-all duration-300
+         hover:border-[#409eff] hover:shadow-[0_2px_12px_rgba(64,158,255,0.1)];
 }
 
 .datasource-info {
-  flex: 1;
+  @apply flex-1;
 }
 
 .info-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
+  @apply flex items-start gap-3 mb-3;
 }
 
 .type-icon {
-  color: #409eff;
-  flex-shrink: 0;
+  @apply text-[#409eff] flex-shrink-0;
 }
 
 .info-text {
-  flex: 1;
+  @apply flex-1;
 }
 
 .name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  @apply flex items-center gap-2 mb-2;
 }
 
 .name {
-  font-size: 16px;
-  font-weight: 600;
+  @apply text-base font-semibold;
   color: #303133;
 }
 
 .info-details {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px 24px;
-  margin-left: 36px;
+  @apply grid grid-cols-2 gap-x-6 gap-y-2 ml-9;
 }
 
 .detail-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  @apply flex items-center gap-2 text-sm;
 }
 
 .label {
-  color: #909399;
-  white-space: nowrap;
+  @apply text-[#909399] whitespace-nowrap;
 }
 
 .value {
-  color: #606266;
+  @apply text-[#606266];
 }
 
 .masked {
-  font-family: monospace;
-  color: #909399;
+  @apply font-mono text-[#909399];
 }
 
 .datasource-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 24px;
+  @apply flex items-center gap-2 ml-6;
 }
 
 :deep(.el-form-item__label) {
-  font-weight: 500;
+  @apply font-medium;
 }
 
 /* 确保对话框正确显示 */
@@ -580,10 +543,7 @@ function getTypeTagType(type: string) {
 }
 
 .form-tip {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #909399;
-  line-height: 1.5;
+  @apply mt-1 text-xs text-[#909399] leading-[1.5];
 }
 
 </style>

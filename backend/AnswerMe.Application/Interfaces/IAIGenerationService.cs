@@ -43,4 +43,19 @@ public interface IAIGenerationService
         int userId,
         string taskId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 执行后台任务（由 Worker 调用）
+    /// </summary>
+    /// <param name="taskId">任务ID</param>
+    /// <param name="userId">用户ID</param>
+    /// <param name="dto">生成请求</param>
+    /// <param name="progressCallback">进度回调</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    Task ExecuteTaskAsync(
+        string taskId,
+        int userId,
+        AIGenerateRequestDto dto,
+        Func<string, int, int, string, Task> progressCallback,
+        CancellationToken cancellationToken = default);
 }

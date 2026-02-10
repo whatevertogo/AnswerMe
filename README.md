@@ -43,6 +43,7 @@
 - .NET 10 SDK
 - Node.js 18+
 - npm 或 pnpm
+- Docker（可选，用于 PostgreSQL + Redis）
 
 ### 一键启动
 
@@ -57,18 +58,22 @@ cd AnswerMe
 cp .env.example .env
 # 编辑 .env 文件，设置必要的环境变量
 
-# 3. 启动后端服务器（终端1）
+# 3. 启动依赖服务（PostgreSQL + Redis）- 可选
+# 如果不启动，将使用 SQLite（开发默认）和禁用 AI 异步生成功能
+docker-compose up -d db redis
+
+# 4. 启动后端服务器（终端1）
 cd backend
 dotnet run --project AnswerMe.API
 # 后端将运行在 http://localhost:5000（或配置的端口）
 
-# 4. 启动前端开发服务器（终端2）
+# 5. 启动前端开发服务器（终端2）
 cd frontend
 npm install           # 首次运行需要安装依赖
 npm run dev           # 启动 Vite 开发服务器
 # 前端将运行在 http://localhost:5173（或可用端口）
 
-# 5. 访问应用
+# 6. 访问应用
 # 打开浏览器访问前端地址（如 http://localhost:5173）
 ```
 
@@ -231,6 +236,7 @@ docker-compose exec db psql -U answeruser -d answermedb
 | 前端 | 5173 | `FRONTEND_PORT` | Vite 开发服务器（自动寻找可用端口） |
 | 后端 API | 5000 | `BACKEND_PORT` | ASP.NET Core API |
 | 数据库 | 5432 | `POSTGRES_PORT` | PostgreSQL（Docker 模式） |
+| Redis | 6379 | `REDIS_PORT` | Redis 任务队列（Docker 模式） |
 
 **注意**: Vite 开发服务器如果默认端口被占用，会自动尝试 5174、5175 等端口。
 
@@ -261,9 +267,10 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ## 🛠️ 技术栈
 
 ### 后端
-- **.NET 8** - 跨平台高性能框架
+- **.NET 10** - 跨平台高性能框架
 - **Entity Framework Core** - ORM数据访问
 - **SQLite / PostgreSQL** - 数据库
+- **Redis** - AI 异步任务队列
 - **ASP.NET Core Identity** - 用户认证
 - **Swashbuckle** - Swagger API文档
 
@@ -317,7 +324,27 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ### 功能限制
 
 - **数据导入功能**: 暂未实现,仅支持导出。如需迁移数据,可直接备份SQLite数据库文件。
-- **异步任务持久化**: AI异步生成任务当前存储在内存中,应用重启会丢失任务状态。生产环境建议使用Redis。
+
+### Redis 配置（AI 异步生成）
+
+AI 生成题目支持两种模式：
+- **同步模式**：题目数量 ≤ 20，直接返回结果
+- **异步模式**：题目数量 > 20，后台生成，通过 Redis 队列处理
+
+要启用异步模式，需要启动 Redis：
+
+**方式一：使用 Docker（推荐）**
+```bash
+# 确保 Docker Desktop 已启动
+docker-compose up -d redis
+```
+
+**方式二：本地安装 Redis**
+- Windows: 下载 [Redis for Windows](https://github.com/microsoftarchive/redis/releases) 或使用 WSL
+- macOS: `brew install redis && brew services start redis`
+- Linux: `sudo systemctl start redis`
+
+如果 Redis 未配置，异步生成功能将不可用，但不影响同步生成（小批量题目）。
 
 ### 安全建议
 

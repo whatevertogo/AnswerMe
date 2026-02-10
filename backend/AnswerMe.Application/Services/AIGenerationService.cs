@@ -8,7 +8,7 @@ using AnswerMe.Domain.Models;
 using AnswerMe.Domain.Interfaces;
 using AnswerMe.Domain.Common;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System.Linq;
 
 namespace AnswerMe.Application.Services;
@@ -24,12 +24,9 @@ public class AIGenerationService : IAIGenerationService
     private readonly IDataSourceService _dataSourceService;
     private readonly AIProviderFactory _aiProviderFactory;
     private readonly ILogger<AIGenerationService> _logger;
-    private readonly IServiceProvider _serviceProvider;
-
-    // 内存中的异步任务存储（生产环境应使用Redis或数据库）
-    private static readonly Dictionary<string, AIGenerateProgressDto> _asyncTasks = new();
-    private static readonly object _taskLock = new();
-    private const int GenerationBatchSize = 5;
+    private readonly IAIGenerationTaskQueue _taskQueue;
+    private readonly IAIGenerationProgressStore _progressStore;
+    private readonly AIGenerationOptions _options;
 
     public AIGenerationService(
         IQuestionRepository questionRepository,
@@ -38,7 +35,9 @@ public class AIGenerationService : IAIGenerationService
         IDataSourceService dataSourceService,
         AIProviderFactory aiProviderFactory,
         ILogger<AIGenerationService> logger,
-        IServiceProvider serviceProvider)
+        IAIGenerationTaskQueue taskQueue,
+        IAIGenerationProgressStore progressStore,
+        IOptions<AIGenerationOptions> options)
     {
         _questionRepository = questionRepository;
         _questionBankRepository = questionBankRepository;
@@ -46,7 +45,9 @@ public class AIGenerationService : IAIGenerationService
         _dataSourceService = dataSourceService;
         _aiProviderFactory = aiProviderFactory;
         _logger = logger;
-        _serviceProvider = serviceProvider;
+        _taskQueue = taskQueue;
+        _progressStore = progressStore;
+        _options = options.Value;
     }
 
     public async Task<AIGenerateResponseDto> GenerateQuestionsAsync(
@@ -54,20 +55,20 @@ public class AIGenerationService : IAIGenerationService
         AIGenerateRequestDto dto,
         CancellationToken cancellationToken = default)
     {
-        if (dto.Count > 20)
+        if (dto.Count > _options.MaxSyncCount)
         {
             return new AIGenerateResponseDto
             {
                 Success = false,
-                ErrorMessage = "同步生成最多支持20道题目，请使用异步生成接口",
+                ErrorMessage = $"同步生成最多支持{_options.MaxSyncCount}道题目，请使用异步生成接口",
                 ErrorCode = "COUNT_EXCEEDED"
             };
         }
 
-        return await GenerateQuestionsInternalAsync(userId, dto, cancellationToken, null);
+        return await GenerateQuestionsInternalAsync(userId, dto, null, cancellationToken);
     }
 
-    public Task<string> StartAsyncGeneration(
+    public async Task<string> StartAsyncGeneration(
         int userId,
         AIGenerateRequestDto dto,
         CancellationToken cancellationToken = default)
@@ -79,23 +80,22 @@ public class AIGenerationService : IAIGenerationService
         var progress = new AIGenerateProgressDto
         {
             TaskId = taskId,
-            UserId = userId,  // 保存用户ID用于权限验证
+            UserId = userId,
             Status = "pending",
             GeneratedCount = 0,
             TotalCount = dto.Count,
             CreatedAt = DateTime.UtcNow
         };
 
-        lock (_taskLock)
-        {
-            _asyncTasks[taskId] = progress;
-        }
+        // 保存初始进度到 Redis
+        await _progressStore.SetAsync(taskId, progress, TimeSpan.FromHours(_options.TaskTtlHours), cancellationToken);
 
-        // 在后台线程中执行生成任务（fire-and-forget，不等待完成）
-        _ = Task.Run(async () => await ExecuteAsyncGeneration(taskId, userId, dto), cancellationToken)
-            .ConfigureAwait(false);
+        // 将任务加入队列
+        await _taskQueue.EnqueueAsync(taskId, userId, dto, cancellationToken);
 
-        return Task.FromResult(taskId);
+        _logger.LogInformation("任务已加入队列: {TaskId}, 用户: {UserId}, 题目数量: {Count}", taskId, userId, dto.Count);
+
+        return taskId;
     }
 
     public async Task<AIGenerateProgressDto?> GetProgressAsync(
@@ -103,124 +103,100 @@ public class AIGenerationService : IAIGenerationService
         string taskId,
         CancellationToken cancellationToken = default)
     {
-        // 使用 await Task.Run 将同步锁操作包装为异步，避免阻塞线程
-        return await Task.Run(() =>
-        {
-            lock (_taskLock)
-            {
-                if (_asyncTasks.TryGetValue(taskId, out var progress))
-                {
-                    // 验证用户权限：只能查询自己的任务
-                    if (progress.UserId != userId)
-                    {
-                        return null;  // 返回 null 表示任务不存在（不泄露其他用户任务信息）
-                    }
+        var progress = await _progressStore.GetAsync(taskId, cancellationToken);
 
-                    // 返回副本避免外部修改（避免序列化抽象类型导致异常）
-                    return CloneProgress(progress);
-                }
-            }
+        if (progress == null)
+        {
             return null;
-        }, cancellationToken);
+        }
+
+        // 验证用户权限：只能查询自己的任务
+        if (progress.UserId != userId)
+        {
+            return null;
+        }
+
+        return progress;
     }
 
     /// <summary>
-    /// 执行异步生成任务
+    /// 执行后台任务（由 Worker 调用）
     /// </summary>
-    private async Task ExecuteAsyncGeneration(string taskId, int userId, AIGenerateRequestDto dto)
+    public async Task ExecuteTaskAsync(
+        string taskId,
+        int userId,
+        AIGenerateRequestDto dto,
+        Func<string, int, int, string, Task> progressCallback,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             // 更新状态为处理中
-            UpdateTaskStatus(taskId, "processing");
+            await _progressStore.UpdateAsync(taskId, progress => progress.Status = "processing", cancellationToken);
 
-            // ✅ 修复P0: 创建独立作用域，避免使用已释放的 DbContext
-            using var scope = _serviceProvider.CreateScope();
-
-            // 从新作用域获取服务实例（通过接口）
-            var aiGenerationService = scope.ServiceProvider.GetRequiredService<IAIGenerationService>();
-            var concreteService = aiGenerationService as AIGenerationService
-                ?? throw new InvalidOperationException("无法解析 AIGenerationService");
-
-            var response = await concreteService.GenerateQuestionsInternalAsync(
+            var response = await GenerateQuestionsInternalAsync(
                 userId,
                 dto,
-                CancellationToken.None,
-                generatedCount =>
+                (generatedCount, totalCount) =>
                 {
-                    UpdateTaskProgress(taskId, generatedCount);
-                    return Task.CompletedTask;
-                });
+                    return progressCallback(taskId, generatedCount, totalCount, "processing");
+                },
+                cancellationToken);
 
             if (response.Success)
             {
-                UpdateTaskStatus(taskId, "completed", response.Questions);
+                await _progressStore.UpdateAsync(taskId, progress =>
+                {
+                    progress.Status = "completed";
+                    progress.GeneratedCount = response.Questions.Count;
+                    progress.Questions = response.Questions;
+                    progress.CompletedAt = DateTime.UtcNow;
+                }, cancellationToken);
             }
             else if (response.PartialSuccessCount.HasValue && response.PartialSuccessCount.Value > 0)
             {
                 var errorMessage = string.IsNullOrWhiteSpace(response.ErrorMessage)
                     ? "生成部分成功，但存在失败题目"
                     : response.ErrorMessage;
-                UpdateTaskStatus(taskId, "partial_success", response.Questions, errorMessage);
+                await _progressStore.UpdateAsync(taskId, progress =>
+                {
+                    progress.Status = "partial_success";
+                    progress.GeneratedCount = response.Questions.Count;
+                    progress.Questions = response.Questions;
+                    progress.ErrorMessage = errorMessage;
+                    progress.CompletedAt = DateTime.UtcNow;
+                }, cancellationToken);
             }
             else
             {
                 var errorMessage = string.IsNullOrWhiteSpace(response.ErrorMessage)
                     ? "AI生成失败，请查看服务器日志"
                     : response.ErrorMessage;
-                UpdateTaskStatus(taskId, "failed", errorMessage: errorMessage);
+                await _progressStore.UpdateAsync(taskId, progress =>
+                {
+                    progress.Status = "failed";
+                    progress.ErrorMessage = errorMessage;
+                    progress.CompletedAt = DateTime.UtcNow;
+                }, cancellationToken);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "异步生成任务失败: TaskId={TaskId}", taskId);
-            UpdateTaskStatus(taskId, "failed", errorMessage: ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// 更新任务状态
-    /// </summary>
-    private void UpdateTaskStatus(
-        string taskId,
-        string status,
-        List<GeneratedQuestionDto>? questions = null,
-        string? errorMessage = null)
-    {
-        lock (_taskLock)
-        {
-            if (_asyncTasks.TryGetValue(taskId, out var progress))
+            await _progressStore.UpdateAsync(taskId, progress =>
             {
-                progress.Status = status;
-                progress.GeneratedCount = questions?.Count ?? 0;
-                progress.Questions = questions;
-                progress.ErrorMessage = errorMessage;
-
-                if (status is "completed" or "failed" or "partial_success")
-                {
-                    progress.CompletedAt = DateTime.UtcNow;
-                }
-            }
-        }
-    }
-
-    private void UpdateTaskProgress(string taskId, int generatedCount)
-    {
-        lock (_taskLock)
-        {
-            if (_asyncTasks.TryGetValue(taskId, out var progress))
-            {
-                progress.Status = "processing";
-                progress.GeneratedCount = generatedCount;
-            }
+                progress.Status = "failed";
+                progress.ErrorMessage = ex.Message;
+                progress.CompletedAt = DateTime.UtcNow;
+            }, cancellationToken);
         }
     }
 
     private async Task<AIGenerateResponseDto> GenerateQuestionsInternalAsync(
         int userId,
         AIGenerateRequestDto dto,
-        CancellationToken cancellationToken,
-        Func<int, Task>? onProgress)
+        Func<int, int, Task>? onProgress,
+        CancellationToken cancellationToken)
     {
         // 验证请求参数
         var validationResult = ValidateRequest(dto);
@@ -282,7 +258,7 @@ public class AIGenerationService : IAIGenerationService
 
         while (remaining > 0)
         {
-            var batchSize = Math.Min(GenerationBatchSize, remaining);
+            var batchSize = Math.Min(_options.BatchSize, remaining);
             var aiRequest = new AIQuestionGenerateRequest
             {
                 Subject = dto.Subject,
@@ -425,7 +401,7 @@ public class AIGenerationService : IAIGenerationService
 
             if (onProgress != null)
             {
-                await onProgress(savedQuestions.Count);
+                await onProgress(savedQuestions.Count, totalRequested);
             }
         }
 
@@ -470,7 +446,6 @@ public class AIGenerationService : IAIGenerationService
         {
             try
             {
-                // 调用AI生成，传递 apiKey、model 和 endpoint
                 var response = await provider.GenerateQuestionsAsync(apiKey, request, model, endpoint, cancellationToken);
 
                 if (response.Success)
@@ -478,7 +453,6 @@ public class AIGenerationService : IAIGenerationService
                     return response;
                 }
 
-                // 如果不是临时错误，直接返回
                 if (response.ErrorCode != "RATE_LIMIT_EXCEEDED" &&
                     response.ErrorCode != "TIMEOUT" &&
                     response.ErrorCode != "SERVICE_UNAVAILABLE")
@@ -494,7 +468,6 @@ public class AIGenerationService : IAIGenerationService
                 _logger.LogWarning(ex, "AI生成失败，重试 {Retry}/{MaxRetries}", retry + 1, maxRetries);
             }
 
-            // 指数退避
             if (retry < maxRetries - 1)
             {
                 var delay = TimeSpan.FromSeconds(Math.Pow(2, retry));
@@ -572,7 +545,6 @@ public class AIGenerationService : IAIGenerationService
                 ds.Type.Equals(providerName, StringComparison.OrdinalIgnoreCase));
         }
 
-        // 返回第一个可用的数据源
         return dataSources.FirstOrDefault();
     }
 
@@ -591,46 +563,8 @@ public class AIGenerationService : IAIGenerationService
         };
 
         await _questionBankRepository.AddAsync(questionBank, cancellationToken);
+        await _questionBankRepository.SaveChangesAsync(cancellationToken);
         return questionBank.Id;
-    }
-
-    /// <summary>
-    /// 映射Question到GeneratedQuestionDto
-    /// </summary>
-    private static GeneratedQuestionDto MapToGeneratedQuestionDto(Question question)
-    {
-#pragma warning disable CS0618 // 旧字段兼容性代码：读取旧字段
-        var options = new List<string>();
-        if (!string.IsNullOrEmpty(question.Options))
-        {
-            try
-            {
-                options = JsonSerializer.Deserialize<List<string>>(question.Options) ?? new List<string>();
-            }
-            catch
-            {
-                options = new List<string>();
-            }
-        }
-#pragma warning restore CS0618
-
-        var dto = new GeneratedQuestionDto
-        {
-            Id = question.Id,
-            QuestionTypeEnum = question.QuestionTypeEnum,
-            QuestionText = question.QuestionText,
-            Data = question.Data,
-#pragma warning disable CS0618 // 旧字段兼容性代码：填充 DTO 旧字段
-            Options = options,
-            CorrectAnswer = question.CorrectAnswer,
-#pragma warning restore CS0618
-            Explanation = question.Explanation,
-            Difficulty = question.Difficulty,
-            QuestionBankId = question.QuestionBankId,
-            CreatedAt = question.CreatedAt
-        };
-        dto.PopulateLegacyFieldsFromData();
-        return dto;
     }
 
     private static QuestionType? ResolveQuestionType(
@@ -708,7 +642,6 @@ public class AIGenerationService : IAIGenerationService
             return;
         }
 
-        // 只更新新字段，与 QuestionService 保持一致
         question.Data = data;
 
         if (!string.IsNullOrWhiteSpace(data.Explanation))
@@ -720,9 +653,6 @@ public class AIGenerationService : IAIGenerationService
         {
             question.Difficulty = data.Difficulty;
         }
-
-        // 不再同步更新旧字段
-        // 历史数据的旧字段保留用于读取兼容（通过 Question.Data getter 的 fallback 机制）
     }
 
     private static QuestionData? BuildDataFromLegacy(
@@ -819,40 +749,5 @@ public class AIGenerationService : IAIGenerationService
 #pragma warning restore CS0618
     {
         return LegacyFieldParser.ParseCorrectAnswers(legacyAnswers);
-    }
-
-    private static AIGenerateProgressDto CloneProgress(AIGenerateProgressDto progress)
-    {
-        return new AIGenerateProgressDto
-        {
-            TaskId = progress.TaskId,
-            UserId = progress.UserId,
-            Status = progress.Status,
-            GeneratedCount = progress.GeneratedCount,
-            TotalCount = progress.TotalCount,
-            ErrorMessage = progress.ErrorMessage,
-            Questions = progress.Questions?.Select(CloneGeneratedQuestion).ToList(),
-            CreatedAt = progress.CreatedAt,
-            CompletedAt = progress.CompletedAt
-        };
-    }
-
-    private static GeneratedQuestionDto CloneGeneratedQuestion(GeneratedQuestionDto question)
-    {
-        return new GeneratedQuestionDto
-        {
-            Id = question.Id,
-            QuestionTypeEnum = question.QuestionTypeEnum,
-            QuestionText = question.QuestionText,
-            Data = question.Data,
-#pragma warning disable CS0618 // 旧字段兼容性代码：克隆 DTO 旧字段
-            Options = question.Options != null ? new List<string>(question.Options) : new List<string>(),
-            CorrectAnswer = question.CorrectAnswer,
-#pragma warning restore CS0618
-            Explanation = question.Explanation,
-            Difficulty = question.Difficulty,
-            QuestionBankId = question.QuestionBankId,
-            CreatedAt = question.CreatedAt
-        };
     }
 }

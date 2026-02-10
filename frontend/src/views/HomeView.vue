@@ -1,16 +1,25 @@
 <script setup lang="ts">
-import { ref, markRaw, onMounted } from 'vue'
+import { ref, markRaw, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Notebook,
   Setting,
   TrendCharts,
-  CollectionTag
+  CollectionTag,
+  CirclePlus,
+  Cpu,
+  EditPen,
+  Sugar,
+  ArrowRight
 } from '@element-plus/icons-vue'
 import { getHomeStats, type HomeStatsResponse } from '@/api/stats'
 import { ElMessage } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
+
+const username = computed(() => authStore.userInfo?.username || authStore.userInfo?.email || '用户')
 
 interface StatCard {
   icon: any
@@ -25,28 +34,28 @@ const stats = ref<StatCard[]>([
     icon: markRaw(Notebook),
     title: '题库总数',
     value: '0',
-    color: '#409eff',
+    color: 'var(--color-primary)',
     path: '/question-banks'
   },
   {
     icon: markRaw(CollectionTag),
     title: '题目总数',
     value: '0',
-    color: '#67c23a',
+    color: 'var(--color-success)',
     path: '/question-banks'
   },
   {
     icon: markRaw(TrendCharts),
     title: '本月练习',
     value: '0',
-    color: '#e6a23c',
+    color: 'var(--color-warning)',
     path: '/practice'
   },
   {
     icon: markRaw(Setting),
     title: 'AI配置',
     value: '0',
-    color: '#f56c6c',
+    color: 'var(--color-danger)',
     path: '/ai-config'
   }
 ])
@@ -77,29 +86,25 @@ const quickActions = ref([
   {
     title: '创建题库',
     description: '快速创建一个新的题库',
-    icon: '➕',
-    color: '#409eff',
+    icon: markRaw(CirclePlus),
     action: () => router.push('/question-banks?action=create')
   },
   {
     title: 'AI生成题目',
     description: '使用AI自动生成题目',
-    icon: '🤖',
-    color: '#67c23a',
+    icon: markRaw(Cpu),
     action: () => router.push('/question-banks')
   },
   {
     title: '开始练习',
     description: '选择题库开始练习',
-    icon: '📝',
-    color: '#e6a23c',
+    icon: markRaw(EditPen),
     action: () => router.push('/practice')
   },
   {
     title: '配置AI',
     description: '管理AI数据源',
-    icon: '⚙️',
-    color: '#909399',
+    icon: markRaw(Setting),
     action: () => router.push('/ai-config')
   }
 ])
@@ -125,240 +130,276 @@ const recentActivities = ref([
 
 <template>
   <div class="home-view">
-    <!-- 统计卡片 -->
-    <el-row :gutter="20" class="stats-row">
-      <el-col
+    <!-- 欢迎横幅 -->
+    <div class="welcome-banner">
+      <div class="banner-content">
+        <div class="banner-greeting">
+          <el-icon :size="32" class="wave-icon"><Sugar /></el-icon>
+          <div class="greeting-text">
+            <h1>欢迎回来，{{ username }}</h1>
+            <p>今天想学习什么？</p>
+          </div>
+        </div>
+        <div class="banner-decoration">
+          <div class="decoration-circle"></div>
+          <div class="decoration-circle"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统计概览 - 横向排列大卡片 -->
+    <div class="stats-section">
+      <div
         v-for="stat in stats"
         :key="stat.title"
-        :xs="24"
-        :sm="12"
-        :md="6"
+        class="stat-card-large"
+        @click="router.push(stat.path)"
       >
-        <el-card class="stat-card" shadow="hover" @click="router.push(stat.path)">
-          <div class="stat-content">
-            <div class="stat-icon" :style="{ background: stat.color }">
-              <el-icon :size="24" color="#fff">
-                <component :is="stat.icon" />
-              </el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stat.value }}</div>
-              <div class="stat-title">{{ stat.title }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        <div class="stat-icon" :style="{ background: stat.color }">
+          <el-icon :size="28" color="#FFFFFF">
+            <component :is="stat.icon" />
+          </el-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-value">{{ stat.value }}</div>
+          <div class="stat-title">{{ stat.title }}</div>
+        </div>
+      </div>
+    </div>
 
-    <!-- 快捷操作 -->
-    <div class="section">
+    <!-- 快捷操作 - 垂直列表 -->
+    <div class="actions-section">
       <h2 class="section-title">快捷操作</h2>
-      <el-row :gutter="20">
-        <el-col
+      <div class="action-list">
+        <div
           v-for="action in quickActions"
           :key="action.title"
-          :xs="24"
-          :sm="12"
-          :md="6"
+          class="action-item"
+          @click="action.action"
         >
-          <el-card class="action-card" shadow="hover" @click="action.action">
-            <div class="action-icon" :style="{ background: action.color }">
-              {{ action.icon }}
-            </div>
+          <div class="action-icon">
+            <el-icon :size="24">
+              <component :is="action.icon" />
+            </el-icon>
+          </div>
+          <div class="action-content">
             <div class="action-title">{{ action.title }}</div>
             <div class="action-description">{{ action.description }}</div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
-
-    <!-- 最近活动 -->
-    <div class="section">
-      <h2 class="section-title">最近活动</h2>
-      <el-card class="activity-card">
-        <el-timeline>
-          <el-timeline-item
-            v-for="(activity, index) in recentActivities"
-            :key="index"
-            :timestamp="activity.time"
-            placement="top"
-          >
-            <div class="activity-item">
-              <el-tag
-                :type="activity.type === 'create' ? 'success' : activity.type === 'generate' ? 'warning' : 'info'"
-                size="small"
-              >
-                {{ activity.type === 'create' ? '创建' : activity.type === 'generate' ? '生成' : '练习' }}
-              </el-tag>
-              <span class="activity-text">{{ activity.title }}</span>
-            </div>
-          </el-timeline-item>
-        </el-timeline>
-      </el-card>
-    </div>
-
-    <!-- 欢迎卡片 -->
-    <el-card class="welcome-card" v-if="!isLoading && stats[0]?.value === '0'">
-      <div class="welcome-content">
-        <div class="welcome-icon">👋</div>
-        <h2>欢迎使用 AnswerMe</h2>
-        <p>开始创建你的第一个题库吧！</p>
-        <el-button type="primary" size="large" @click="router.push('/question-banks?action=create')">
-          创建题库
-        </el-button>
+          </div>
+          <el-icon class="action-arrow" :size="16">
+            <ArrowRight />
+          </el-icon>
+        </div>
       </div>
-    </el-card>
+    </div>
+
+    <!-- 最近活动 - 简化展示 -->
+    <div class="activity-section" v-if="recentActivities.length > 0">
+      <h2 class="section-title">最近活动</h2>
+      <div class="activity-list">
+        <div
+          v-for="(activity, index) in recentActivities"
+          :key="index"
+          class="activity-item"
+        >
+          <div class="activity-dot"></div>
+          <div class="activity-content">
+            <div class="activity-title">{{ activity.title }}</div>
+            <div class="activity-time">{{ activity.time }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .home-view {
-  max-width: 1400px;
-  margin: 0 auto;
+  @apply max-w-[1400px] mx-auto;
 }
 
-/* 统计卡片 */
-.stats-row {
-  margin-bottom: 1.5rem;
+/* 欢迎横幅 */
+.welcome-banner {
+  @apply bg-bg-secondary rounded-xl p-10 mb-8 shadow-sm;
 }
 
-.stat-card {
-  cursor: pointer;
-  transition: all 0.2s;
+.banner-content {
+  @apply flex justify-between items-center;
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+.banner-greeting {
+  @apply flex items-center gap-4;
 }
 
-.stat-content {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+.wave-icon {
+  @apply text-primary;
+  animation: wave 1.5s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(20deg); }
+  75% { transform: rotate(-20deg); }
+}
+
+.greeting-text h1 {
+  @apply text-[1.75rem] font-bold text-text-primary m-0 mb-1;
+}
+
+.greeting-text p {
+  @apply text-base text-text-secondary m-0;
+}
+
+.banner-decoration {
+  @apply flex gap-4;
+}
+
+.decoration-circle {
+  @apply w-[60px] h-[60px] rounded-full;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  @apply opacity-10;
+}
+
+/* 统计概览 */
+.stats-section {
+  @apply grid grid-cols-4 gap-6 mb-8;
+}
+
+.stat-card-large {
+  @apply bg-bg rounded-lg p-6 shadow-sm
+         transition-all duration-400 ease-smooth
+         flex items-center gap-4 cursor-pointer
+         border border-border
+         hover:-translate-y-1 hover:shadow-md hover:border-primary;
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  @apply w-14 h-14 rounded-md
+         flex items-center justify-center
+         flex-shrink-0;
 }
 
 .stat-info {
-  flex: 1;
+  @apply flex-1;
 }
 
 .stat-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #073642;
-  margin-bottom: 0.25rem;
+  @apply text-[1.75rem] font-bold text-text-primary mb-1;
 }
 
 .stat-title {
-  font-size: 0.875rem;
-  color: #586E75;
-  font-weight: 500;
+  @apply text-sm text-text-secondary font-medium;
 }
 
 /* 区块 */
-.section {
-  margin-bottom: 1.5rem;
-}
-
 .section-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #073642;
-  margin: 0 0 1rem;
+  @apply text-[1.125rem] font-semibold text-text-primary m-0 mb-4;
 }
 
 /* 快捷操作 */
-.action-card {
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.2s;
-  padding: 1.5rem;
-  height: 100%;
+.actions-section {
+  @apply mb-8;
 }
 
-.action-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+.action-list {
+  @apply flex flex-col gap-3;
+}
+
+.action-item {
+  @apply bg-bg rounded-md px-5 py-4
+         flex items-center gap-4 cursor-pointer
+         transition-all duration-400 ease-smooth
+         border border-border shadow-xs
+         hover:translate-x-1 hover:shadow-sm hover:border-primary;
 }
 
 .action-icon {
-  font-size: 3rem;
-  margin-bottom: 0.75rem;
-  width: 80px;
-  height: 80px;
-  line-height: 80px;
-  border-radius: 50%;
-  margin: 0 auto 0.75rem;
+  @apply w-11 h-11 rounded-md bg-bg-secondary
+         flex items-center justify-center text-primary
+         flex-shrink-0;
+}
+
+.action-content {
+  @apply flex-1;
 }
 
 .action-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #073642;
-  margin-bottom: 0.5rem;
+  @apply text-base font-semibold text-text-primary mb-1;
 }
 
 .action-description {
-  font-size: 0.8125rem;
-  color: #586E75;
-  line-height: 1.5;
+  @apply text-[0.8125rem] text-text-secondary;
 }
 
-/* 活动卡片 */
-.activity-card {
-  background: #FFFFFF;
+.action-arrow {
+  @apply text-text-muted;
+}
+
+/* 最近活动 */
+.activity-section {
+  @apply mb-8;
+}
+
+.activity-list {
+  @apply bg-bg rounded-lg p-6
+         border border-border shadow-xs;
 }
 
 .activity-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @apply flex items-start gap-4 py-4 relative;
 }
 
-.activity-text {
-  font-size: 0.875rem;
-  color: #657B83;
+.activity-item:not(:last-child)::after {
+  content: '';
+  @apply absolute left-[7px] top-10 bottom-0 w-[2px] bg-bg-secondary;
 }
 
-/* 欢迎卡片 */
-.welcome-card {
-  background: linear-gradient(135deg, #268BD2 0%, #2AA198 100%);
-  border: none;
+.activity-dot {
+  @apply w-4 h-4 rounded-full bg-primary flex-shrink-0 mt-1;
 }
 
-.welcome-card :deep(.el-card__body) {
-  padding: 3rem;
+.activity-content {
+  @apply flex-1;
 }
 
-.welcome-content {
-  text-align: center;
+.activity-title {
+  @apply text-[0.9375rem] text-text-primary mb-1;
 }
 
-.welcome-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
+.activity-time {
+  @apply text-[0.8125rem] text-text-muted;
 }
 
-.welcome-content h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1.75rem;
-  color: #FFFFFF;
-  font-weight: 700;
+/* 响应式 */
+@media (max-width: 1024px) {
+  .stats-section {
+    @apply grid-cols-2;
+  }
 }
 
-.welcome-content p {
-  margin: 0 0 1.5rem;
-  font-size: 1rem;
-  color: rgba(255, 255, 255, 0.95);
+@media (max-width: 640px) {
+  .welcome-banner {
+    @apply p-6;
+  }
+
+  .banner-content {
+    @apply flex-col items-start gap-4;
+  }
+
+  .banner-decoration {
+    @apply hidden;
+  }
+
+  .greeting-text h1 {
+    @apply text-[1.25rem];
+  }
+
+  .stats-section {
+    @apply grid-cols-1 gap-4;
+  }
+
+  .action-item {
+    @apply px-4 py-3.5;
+  }
 }
 </style>

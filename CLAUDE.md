@@ -97,6 +97,8 @@ int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 - `Infrastructure/Data/AnswerMeDbContext.cs` - DbContext
 - `Domain/Entities/Question.cs` - 注意 Data 属性的自动回退逻辑
 - `Application/Common/EntityMappingExtensions.cs` - 实体→DTO 映射
+- `Infrastructure/AI/` - Redis 任务队列和进度存储实现
+- `API/BackgroundServices/AIGenerationWorker.cs` - AI 生成后台服务
 
 ## 环境变量
 
@@ -104,12 +106,38 @@ int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 
 **重要:** `DB_TYPE` (Sqlite/PostgreSQL), `ALLOWED_ORIGINS`
 
+**可选:**
+- `ConnectionStrings__Redis` - Redis 连接字符串（用于 AI 异步生成）
+- `AIGeneration__MaxSyncCount` - 同步生成最大题目数（默认 20）
+
+## Redis 配置（AI 异步生成）
+
+Redis 用于 AI 异步生成任务队列：
+
+**方式一：使用 Docker（推荐）**
+```bash
+# 确保 Docker Desktop 已启动
+docker-compose up -d redis
+```
+
+**方式二：本地安装 Redis**
+- Windows: 下载 Redis for Windows 或使用 WSL
+- macOS: `brew install redis && brew services start redis`
+- Linux: `sudo systemctl start redis`
+
+**生成模式判断：**
+- 题目数 ≤ MaxSyncCount（默认 20）：同步生成，直接返回
+- 题目数 > MaxSyncCount：异步生成，任务进入 Redis 队列
+
+如果 Redis 未配置，异步生成功能将不可用，但不影响同步生成。
+
 ## 常见问题
 
 - **EF工具失效:** `dotnet tool install --global dotnet-ef`
 - **SQLite锁定:** 停止API后再运行迁移
 - **Serilog静态方法:** 用 `Log.Information()` 不是 `LogILogger()`
-- **Program.cs中日志:** `Serilog.Events.LogEventLevel` 不是 `Microsoft.Extensions.Logging.LogLevel`
+- **Program.cs中日志:** `Serilog.Events.LogEventLevel` 不是 `Microsoft.Extensions.logging.LogLevel`
+- **Redis 连接失败:** 如果不需要 AI 异步生成，可以忽略；否则运行 `docker-compose up -d redis`
 
 ## 添加新实体流程
 
@@ -139,5 +167,3 @@ int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 ## 代码简化工具
 
 - 使用 `code-simplifier` 代理发现和消除重复代码
-- 前端已消除约 150+ 行重复代码（难度/类型标签函数）
-- 后端已创建共享工具类替代重复的解析逻辑

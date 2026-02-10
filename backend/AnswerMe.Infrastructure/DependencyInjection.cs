@@ -1,4 +1,6 @@
 using AnswerMe.Application.AI;
+using AnswerMe.Application.DTOs;
+using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Interfaces;
 using AnswerMe.Infrastructure.AI;
 using AnswerMe.Infrastructure.Data;
@@ -7,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
 namespace AnswerMe.Infrastructure;
 
@@ -71,6 +74,28 @@ public static class DependencyInjection
                 "minimax",
                 "https://api.minimaxi.com/v1/text/chatcompletion_v2"));
         services.AddSingleton<IAIProvider, CustomApiProvider>();
+
+        // Redis 配置（如果配置了连接字符串）
+        var redisConnectionString = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrEmpty(redisConnectionString))
+        {
+            services.AddSingleton<IConnectionMultiplexer>(sp =>
+            {
+                var configurationOptions = ConfigurationOptions.Parse(redisConnectionString);
+                configurationOptions.AbortOnConnectFail = false;
+                configurationOptions.ConnectRetry = 3;
+                return ConnectionMultiplexer.Connect(configurationOptions);
+            });
+
+            services.AddSingleton<IAIGenerationTaskQueue, RedisAIGenerationTaskQueue>();
+            services.AddSingleton<IAIGenerationProgressStore, RedisAIGenerationProgressStore>();
+        }
+        else
+        {
+            // Redis 未配置时回退为内存实现（仅适用于单实例开发环境）
+            services.AddSingleton<IAIGenerationTaskQueue, InMemoryAIGenerationTaskQueue>();
+            services.AddSingleton<IAIGenerationProgressStore, InMemoryAIGenerationProgressStore>();
+        }
 
         return services;
     }

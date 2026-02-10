@@ -346,38 +346,29 @@ const formatCorrectAnswer = (question: Question) => {
 
 <style scoped>
 .questions-view {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  @apply flex flex-col gap-6;
 }
 
 /* 页面头部 */
 .page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
+  @apply flex items-start justify-between gap-4;
 }
 
 .header-content {
-  flex: 1;
+  @apply flex-1;
 }
 
 .header-title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  @apply flex items-center gap-4;
 }
 
 .back-button {
-  flex-shrink: 0;
+  @apply flex-shrink-0;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
+  @apply text-[1.5rem] font-bold m-0 mb-1;
   color: #073642;
-  margin: 0 0 0.25rem 0;
 }
 
 .dark .page-title {
@@ -385,9 +376,8 @@ const formatCorrectAnswer = (question: Question) => {
 }
 
 .page-subtitle {
-  font-size: 0.875rem;
+  @apply text-sm m-0;
   color: #586E75;
-  margin: 0;
 }
 
 .dark .page-subtitle {
@@ -396,48 +386,37 @@ const formatCorrectAnswer = (question: Question) => {
 
 /* 筛选栏 */
 .filter-bar {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  flex-wrap: wrap;
+  @apply flex gap-3 items-center flex-wrap;
 }
 
 .search-input {
-  flex: 1;
-  min-width: 200px;
-  max-width: 400px;
+  @apply flex-1 min-w-[200px] max-w-[400px];
 }
 
 .filter-select {
-  width: 150px;
+  @apply w-[150px];
 }
 
 /* 表格卡片 */
 .table-card {
-  overflow: visible;
+  @apply overflow-visible;
 }
 
 .table-card :deep(.el-card__body) {
-  padding: 0;
+  @apply p-0;
 }
 
 /* 题目内容 */
 .question-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  @apply flex flex-col gap-2;
 }
 
 .question-text {
-  font-weight: 500;
-  color: #073642;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  @apply font-medium text-[#073642] overflow-hidden text-ellipsis
+         line-clamp-2 leading-[1.5];
   display: -webkit-box;
-  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.5;
 }
 
 .dark .question-text {
@@ -445,30 +424,20 @@ const formatCorrectAnswer = (question: Question) => {
 }
 
 .question-meta {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  @apply flex gap-2 flex-wrap;
 }
 
 /* 答案单元格 */
 .answer-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  @apply flex flex-col gap-2 text-sm;
 }
 
 .options-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  @apply flex flex-col gap-1;
 }
 
 .option-line {
-  color: #586E75;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  @apply text-[#586E75] overflow-hidden text-ellipsis whitespace-nowrap;
 }
 
 .dark .option-line {
@@ -476,12 +445,11 @@ const formatCorrectAnswer = (question: Question) => {
 }
 
 .more-hint {
-  color: #9ca3af;
-  font-size: 0.75rem;
+  @apply text-[#9ca3af] text-xs;
 }
 
 .answer-preview {
-  color: #586E75;
+  @apply text-[#586E75];
 }
 
 .dark .answer-preview {
@@ -489,42 +457,33 @@ const formatCorrectAnswer = (question: Question) => {
 }
 
 .correct-answer {
-  color: #10b981;
-  font-weight: 500;
+  @apply text-[#10b981] font-medium;
 }
 
 /* 标签单元格 */
 .tags-cell {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  @apply flex flex-wrap items-center;
 }
 
 .more-tags {
-  color: #9ca3af;
-  font-size: 0.75rem;
+  @apply text-[#9ca3af] text-xs;
 }
 
 .text-muted {
-  font-size: 0.875rem;
-  color: #9ca3af;
+  @apply text-sm text-[#9ca3af];
 }
 
 .table-actions {
-  display: flex;
-  gap: 0.5rem;
+  @apply flex gap-2;
 }
 
 .table-actions .el-button {
-  flex-shrink: 0;
+  @apply flex-shrink-0;
 }
 
 /* 分页 */
 .pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 1rem;
-  border-top: 1px solid #e5e7eb;
+  @apply flex justify-center px-4 py-4 border-t border-[#e5e7eb];
 }
 
 .dark .pagination-wrapper {
@@ -533,7 +492,7 @@ const formatCorrectAnswer = (question: Question) => {
 
 /* 表格样式优化 */
 :deep(.el-table) {
-  font-size: 0.875rem;
+  @apply text-sm;
 }
 
 :deep(.el-table th.el-table__cell) {
@@ -578,39 +537,34 @@ const formatCorrectAnswer = (question: Question) => {
 /* 响应式 */
 @media (max-width: 1024px) {
   .table-actions {
-    flex-direction: column;
-    gap: 0.25rem;
+    @apply flex-col gap-1;
   }
 
   :deep(.el-table-column) {
-    padding: 0.5rem 0;
+    @apply py-2;
   }
 }
 
 @media (max-width: 768px) {
   .page-header {
-    flex-direction: column;
-    align-items: stretch;
+    @apply flex-col items-stretch;
   }
 
   .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
+    @apply flex-col items-stretch;
   }
 
   .search-input,
   .filter-select {
-    max-width: none;
-    width: 100%;
+    @apply max-w-none w-full;
   }
 
   :deep(.el-table) {
-    font-size: 0.75rem;
+    @apply text-xs;
   }
 
   .table-actions .el-button {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
+    @apply px-2 py-1 text-xs;
   }
 }
 </style>

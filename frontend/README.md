@@ -117,7 +117,7 @@ npm run lint
 
 ### Docker部署
 
-使用Docker Compose一键部署：
+使用Docker Compose一键部署（包含 PostgreSQL + Redis）：
 
 ```bash
 # 在项目根目录
@@ -125,6 +125,21 @@ docker-compose up -d
 
 # 访问应用
 open http://localhost:3000
+```
+
+### 依赖服务说明
+
+后端需要以下依赖服务：
+- **PostgreSQL**：生产数据库（开发环境可用 SQLite）
+- **Redis**：AI 异步任务队列（可选，不配置则禁用异步生成）
+
+启动依赖服务：
+```bash
+# 只启动数据库
+docker-compose up -d db
+
+# 启动数据库 + Redis（完整功能）
+docker-compose up -d db redis
 ```
 
 单独构建前端Docker镜像：

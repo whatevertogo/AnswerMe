@@ -63,4 +63,16 @@ public class AttemptDetailRepository : IAttemptDetailRepository
             .OrderBy(d => d.Id)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<List<AttemptDetail>> GetByAttemptIdsAsync(List<int> attemptIds, CancellationToken cancellationToken = default)
+    {
+        if (attemptIds == null || attemptIds.Count == 0)
+        {
+            return new List<AttemptDetail>();
+        }
+
+        return await _context.AttemptDetails
+            .Where(d => attemptIds.Contains(d.AttemptId))
+            .ToListAsync(cancellationToken);
+    }
 }

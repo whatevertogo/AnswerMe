@@ -583,9 +583,8 @@ function taskStatusText(status: string) {
 
 <style scoped>
 .generate-container {
-  min-height: 100vh;
+  @apply min-h-screen p-6;
   background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
-  padding: 1.5rem;
 }
 
 .dark .generate-container {
@@ -593,26 +592,16 @@ function taskStatusText(status: string) {
 }
 
 .generate-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
+  @apply flex items-center justify-between mb-6;
 }
 
 .header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  @apply flex items-center gap-4;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 600;
+  @apply text-[1.5rem] font-semibold m-0 flex items-center gap-2;
   color: #111827;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .dark .page-title {
@@ -620,23 +609,16 @@ function taskStatusText(status: string) {
 }
 
 .generate-content {
-  display: grid;
+  @apply grid gap-6 items-start;
   grid-template-columns: 450px 1fr;
-  gap: 1.5rem;
-  align-items: start;
 }
 
 .form-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  position: sticky;
-  top: 1.5rem;
+  @apply flex flex-col gap-4 sticky top-6;
 }
 
 .card-title {
-  font-size: 1rem;
-  font-weight: 600;
+  @apply text-base font-semibold;
   color: #111827;
 }
 
@@ -645,24 +627,19 @@ function taskStatusText(status: string) {
 }
 
 .form-hint {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-left: 0.5rem;
+  @apply text-xs text-[#6b7280] ml-2;
 }
 
 .form-hint.error {
-  color: #ef4444;
+  @apply text-[#ef4444];
 }
 
 .action-buttons {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  @apply flex gap-3 mt-4;
 }
 
 .progress-card {
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
+  @apply border border-[#bfdbfe] bg-[#eff6ff];
 }
 
 .dark .progress-card {
@@ -671,20 +648,15 @@ function taskStatusText(status: string) {
 }
 
 .progress-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  @apply flex flex-col gap-4;
 }
 
 .progress-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
 }
 
 .progress-label {
-  font-size: 0.875rem;
-  font-weight: 500;
+  @apply text-sm font-medium;
   color: #374151;
 }
 
@@ -693,9 +665,7 @@ function taskStatusText(status: string) {
 }
 
 .progress-details {
-  font-size: 0.875rem;
-  color: #6b7280;
-  text-align: center;
+  @apply text-sm text-[#6b7280] text-center;
 }
 
 .dark .progress-details {
@@ -703,12 +673,8 @@ function taskStatusText(status: string) {
 }
 
 .progress-error {
-  font-size: 0.8125rem;
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
+  @apply text-xs text-[#dc2626] bg-[#fef2f2] border border-[#fecaca]
+         px-3 py-2 rounded-md;
 }
 
 .dark .progress-error {
@@ -718,17 +684,11 @@ function taskStatusText(status: string) {
 }
 
 .task-id {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  padding: 0.5rem;
-  background: #ffffff;
-  border-radius: 0.375rem;
+  @apply flex items-center gap-2 text-xs px-2 py-2 bg-bg rounded-md;
 }
 
 .task-id .label {
-  color: #6b7280;
+  @apply text-[#6b7280];
 }
 
 .dark .task-id {
@@ -736,25 +696,19 @@ function taskStatusText(status: string) {
 }
 
 .task-id code {
-  font-family: monospace;
-  color: #3b82f6;
-  font-size: 0.75rem;
+  @apply font-mono text-[#3b82f6] text-xs;
 }
 
 .result-section {
-  min-height: 500px;
+  @apply min-h-[500px];
 }
 
 .result-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
 }
 
 .count {
-  font-size: 0.875rem;
-  font-weight: 400;
-  color: #6b7280;
+  @apply text-sm font-normal text-[#6b7280];
 }
 
 .dark .count {
@@ -762,22 +716,15 @@ function taskStatusText(status: string) {
 }
 
 .empty-state {
-  padding: 3rem 0;
-  display: flex;
-  justify-content: center;
+  @apply py-12 flex justify-center;
 }
 
 .questions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  @apply flex flex-col gap-4;
 }
 
 .question-item {
-  padding: 1rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  background: #ffffff;
+  @apply px-4 py-4 border border-[#e5e7eb] rounded-md bg-bg;
 }
 
 .dark .question-item {
@@ -786,28 +733,20 @@ function taskStatusText(status: string) {
 }
 
 .question-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
+  @apply flex items-center justify-between mb-3;
 }
 
 .question-number {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #3b82f6;
+  @apply text-sm font-semibold text-[#3b82f6];
 }
 
 .question-tags {
-  display: flex;
-  gap: 0.375rem;
+  @apply flex gap-1.5;
 }
 
 .question-content {
-  font-size: 0.9375rem;
+  @apply text-[0.9375rem] leading-[1.6] mb-3;
   color: #374151;
-  line-height: 1.6;
-  margin-bottom: 0.75rem;
 }
 
 .dark .question-content {
@@ -815,16 +754,11 @@ function taskStatusText(status: string) {
 }
 
 .question-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin-bottom: 0.75rem;
-  padding-left: 1rem;
+  @apply flex flex-col gap-1.5 mb-3 pl-4;
 }
 
 .option-item {
-  font-size: 0.875rem;
-  color: #4b5563;
+  @apply text-sm text-[#4b5563];
 }
 
 .dark .option-item {
@@ -832,13 +766,7 @@ function taskStatusText(status: string) {
 }
 
 .question-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #f9fafb;
-  border-radius: 0.375rem;
-  margin-bottom: 0.75rem;
+  @apply flex flex-col gap-2 px-3 py-3 bg-[#f9fafb] rounded-md mb-3;
 }
 
 .dark .question-meta {
@@ -847,20 +775,15 @@ function taskStatusText(status: string) {
 
 .answer-section,
 .explanation-section {
-  display: flex;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  @apply flex gap-2 text-sm;
 }
 
 .answer-section .label {
-  font-weight: 600;
-  color: #059669;
-  white-space: nowrap;
+  @apply font-semibold text-[#059669] whitespace-nowrap;
 }
 
 .answer-section .answer {
-  color: #374151;
-  font-weight: 500;
+  @apply font-medium text-[#374151];
 }
 
 .dark .answer-section .answer {
@@ -868,13 +791,11 @@ function taskStatusText(status: string) {
 }
 
 .explanation-section .label {
-  font-weight: 600;
-  color: #2563eb;
-  white-space: nowrap;
+  @apply font-semibold text-[#2563eb] whitespace-nowrap;
 }
 
 .explanation-section .explanation {
-  color: #374151;
+  @apply text-[#374151];
 }
 
 .dark .explanation-section .explanation {
@@ -882,8 +803,6 @@ function taskStatusText(status: string) {
 }
 
 .question-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
+  @apply flex gap-2 justify-end;
 }
 </style>

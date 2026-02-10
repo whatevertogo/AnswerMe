@@ -1,65 +1,76 @@
 /*
  * ============================================================
  *  AnswerMe — 全局主题 (唯一全局样式入口)
- *
- *  组织结构:
- *    1. 设计令牌 (CSS Variables)
- *    2. 全局 Reset
- *    3. 基础排版
- *    4. 布局基础
- *    5. 滚动条
- *    6. 通用工具类
- *    7. Element Plus 覆写
- *    8. 全局过渡动画
  * ============================================================
  */
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ─────────────────────────────────────────────
-   1. 设计令牌 — Solarized Light 配色
+   设计令牌 — 保留用于 CSS 变量和 @apply 指令
    ───────────────────────────────────────────── */
 :root {
-  /* 主色调 */
-  --color-primary: #268BD2;
-  --color-primary-hover: #1F78B4;
-  --color-primary-light: rgba(38, 139, 210, 0.1);
+  /* 主色调 - 鲜明的蓝色 */
+  --color-primary: #3B82F6;
+  --color-primary-hover: #2563EB;
+  --color-primary-light: rgba(59, 130, 246, 0.1);
 
-  /* 辅助色 */
-  --color-secondary: #2AA198;
-  --color-secondary-hover: #217A7B;
-  --color-accent: #CB4B16;
-  --color-accent-hover: #BD362F;
+  /* 辅助色 - 清新的青色 */
+  --color-secondary: #06B6D4;
+  --color-secondary-hover: #0891B2;
 
-  /* 背景色 */
-  --color-bg: #FDF6E3;
-  --color-bg-secondary: #EEE8D5;
-  --color-bg-tertiary: #E8E4CE;
+  /* 强调色 - 温暖的橙色 */
+  --color-accent: #F97316;
+  --color-accent-hover: #EA580C;
+
+  /* 背景色 - 纯净的亮白 */
+  --color-bg: #FFFFFF;
+  --color-bg-secondary: #F9FAFB;
+  --color-bg-tertiary: #F3F4F6;
   --color-white: #FFFFFF;
 
   /* 文字颜色 */
-  --color-text-primary: #073642;
-  --color-text-secondary: #586E75;
-  --color-text-muted: #657B83;
-  --color-text-light: #839496;
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+  --color-text-light: #D1D5DB;
 
   /* 边框颜色 */
-  --color-border: #E8E4CE;
-  --color-border-light: #D3D7CF;
+  --color-border: #E5E7EB;
+  --color-border-light: #D1D5DB;
 
-  /* 功能色 */
-  --color-success: #859900;
-  --color-warning: #B58900;
-  --color-danger: #DC322F;
-  --color-info: #268BD2;
+  /* 功能色 - 鲜明饱满 */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #DC2626; /* 更深的红色，提升文字对比度 */
+  --color-danger-text: #FFFFFF; /* 危险按钮文字色 */
+  --color-info: #3B82F6;
 
-  /* 阴影 */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 2px 8px 0 rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 24px 0 rgba(0, 0, 0, 0.08);
+  /* 大圆角系统 */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
 
-  /* 圆角 */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* 柔和弥散阴影系统 */
+  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.15);
+
+  /* 流畅的缓动动画 */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Tailwind 兼容的过渡变量 */
+  --transition-duration-400: 0.4s;
+  --transition-duration-600: 0.6s;
+  --transition-timing-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* 间距 */
   --spacing-xs: 0.25rem;
@@ -68,41 +79,30 @@
   --spacing-lg: 1rem;
   --spacing-xl: 1.5rem;
   --spacing-2xl: 2rem;
-
-  /* 过渡 */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
 }
 
 /* 深色模式 */
 .dark {
-  --color-bg: #002B36;
-  --color-bg-secondary: #073642;
-  --color-bg-tertiary: #586E75;
-  --color-white: #073642;
+  --color-bg: #111827;
+  --color-bg-secondary: #1F2937;
+  --color-bg-tertiary: #374151;
+  --color-white: #1F2937;
 
-  --color-text-primary: #839496;
-  --color-text-secondary: #93A1A1;
-  --color-text-muted: #657B83;
-  --color-text-light: #586E75;
+  --color-text-primary: #F9FAFB;
+  --color-text-secondary: #D1D5DB;
+  --color-text-muted: #9CA3AF;
+  --color-text-light: #6B7280;
 
-  --color-border: #586E75;
-  --color-border-light: #93A1A1;
+  --color-border: #374151;
+  --color-border-light: #4B5563;
+
+  --color-primary: #60A5FA;
+  --color-primary-hover: #3B82F6;
+  --color-primary-light: rgba(96, 165, 250, 0.15);
 }
 
 /* ─────────────────────────────────────────────
-   2. 全局 Reset
-   ───────────────────────────────────────────── */
-*,
-*::before,
-*::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-/* ─────────────────────────────────────────────
-   3. 基础排版
+   基础排版 (Tailwind Preflight 处理 Reset，这里保留字体)
    ───────────────────────────────────────────── */
 html {
   font-size: 14px;
@@ -112,7 +112,6 @@ html {
 }
 
 body {
-  min-height: 100vh;
   font-family:
     'Inter',
     -apple-system, BlinkMacSystemFont,
@@ -120,32 +119,8 @@ body {
     'Helvetica Neue', Arial,
     'Noto Sans', sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  line-height: 1.6;
-  color: var(--color-text-muted);
-  background-color: var(--color-bg);
 }
 
-h1, h2, h3, h4, h5, h6 {
-  color: var(--color-text-primary);
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-a {
-  color: var(--color-primary);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-a:hover {
-  color: var(--color-primary-hover);
-}
-
-/* ─────────────────────────────────────────────
-   4. 布局基础
-   ─────────────────────────────────────────────
-   关键: #app 不设 max-width / padding / text-align
-   让各布局组件 (AuthLayout / AppLayout) 自行控制 */
 html,
 body,
 #app {
@@ -162,78 +137,57 @@ body,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D3D7CF;
+  background: #D0D0D0;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #93A1A1;
+  background: #B0B0B0;
 }
 
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #3D4350;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4B5563;
+}
+
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #D3D7CF transparent;
+  scrollbar-color: #D0D0D0 transparent;
+}
+
+.dark * {
+  scrollbar-color: #3D4350 transparent;
 }
 
 /* ─────────────────────────────────────────────
-   6. 通用工具类
+   页面容器 — 用于 AppLayout 内的内容页
    ───────────────────────────────────────────── */
-.card {
-  background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-fast);
-}
-
-.card:hover {
-  box-shadow: var(--shadow-md);
-}
-
-.btn-primary {
-  background: var(--color-primary);
-  color: #FFFFFF;
-  border: none;
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.btn-primary:hover {
-  background: var(--color-primary-hover);
-}
-
-.text-primary  { color: var(--color-primary); }
-.text-success  { color: var(--color-success); }
-.text-warning  { color: var(--color-warning); }
-.text-danger   { color: var(--color-danger); }
-.text-muted    { color: var(--color-text-muted); }
-
-.bg-primary    { background: var(--color-primary); }
-.bg-secondary  { background: var(--color-bg-secondary); }
-
-/* 页面容器 — 用于 AppLayout 内的内容页 */
 .page-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: var(--spacing-2xl);
+  @apply max-w-[1400px] mx-auto p-8;
 }
 
 /* ─────────────────────────────────────────────
-   7. Element Plus 覆写
+   Element Plus 覆写
    ───────────────────────────────────────────── */
 
 /* 卡片 */
 .el-card {
-  border-radius: var(--radius-lg);
-  border-color: var(--color-border);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.el-card:hover {
+  box-shadow: var(--shadow-md) !important;
 }
 
 /* 表格 */
@@ -246,7 +200,7 @@ body,
 /* 输入框 */
 .el-input__wrapper {
   border-radius: var(--radius-md) !important;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-normal) !important;
 }
 
 .el-input__wrapper:hover {
@@ -255,14 +209,25 @@ body,
 
 .el-input__wrapper.is-focus {
   border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 2px var(--color-primary-light) !important;
+  box-shadow: 0 0 0 3px var(--color-primary-light) !important;
 }
 
 /* 按钮 */
 .el-button {
   border-radius: var(--radius-md) !important;
   font-weight: 500;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-normal) !important;
+  box-shadow: var(--shadow-xs) !important;
+}
+
+.el-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.el-button:active {
+  transform: translateY(0);
+  box-shadow: none !important;
 }
 
 .el-button--primary {
@@ -275,6 +240,33 @@ body,
   border-color: var(--color-primary-hover) !important;
 }
 
+.el-button--success {
+  background: var(--color-success) !important;
+  border-color: var(--color-success) !important;
+}
+
+.el-button--warning {
+  background: var(--color-warning) !important;
+  border-color: var(--color-warning) !important;
+}
+
+.el-button--danger {
+  background: var(--color-danger) !important;
+  border-color: var(--color-danger) !important;
+  color: var(--color-danger-text) !important;
+  font-weight: 600 !important; /* 加粗字体提升可读性 */
+}
+
+.el-button--danger:hover {
+  background: #B91C1C !important; /* 更深的悬停色 */
+  border-color: #B91C1C !important;
+}
+
+.el-button--info {
+  background: var(--color-info) !important;
+  border-color: var(--color-info) !important;
+}
+
 /* 下拉框 */
 .el-select .el-input__wrapper {
   border-radius: var(--radius-md) !important;
@@ -284,6 +276,11 @@ body,
 .el-tag {
   border-radius: var(--radius-sm) !important;
   font-weight: 500;
+}
+
+/* 对话框 */
+.el-dialog {
+  border-radius: var(--radius-xl) !important;
 }
 
 /* ─────────────────────────────────────────────

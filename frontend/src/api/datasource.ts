@@ -1,4 +1,17 @@
-import request from '@/utils/request'
+import { request } from '@/utils/request'
+
+/**
+ * 数据源配置（包含API密钥等敏感信息）
+ * 对应后端 DataSourceConfigDto
+ */
+export interface DataSourceConfig {
+  /** API密钥（解密后） */
+  apiKey: string
+  /** 自定义端点（可选） */
+  endpoint?: string
+  /** 模型名称（可选，如果为空则使用 Provider 默认模型） */
+  model?: string
+}
 
 export interface DataSource {
   id: number
@@ -29,6 +42,18 @@ export interface UpdateDataSourceParams {
   endpoint?: string
   model?: string
   isDefault?: boolean
+}
+
+/**
+ * API使用统计
+ * 对应后端 ApiUsageStatsDto
+ */
+export interface ApiUsageStats {
+  dataSourceId: number
+  dataSourceName: string
+  totalRequests: number
+  totalCost: number
+  lastUsed: string
 }
 
 /**

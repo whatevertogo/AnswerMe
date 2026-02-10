@@ -273,362 +273,261 @@ onMounted(() => {
 
 <style scoped>
 .result-view {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 1.5rem;
+  @apply max-w-[1000px] mx-auto p-6;
 }
 
 /* 加载状态 */
 .loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 3rem;
+  @apply flex flex-col items-center gap-6 p-12;
 }
 
 .loading-text {
-  color: #6b7280;
-  font-size: 1rem;
+  @apply text-text-secondary text-base;
 }
 
 /* 顶部导航 */
 .result-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  @apply flex items-center justify-between mb-8 pb-4 border-b border-border;
 }
 
 .header-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0;
+  @apply text-[1.5rem] font-bold text-text-primary m-0;
 }
 
 /* 分数卡片 */
 .score-card {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 1rem;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  color: white;
+  @apply flex items-center gap-8 bg-primary rounded-xl p-8 mb-8 text-white shadow-md;
 }
 
 .score-circle {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 150px;
-  height: 150px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  flex-shrink: 0;
+  @apply flex flex-col items-center justify-center w-[150px] h-[150px]
+         rounded-full flex-shrink-0;
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .score-value {
-  font-size: 3rem;
-  font-weight: 700;
-  line-height: 1;
+  @apply text-[3rem] font-bold leading-none;
 }
 
 .score-label {
-  font-size: 0.875rem;
-  opacity: 0.9;
-  margin-top: 0.5rem;
+  @apply text-sm opacity-90 mt-2;
 }
 
 .score-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  @apply flex-1 flex flex-col gap-4;
 }
 
 .info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  @apply flex justify-between items-center;
 }
 
 .info-label {
-  opacity: 0.9;
-  font-size: 0.875rem;
+  @apply opacity-90 text-sm;
 }
 
 .info-value {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @apply font-semibold flex items-center gap-2;
 }
 
 /* 统计数据 */
 .stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 2rem;
+  @apply grid grid-cols-4 gap-4 mb-8;
 }
 
 .stat-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.25rem;
-  border-radius: 0.75rem;
-  background: white;
-  border: 1px solid #e5e7eb;
+  @apply flex items-center gap-4 px-5 rounded-lg bg-bg border border-border shadow-xs
+         transition-all duration-400 ease-smooth
+         hover:-translate-y-0.5 hover:shadow-sm;
 }
 
 .stat-item.correct {
-  border-color: #10b981;
-  background: #f0fdf4;
+  @apply border-success bg-[#F0F9F4];
 }
 
 .stat-item.correct .el-icon {
-  color: #10b981;
+  @apply text-success;
 }
 
 .stat-item.incorrect {
-  border-color: #ef4444;
-  background: #fef2f2;
+  @apply border-danger bg-[#FEF2F2];
 }
 
 .stat-item.incorrect .el-icon {
-  color: #ef4444;
+  @apply text-danger;
 }
 
 .stat-item.unanswered {
-  border-color: #9ca3af;
-  background: #f9fafb;
+  @apply border-border bg-bg-secondary;
 }
 
 .stat-item.unanswered .el-icon {
-  color: #9ca3af;
+  @apply text-text-muted;
 }
 
 .stat-item.total {
-  border-color: #3b82f6;
-  background: #eff6ff;
+  @apply border-info bg-[#EFF6FF];
 }
 
 .stat-item.total .el-icon {
-  color: #3b82f6;
+  @apply text-info;
 }
 
 .stat-content {
-  display: flex;
-  flex-direction: column;
+  @apply flex flex-col;
 }
 
 .stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
+  @apply text-[1.5rem] font-bold leading-none text-text-primary;
 }
 
 .stat-label {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
+  @apply text-xs text-text-secondary mt-1;
 }
 
 /* 详情区域 */
 .details-section {
-  margin-bottom: 2rem;
+  @apply mb-8;
 }
 
 .section-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 1rem;
+  @apply text-[1.125rem] font-semibold text-text-primary m-0 mb-4;
 }
 
 .details-card {
-  background: white;
+  @apply bg-bg rounded-lg border border-border shadow-xs;
 }
 
 .detail-item {
-  padding: 1.25rem;
-  border-bottom: 1px solid #e5e7eb;
-  transition: background 0.15s;
+  @apply px-5 py-5 border-b border-border
+         transition-all duration-400 ease-smooth
+         hover:bg-bg-secondary;
 }
 
 .detail-item:last-child {
-  border-bottom: none;
-}
-
-.detail-item:hover {
-  background: #f9fafb;
+  @apply border-b-0;
 }
 
 .detail-item.correct {
-  background: #f0fdf4;
-  border-left: 4px solid #10b981;
+  @apply bg-[#F0F9F4] border-l-4 border-l-success;
 }
 
 .detail-item.incorrect {
-  background: #fef2f2;
-  border-left: 4px solid #ef4444;
+  @apply bg-[#FEF2F2] border-l-4 border-l-danger;
 }
 
 .detail-item.unanswered {
-  background: #f9fafb;
-  border-left: 4px solid #9ca3af;
+  @apply bg-bg-secondary border-l-4 border-l-text-muted;
 }
 
 .detail-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  @apply flex items-center gap-3 mb-3;
 }
 
 .question-number {
-  font-weight: 600;
-  color: #374151;
+  @apply font-semibold text-text-primary;
 }
 
 .detail-content {
-  padding-left: 0.5rem;
+  @apply pl-2;
 }
 
 .question-text {
-  color: #4b5563;
-  margin-bottom: 0.75rem;
-  line-height: 1.6;
+  @apply text-text-primary mb-3 leading-[1.6];
 }
 
 .answer-row {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
+  @apply flex gap-2 mb-1;
 }
 
 .answer-label {
-  color: #6b7280;
-  font-size: 0.875rem;
-  flex-shrink: 0;
+  @apply text-text-secondary text-sm flex-shrink-0;
 }
 
 .answer-value {
-  color: #374151;
-  font-size: 0.875rem;
+  @apply text-text-primary text-sm;
 }
 
 .answer-value.correct {
-  color: #10b981;
-  font-weight: 500;
+  @apply text-success font-medium;
 }
 
 .answer-value.incorrect {
-  color: #ef4444;
-  font-weight: 500;
+  @apply text-danger font-medium;
 }
 
 .answer-value.unanswered {
-  color: #9ca3af;
-  font-style: italic;
+  @apply text-text-muted italic;
 }
 
 .correct-answer {
-  color: #10b981;
-  font-weight: 500;
+  @apply text-success font-medium;
 }
 
 /* 弹窗内容 */
 .answer-modal-content {
-  padding: 0.5rem 0;
+  @apply py-2;
 }
 
 .modal-question {
-  font-size: 1rem;
-  color: #374151;
-  line-height: 1.6;
-  margin-bottom: 0.5rem;
+  @apply text-base text-text-primary leading-[1.6] mb-2;
 }
 
 .modal-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  @apply flex flex-col gap-3;
 }
 
 .info-row {
-  display: flex;
-  gap: 0.75rem;
+  @apply flex gap-3;
 }
 
 .info-row .label {
-  color: #6b7280;
-  flex-shrink: 0;
+  @apply text-text-secondary flex-shrink-0;
 }
 
 .info-row .value {
-  color: #374151;
-  font-weight: 500;
+  @apply text-text-primary font-medium;
 }
 
 .info-row .value.correct {
-  color: #10b981;
+  @apply text-success;
 }
 
 .info-row .value.incorrect {
-  color: #ef4444;
+  @apply text-danger;
 }
 
 .explanation-section {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: #f0fdf4;
-  border-radius: 0.5rem;
+  @apply mt-6 p-4 bg-[#F0F9F4] rounded-md;
 }
 
 .explanation-title {
-  margin: 0 0 0.5rem;
-  color: #065f46;
-  font-size: 0.875rem;
-  font-weight: 600;
+  @apply m-0 mb-2 text-success text-sm font-semibold;
 }
 
 .explanation-text {
-  margin: 0;
-  color: #047857;
-  line-height: 1.6;
-  font-size: 0.875rem;
+  @apply m-0 text-text-primary leading-[1.6] text-sm;
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
   .result-view {
-    padding: 1rem;
+    @apply p-4;
   }
 
   .score-card {
-    flex-direction: column;
-    text-align: center;
+    @apply flex-col text-center;
   }
 
   .score-info {
-    width: 100%;
+    @apply w-full;
   }
 
   .stats-row {
-    grid-template-columns: repeat(2, 1fr);
+    @apply grid-cols-2;
   }
 
   .result-header {
-    flex-direction: column;
-    gap: 1rem;
+    @apply flex-col gap-4;
   }
 }
 </style>

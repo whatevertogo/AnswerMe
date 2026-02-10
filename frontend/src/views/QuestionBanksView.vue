@@ -255,28 +255,21 @@ const getDifficultyLabel = (difficulty: string) => {
 
 <style scoped>
 .question-banks-view {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  @apply flex flex-col gap-6;
 }
 
 /* 页面头部 */
 .page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
+  @apply flex items-start justify-between gap-4;
 }
 
 .header-content {
-  flex: 1;
+  @apply flex-1;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
+  @apply text-[1.5rem] font-bold m-0 mb-1;
   color: #073642;
-  margin: 0 0 0.25rem 0;
 }
 
 .dark .page-title {
@@ -284,9 +277,8 @@ const getDifficultyLabel = (difficulty: string) => {
 }
 
 .page-subtitle {
-  font-size: 0.875rem;
+  @apply text-sm m-0;
   color: #586E75;
-  margin: 0;
 }
 
 .dark .page-subtitle {
@@ -295,36 +287,29 @@ const getDifficultyLabel = (difficulty: string) => {
 
 /* 筛选栏 */
 .filter-bar {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
+  @apply flex gap-3 items-center;
 }
 
 .search-input {
-  max-width: 400px;
+  @apply max-w-[400px];
 }
 
 /* 表格卡片 */
 .table-card {
-  overflow: visible;
+  @apply overflow-visible;
 }
 
 .table-card :deep(.el-card__body) {
-  padding: 0;
+  @apply p-0;
 }
 
 .bank-name-cell {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @apply flex items-center gap-2;
 }
 
 .bank-name {
-  font-weight: 500;
+  @apply font-medium overflow-hidden text-ellipsis whitespace-nowrap;
   color: #073642;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .dark .bank-name {
@@ -332,12 +317,8 @@ const getDifficultyLabel = (difficulty: string) => {
 }
 
 .bank-description {
-  font-size: 0.875rem;
+  @apply text-sm overflow-hidden text-ellipsis whitespace-nowrap block;
   color: #586E75;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
 }
 
 .dark .bank-description {
@@ -345,34 +326,31 @@ const getDifficultyLabel = (difficulty: string) => {
 }
 
 .text-muted {
-  font-size: 0.875rem;
+  @apply text-sm;
   color: #9ca3af;
 }
 
 .table-actions {
-  display: flex;
-  gap: 0.5rem;
+  @apply flex gap-2;
 }
 
 .table-actions .el-button {
-  flex-shrink: 0;
+  @apply flex-shrink-0;
 }
 
 /* 分页 */
 .pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 1rem;
-  border-top: 1px solid #e5e7eb;
+  @apply flex justify-center px-4 py-4 border-t;
+  border-color: #e5e7eb;
 }
 
 .dark .pagination-wrapper {
-  border-top-color: #374151;
+  border-color: #374151;
 }
 
 /* 表格样式优化 */
 :deep(.el-table) {
-  font-size: 0.875rem;
+  @apply text-sm;
 }
 
 :deep(.el-table th.el-table__cell) {
@@ -417,37 +395,33 @@ const getDifficultyLabel = (difficulty: string) => {
 /* 响应式 */
 @media (max-width: 1024px) {
   .table-actions {
-    flex-direction: column;
-    gap: 0.25rem;
+    @apply flex-col gap-1;
   }
 
   :deep(.el-table-column) {
-    padding: 0.5rem 0;
+    @apply py-2;
   }
 }
 
 @media (max-width: 768px) {
   .page-header {
-    flex-direction: column;
-    align-items: stretch;
+    @apply flex-col items-stretch;
   }
 
   .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
+    @apply flex-col items-stretch;
   }
 
   .search-input {
-    max-width: none;
+    @apply max-w-none;
   }
 
   :deep(.el-table) {
-    font-size: 0.75rem;
+    @apply text-xs;
   }
 
   .table-actions .el-button {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
+    @apply px-2 py-1 text-xs;
   }
 }
 </style>

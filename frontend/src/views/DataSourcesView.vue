@@ -221,124 +221,94 @@ const getTypeTagType = (type: string) => {
 
 <style scoped>
 .datasources-view {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+  @apply p-6 max-w-[1400px] mx-auto;
 }
 
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  @apply flex justify-between items-center mb-6;
 }
 
 .header h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
+  @apply m-0 text-[24px] font-semibold;
   color: #333;
 }
 
 .search-card {
-  margin-bottom: 24px;
+  @apply mb-6;
 }
 
 .loading-container,
 .empty-container {
-  padding: 40px 0;
+  @apply py-10;
 }
 
 .datasources-grid {
-  display: grid;
+  @apply grid gap-5;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 20px;
 }
 
 .datasource-card {
-  border-radius: 8px;
+  @apply rounded-lg;
 }
 
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  @apply flex justify-between items-center;
 }
 
 .header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  @apply flex items-center gap-2.5;
 }
 
 .type-icon {
-  color: #409eff;
+  @apply text-[#409eff];
 }
 
 .name {
-  font-weight: 600;
-  font-size: 16px;
+  @apply font-semibold text-base;
   color: #333;
 }
 
 .card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  @apply flex flex-col gap-3;
 }
 
 .info-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  @apply flex items-center gap-2 text-sm;
 }
 
 .label {
-  color: #909399;
-  min-width: 70px;
+  @apply text-[#909399] min-w-[70px];
 }
 
 .value {
-  color: #303133;
+  @apply text-[#303133];
 }
 
 .text-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 250px;
+  @apply overflow-hidden text-ellipsis whitespace-nowrap max-w-[250px];
 }
 
 .masked {
-  font-family: monospace;
-  color: #909399;
+  @apply font-mono text-[#909399];
 }
 
 .card-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @apply flex items-center gap-2;
 }
 
 .right-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 8px;
+  @apply ml-auto flex gap-2;
 }
 
 :deep(.el-card__header) {
-  padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  @apply px-4 py-4 border-b border-[#f0f0f0];
 }
 
 :deep(.el-card__body) {
-  padding: 16px;
+  @apply px-4 py-4;
 }
 
 :deep(.el-card__footer) {
-  padding: 12px 16px;
-  border-top: 1px solid #f0f0f0;
-  background-color: #fafafa;
+  @apply px-4 py-3 border-t border-[#f0f0f0] bg-[#fafafa];
 }
 </style>

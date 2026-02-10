@@ -281,21 +281,9 @@ public class AttemptService : IAttemptService
         decimal? averageScore = completedAttempts > 0 ?
             (decimal)attempts.Where(a => a.CompletedAt != null).Average(a => a.Score ?? 0) : null;
 
-        // 获取所有答题详情（优化：一次性获取所有 attemptId 对应的详情）
+        // 获取所有答题详情（优化：使用批量查询避免 N+1 问题）
         var attemptIds = attempts.Select(a => a.Id).ToList();
-        var allDetails = new List<Domain.Entities.AttemptDetail>();
-
-        // 分批查询，避免一次性加载过多数据
-        const int batchSize = 100;
-        for (int i = 0; i < attemptIds.Count; i += batchSize)
-        {
-            var batchIds = attemptIds.Skip(i).Take(batchSize).ToList();
-            foreach (var attemptId in batchIds)
-            {
-                var attemptDetails = await _attemptDetailRepository.GetByAttemptIdAsync(attemptId, cancellationToken);
-                allDetails.AddRange(attemptDetails);
-            }
-        }
+        var allDetails = await _attemptDetailRepository.GetByAttemptIdsAsync(attemptIds, cancellationToken);
 
         int totalQuestionsAnswered = allDetails.Count;
         int totalCorrectAnswers = allDetails.Count(d => d.IsCorrect == true);

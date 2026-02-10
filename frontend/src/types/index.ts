@@ -155,12 +155,18 @@ export interface LegacyUpdateQuestionDto {
 // 题库相关类型
 export interface QuestionBank {
   id: number
+  userId: number
   name: string
   description: string
   questionCount: number
   createdAt: string
   updatedAt: string
-  version?: string
+  /** 标签列表（后端总是返回数组，可能是空数组） */
+  tags: string[]
+  dataSourceId?: number
+  dataSourceName?: string
+  /** 乐观锁版本号（base64编码的byte[]） */
+  version: string
 }
 
 /** 题库列表响应 */
@@ -173,6 +179,8 @@ export interface QuestionBankListResponse {
 /** 题库查询参数 */
 export interface QuestionBankQueryParams {
   search?: string
+  /** 按标签过滤（对应后端的Tag字段） */
+  tag?: string
   pageSize: number
   lastId?: number
 }
@@ -191,7 +199,8 @@ export interface UpdateQuestionBankDto {
   description?: string
   tags?: string[]
   dataSourceId?: number
-  version?: string
+  /** 乐观锁版本号（必填，用于并发控制） */
+  version: string
 }
 
 // AI 配置相关类型

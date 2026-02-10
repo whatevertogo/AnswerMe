@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Clock, CircleCheck, Flag, ArrowLeft, ArrowRight, Sunny, Moon, House, Reading } from '@element-plus/icons-vue'
+import { Clock, CircleCheck, Flag, ArrowLeft, ArrowRight, House, Reading, Sunny, Moon } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import QuizQuestionList from '@/components/quiz/QuizQuestionList.vue'
 import QuizQuestionPanel from '@/components/quiz/QuizQuestionPanel.vue'
 import QuizAnswerPanel from '@/components/quiz/QuizAnswerPanel.vue'
 import QuizResultModal from '@/components/quiz/QuizResultModal.vue'
 import { useQuizStore } from '@/stores/quiz'
+import { useTheme } from '@/composables/useTheme'
 import { getQuestionDetail } from '@/api/question'
 import type { QuizQuestion } from '@/stores/quiz'
 import { getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
@@ -15,6 +16,7 @@ import { getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
 const router = useRouter()
 const route = useRoute()
 const quizStore = useQuizStore()
+const { isDark, toggleTheme } = useTheme()
 
 // 从路由参数获取 bankId 和 attemptId (sessionId)
 const bankId = computed(() => parseInt(route.params.bankId as string))
@@ -28,7 +30,6 @@ const questionMap = ref<Map<number, QuizQuestion>>(new Map())
 const markedQuestions = ref<Set<number>>(new Set())
 const timeElapsed = ref(0)
 const showResult = ref(false)
-const darkMode = ref(true)
 const loading = ref(true)
 const initializing = ref(true)
 
@@ -172,8 +173,7 @@ async function loadQuestionsDetails(questionIds: number[]) {
     const questionDetails = await Promise.all(questionPromises)
 
     // 转换为 QuizQuestion 格式
-    questions.value = questionDetails.map((response: any) => {
-      const q = response?.data ?? response
+    questions.value = questionDetails.map((q: any) => {
       return {
         id: q.id,
         content: q.questionText,
@@ -271,7 +271,11 @@ const toggleMark = (questionId: number) => {
 const saveMarkedQuestions = () => {
   if (quizStore.currentAttemptId) {
     const key = `${STORAGE_KEY_MARKED}_${quizStore.currentAttemptId}`
-    localStorage.setItem(key, JSON.stringify([...markedQuestions.value]))
+    try {
+      localStorage.setItem(key, JSON.stringify([...markedQuestions.value]))
+    } catch {
+      // 本地存储不可用时降级为内存状态，不阻断答题流程
+    }
   }
 }
 
@@ -279,13 +283,17 @@ const saveMarkedQuestions = () => {
 const loadMarkedQuestions = () => {
   if (quizStore.currentAttemptId) {
     const key = `${STORAGE_KEY_MARKED}_${quizStore.currentAttemptId}`
-    const saved = localStorage.getItem(key)
-    if (saved) {
-      try {
-        markedQuestions.value = new Set(JSON.parse(saved))
-      } catch {
-        markedQuestions.value = new Set()
+    try {
+      const saved = localStorage.getItem(key)
+      if (saved) {
+        try {
+          markedQuestions.value = new Set(JSON.parse(saved))
+        } catch {
+          markedQuestions.value = new Set()
+        }
       }
+    } catch {
+      markedQuestions.value = new Set()
     }
   }
 }
@@ -294,7 +302,11 @@ const loadMarkedQuestions = () => {
 const clearMarkedQuestions = () => {
   if (quizStore.currentAttemptId) {
     const key = `${STORAGE_KEY_MARKED}_${quizStore.currentAttemptId}`
-    localStorage.removeItem(key)
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      // 忽略本地存储异常，避免影响提交流程
+    }
   }
 }
 
@@ -328,11 +340,6 @@ const handleSubmit = async () => {
 
 const goHome = () => {
   router.push('/home')
-}
-
-const toggleDarkMode = () => {
-  darkMode.value = !darkMode.value
-  // TODO: 实现深色模式切换逻辑
 }
 </script>
 
@@ -375,7 +382,7 @@ const toggleDarkMode = () => {
           </div>
 
           <!-- 深色模式切换 -->
-          <el-button :icon="darkMode ? Sunny : Moon" circle size="small" @click="toggleDarkMode" />
+          <el-button :icon="isDark ? Sunny : Moon" circle size="small" @click="toggleTheme" />
 
           <el-button @click="goHome">
             <el-icon><House /></el-icon>
@@ -476,165 +483,117 @@ const toggleDarkMode = () => {
 
 <style scoped>
 .quiz-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+  @apply h-screen flex flex-col bg-bg;
 }
 
 .dark .quiz-container {
-  background: linear-gradient(to bottom right, #030712, #111827);
+  @apply bg-bg;
 }
 
 .loading-container,
 .empty-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
+  @apply flex-1 flex flex-col items-center justify-center gap-5;
 }
 
 .loading-text {
-  font-size: 16px;
-  color: #606266;
+  @apply text-base text-text-secondary;
 }
 
 /* 顶部导航栏 */
 .quiz-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1.5rem;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid #e5e7eb;
+  @apply flex items-center justify-between px-6 py-3 bg-bg
+         backdrop-blur-md border-b border-border shadow-xs;
 }
 
 .dark .quiz-header {
-  background: rgba(17, 24, 39, 0.8);
-  border-bottom-color: #374151;
+  @apply bg-bg border-b-border;
 }
 
 .header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  @apply flex items-center gap-4;
 }
 
 .logo-section {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @apply flex items-center gap-2;
 }
 
 .logo-icon {
-  color: #3b82f6;
+  @apply text-primary;
 }
 
 .logo-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #111827;
+  @apply text-[1.125rem] font-semibold text-text-primary;
 }
 
 .dark .logo-title {
-  color: #f9fafb;
+  @apply text-text-primary;
 }
 
 .quiz-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #6b7280;
+  @apply flex items-center gap-2 text-sm text-text-secondary;
 }
 
 .dark .quiz-info {
-  color: #9ca3af;
+  @apply text-text-secondary;
 }
 
 .separator {
-  color: #d1d5db;
+  @apply text-border;
 }
 
 .header-right {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  @apply flex items-center gap-3;
 }
 
 .progress-indicator,
 .timer-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  background: #f3f4f6;
-  border-radius: 0.5rem;
+  @apply flex items-center gap-2 px-3 py-2 bg-bg-secondary rounded-md;
 }
 
 .dark .progress-indicator,
 .dark .timer-indicator {
-  background: #1f2937;
+  @apply bg-bg-secondary;
 }
 
 .progress-text,
 .timer-text {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
+  @apply text-sm font-medium text-text-primary;
 }
 
 .dark .progress-text,
 .dark .timer-text {
-  color: #d1d5db;
+  @apply text-text-primary;
 }
 
 .progress-indicator .el-progress {
-  width: 5rem;
+  @apply w-20;
 }
 
 /* 主体内容 */
 .quiz-body {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
+  @apply flex-1 flex overflow-hidden;
 }
 
 .quiz-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  @apply flex-1 flex flex-col overflow-hidden;
 }
 
 .answer-section {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1.5rem;
+  @apply flex-1 overflow-y-auto p-6;
 }
 
 /* 底部操作栏 */
 .quiz-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.625rem 1rem;
-  background: #ffffff;
-  border-top: 1px solid #e5e7eb;
+  @apply flex items-center justify-between px-4 py-3 bg-bg border-t border-border shadow-xs;
 }
 
 .dark .quiz-footer {
-  background: #111827;
-  border-top-color: #374151;
+  @apply bg-bg border-t-border;
 }
 
 .footer-left,
 .footer-right {
-  display: flex;
-  gap: 0.75rem;
+  @apply flex gap-3;
 }
 
 /* 滚动条样式 */
@@ -643,11 +602,11 @@ const toggleDarkMode = () => {
 }
 
 .answer-section::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
+  background: var(--color-border);
   border-radius: 3px;
 }
 
 .answer-section::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
+  background: var(--color-text-muted);
 }
 </style>

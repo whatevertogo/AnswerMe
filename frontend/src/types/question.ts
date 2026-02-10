@@ -139,6 +139,10 @@ export type QuestionData =
 export interface Question {
   /** 题目ID */
   id: number
+  /** 题库ID */
+  questionBankId: number
+  /** 题库名称 */
+  questionBankName?: string
   /** 题目内容 */
   questionText: string
   /** 题型枚举 */
@@ -157,10 +161,12 @@ export interface Question {
   difficulty: Difficulty
   /** 题目标签 */
   tags?: string[]
-  /** 所属题库ID */
-  questionBankId?: number
+  /** 排序索引 */
+  orderIndex?: number
   /** 创建时间 */
-  createdAt?: string
+  createdAt: string
+  /** 更新时间 */
+  updatedAt: string
 }
 
 /**

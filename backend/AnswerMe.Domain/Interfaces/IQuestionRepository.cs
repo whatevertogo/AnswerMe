@@ -12,6 +12,34 @@ public interface IQuestionRepository
     Task<int> CountByQuestionBankIdAsync(int questionBankId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 批量统计多个题库的题目数量（优化 N+1 查询）
+    /// </summary>
+    /// <param name="bankIds">题库ID列表</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>题库ID到题目数量的映射字典</returns>
+    Task<Dictionary<int, int>> CountByQuestionBankIdsAsync(List<int> bankIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取过滤后的分页题目列表（将过滤下推到数据库）
+    /// </summary>
+    Task<List<Question>> GetPagedFilteredAsync(
+        int questionBankId,
+        int pageSize,
+        int? lastId,
+        string? difficulty,
+        string? questionType,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 统计符合过滤条件的题目数量
+    /// </summary>
+    Task<int> CountFilteredAsync(
+        int questionBankId,
+        string? difficulty,
+        string? questionType,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 获取题目列表(游标分页)
     /// </summary>
     Task<List<Question>> GetPagedAsync(int questionBankId, int pageSize, int? lastId, CancellationToken cancellationToken = default);

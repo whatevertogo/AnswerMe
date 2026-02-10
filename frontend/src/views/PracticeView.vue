@@ -4,11 +4,13 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, Reading } from '@element-plus/icons-vue'
 import { useQuestionBankStore } from '@/stores/questionBank'
+import { useAuthStore } from '@/stores/auth'
 import type { QuestionBank } from '@/stores/questionBank'
 import { DifficultyLabels, DifficultyColors } from '@/types/question'
 
 const router = useRouter()
 const questionBankStore = useQuestionBankStore()
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const searchKeyword = ref('')
@@ -45,13 +47,26 @@ watch(searchKeyword, () => {
 })
 
 const handleStartPractice = async (bank: QuestionBank) => {
-  // 检查题目数量，如果是0则提示
-  if (!bank.questionCount) {
+  // 1. 验证题库 ID 有效性
+  if (!bank.id || bank.id <= 0) {
+    ElMessage.error('题库信息无效')
+    return
+  }
+
+  // 2. 验证用户权限
+  const currentUserId = authStore.userInfo?.id
+  if (bank.userId && bank.userId !== currentUserId) {
+    ElMessage.error('您没有权限访问此题库')
+    return
+  }
+
+  // 3. 检查题目数量
+  if (!bank.questionCount || bank.questionCount <= 0) {
     ElMessage.warning('题库暂无题目，无法开始练习')
     return
   }
 
-  // 实时验证题库是否有题目（防止缓存数据不准确）
+  // 4. 实时验证题库是否有题目（防止缓存数据不准确）
   try {
     loading.value = true
     // 重新获取题库列表以获取最新数据
@@ -62,14 +77,26 @@ const handleStartPractice = async (bank: QuestionBank) => {
 
     // 查找更新后的题库
     const updatedBank = questionBankStore.questionBanks.find(b => b.id === bank.id)
-    if (!updatedBank || !updatedBank.questionCount) {
+    if (!updatedBank) {
+      ElMessage.error('题库不存在或已被删除')
+      return
+    }
+
+    if (!updatedBank.questionCount || updatedBank.questionCount <= 0) {
       ElMessage.warning('题库暂无题目，无法开始练习')
       return
     }
 
+    // 5. 再次验证用户权限（使用最新数据）
+    if (updatedBank.userId && updatedBank.userId !== currentUserId) {
+      ElMessage.error('您没有权限访问此题库')
+      return
+    }
+
     router.push(`/quiz/${bank.id}/new`)
-  } catch {
-    ElMessage.error('验证题库失败，请重试')
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || '验证题库失败，请重试'
+    ElMessage.error(errorMessage)
   } finally {
     loading.value = false
   }
@@ -216,27 +243,20 @@ const formatDate = (dateString: string) => {
 
 <style scoped>
 .practice-view {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  @apply flex flex-col gap-6;
 }
 
 .page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
+  @apply flex items-start justify-between gap-4;
 }
 
 .header-content {
-  flex: 1;
+  @apply flex-1;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
+  @apply text-[1.5rem] font-bold m-0 mb-1;
   color: #073642;
-  margin: 0 0 0.25rem 0;
 }
 
 .dark .page-title {
@@ -244,9 +264,8 @@ const formatDate = (dateString: string) => {
 }
 
 .page-subtitle {
-  font-size: 0.875rem;
+  @apply text-sm m-0;
   color: #586E75;
-  margin: 0;
 }
 
 .dark .page-subtitle {
@@ -254,35 +273,27 @@ const formatDate = (dateString: string) => {
 }
 
 .filter-bar {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
+  @apply flex gap-3 items-center;
 }
 
 .search-input {
-  max-width: 400px;
+  @apply max-w-[400px];
 }
 
 .table-card {
-  overflow: visible;
+  @apply overflow-visible;
 }
 
 .table-card :deep(.el-card__body) {
-  padding: 0;
+  @apply p-0;
 }
 
 .bank-name-cell {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @apply flex items-center gap-2;
 }
 
 .bank-name {
-  font-weight: 500;
-  color: #073642;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  @apply font-medium text-[#073642] overflow-hidden text-ellipsis whitespace-nowrap;
 }
 
 .dark .bank-name {
@@ -290,12 +301,7 @@ const formatDate = (dateString: string) => {
 }
 
 .bank-description {
-  font-size: 0.875rem;
-  color: #586E75;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
+  @apply text-sm text-[#586E75] overflow-hidden text-ellipsis whitespace-nowrap block;
 }
 
 .dark .bank-description {
@@ -303,15 +309,11 @@ const formatDate = (dateString: string) => {
 }
 
 .text-muted {
-  font-size: 0.875rem;
-  color: #9ca3af;
+  @apply text-sm text-[#9ca3af];
 }
 
 .pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 1rem;
-  border-top: 1px solid #e5e7eb;
+  @apply flex justify-center px-4 py-4 border-t border-[#e5e7eb];
 }
 
 .dark .pagination-wrapper {
@@ -319,7 +321,7 @@ const formatDate = (dateString: string) => {
 }
 
 :deep(.el-table) {
-  font-size: 0.875rem;
+  @apply text-sm;
 }
 
 :deep(.el-table th.el-table__cell) {
@@ -363,27 +365,25 @@ const formatDate = (dateString: string) => {
 
 @media (max-width: 1024px) {
   :deep(.el-table-column) {
-    padding: 0.5rem 0;
+    @apply py-2;
   }
 }
 
 @media (max-width: 768px) {
   .page-header {
-    flex-direction: column;
-    align-items: stretch;
+    @apply flex-col items-stretch;
   }
 
   .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
+    @apply flex-col items-stretch;
   }
 
   .search-input {
-    max-width: none;
+    @apply max-w-none;
   }
 
   :deep(.el-table) {
-    font-size: 0.75rem;
+    @apply text-xs;
   }
 }
 </style>

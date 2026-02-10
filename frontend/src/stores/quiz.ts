@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as quizApi from '@/api/quiz'
 import type { QuizResult as ApiQuizResult, QuizDetail as ApiQuizDetail } from '@/api/quiz'
+import { useAuthStore } from './auth'
+import { formatAnswerForSubmit, compareAnswers } from '@/utils/answerFormatter'
 
 export interface QuizQuestion {
   id: number
@@ -49,26 +51,7 @@ export function compareMultipleChoiceAnswers(
   userAnswer: string | string[],
   correctAnswer: string | string[]
 ): boolean {
-  // 将答案统一转换为数组
-  const userArray = typeof userAnswer === 'string'
-    ? userAnswer.split(',').map(a => a.trim())
-    : userAnswer
-
-  const correctArray = typeof correctAnswer === 'string'
-    ? correctAnswer.split(',').map(a => a.trim())
-    : correctAnswer
-
-  // 数量必须相同
-  if (userArray.length !== correctArray.length) {
-    return false
-  }
-
-  // 排序后比较
-  const sortedUser = [...userArray].sort()
-  const sortedCorrect = [...correctArray].sort()
-
-  // 每个答案都必须匹配
-  return sortedUser.every((answer, index) => answer === sortedCorrect[index])
+  return compareAnswers(userAnswer, correctAnswer)
 }
 
 /**
@@ -142,10 +125,8 @@ export const useQuizStore = defineStore('quiz', () => {
     loading.value = true
     error.value = null
     try {
-      // 将数组答案转换为逗号分隔字符串（后端期望格式：A,B,C）
-      const answerString = Array.isArray(userAnswer)
-        ? userAnswer.join(',')
-        : userAnswer
+      // 使用统一的答案格式化函数
+      const answerString = formatAnswerForSubmit(userAnswer)
 
       await quizApi.submitAnswer({
         attemptId: currentAttemptId.value,
@@ -177,12 +158,13 @@ export const useQuizStore = defineStore('quiz', () => {
     loading.value = true
     error.value = null
     try {
+      const authStore = useAuthStore()
       const response = await quizApi.completeQuiz({
         attemptId: currentAttemptId.value
       })
       result.value = {
         ...response,
-        userId: 0, // 从 API 响应中可能不包含，需要从上下文获取
+        userId: authStore.userInfo?.id || 0,
         details: []
       }
       return response
@@ -198,10 +180,11 @@ export const useQuizStore = defineStore('quiz', () => {
     loading.value = true
     error.value = null
     try {
+      const authStore = useAuthStore()
       const response = await quizApi.getQuizResult(attemptId)
       result.value = {
         ...response,
-        userId: 0,
+        userId: authStore.userInfo?.id || 0,
         details: []
       }
       return response

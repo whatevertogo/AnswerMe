@@ -569,28 +569,18 @@ function buildQuestionData(): QuestionData | undefined {
 
 <style scoped>
 .options-container {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  @apply w-full flex flex-col gap-3;
 }
 
 .option-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @apply flex items-center gap-2;
 }
 
 .option-label {
-  font-weight: 600;
-  color: #606266;
-  min-width: 24px;
+  @apply font-semibold text-[#606266] min-w-[24px];
 }
 
 .tags-container {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+  @apply flex flex-wrap items-center gap-2;
 }
 </style>

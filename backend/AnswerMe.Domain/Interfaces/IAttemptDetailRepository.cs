@@ -18,4 +18,11 @@ public interface IAttemptDetailRepository
     /// 获取答题详情的所有详情(带题目信息)
     /// </summary>
     Task<List<AttemptDetail>> GetByAttemptIdWithQuestionsAsync(int attemptId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 批量获取多个答题记录的详情（优化 N+1 查询）
+    /// </summary>
+    /// <param name="attemptIds">答题记录ID列表</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    Task<List<AttemptDetail>> GetByAttemptIdsAsync(List<int> attemptIds, CancellationToken cancellationToken = default);
 }

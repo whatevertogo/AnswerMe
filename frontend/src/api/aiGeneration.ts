@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { AxiosResponse } from 'axios'
 import type { QuestionType } from '@/types/question'
 
@@ -38,8 +38,10 @@ export interface AIGenerateRequest {
  */
 export interface GeneratedQuestion {
   id: number
-  /** 题型 */
-  questionType: QuestionType
+  /** 题型枚举（对应后端 QuestionTypeEnum） */
+  questionTypeEnum: QuestionType
+  /** 题型字符串（向后兼容） */
+  questionType?: QuestionType
   questionText: string
   /** 选项（旧格式，向后兼容） */
   options?: string[]

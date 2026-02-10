@@ -6,6 +6,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
+import { useTheme } from './composables/useTheme'
 import './styles/theme.css'
 
 const app = createApp(App)
@@ -25,3 +26,7 @@ app.mount('#app')
 // 挂载后立即触发认证初始化（后台加载，不阻塞渲染）
 const authStore = useAuthStore()
 authStore.initialize()
+
+// 初始化主题（应用保存的主题设置）
+// 主题设置会自动从 localStorage 恢复并应用到 html 元素
+useTheme()

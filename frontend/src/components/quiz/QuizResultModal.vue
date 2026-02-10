@@ -272,15 +272,11 @@ const getDifficultyColor = (difficulty: string) => {
 
 <style scoped>
 .overview-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  @apply grid grid-cols-3 gap-4 mb-6;
 }
 
 .score-card {
-  padding: 1.5rem;
-  border-radius: 0.75rem;
+  @apply px-6 py-6 rounded-xl;
   background: linear-gradient(to bottom right, #dbeafe, #bfdbfe);
   border: 1px solid #93c5fd;
 }
@@ -301,10 +297,7 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .stat-card {
-  padding: 1.5rem;
-  border-radius: 0.75rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  @apply px-6 py-6 rounded-xl bg-[#f9fafb] border border-[#e5e7eb];
 }
 
 .dark .stat-card {
@@ -333,15 +326,11 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
+  @apply flex items-center justify-between mb-2;
 }
 
 .card-label {
-  font-size: 0.875rem;
-  color: #6b7280;
+  @apply text-sm text-[#6b7280];
 }
 
 .dark .card-label {
@@ -349,11 +338,8 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .score-value {
-  font-size: 2.25rem;
-  font-weight: 700;
-  line-height: 1;
+  @apply text-[2.25rem] font-bold leading-none mb-1;
   color: #111827;
-  margin-bottom: 0.25rem;
 }
 
 .dark .score-value {
@@ -361,11 +347,8 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .stat-value {
-  font-size: 2.25rem;
-  font-weight: 700;
-  line-height: 1;
+  @apply text-[2.25rem] font-bold leading-none mb-1;
   color: #111827;
-  margin-bottom: 0.25rem;
 }
 
 .dark .stat-value {
@@ -374,8 +357,7 @@ const getDifficultyColor = (difficulty: string) => {
 
 .score-label,
 .stat-label {
-  font-size: 0.875rem;
-  color: #6b7280;
+  @apply text-sm text-[#6b7280];
 }
 
 .dark .score-label,
@@ -384,27 +366,19 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .progress-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  @apply flex flex-col gap-4 mb-6;
 }
 
 .progress-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
+  @apply flex flex-col gap-1.5;
 }
 
 .progress-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
 }
 
 .progress-label {
-  font-size: 0.875rem;
-  font-weight: 500;
+  @apply text-sm font-medium;
   color: #374151;
 }
 
@@ -413,8 +387,7 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .progress-value {
-  font-size: 0.875rem;
-  color: #6b7280;
+  @apply text-sm text-[#6b7280];
 }
 
 .dark .progress-value {
@@ -422,24 +395,16 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .action-buttons {
-  display: flex;
-  gap: 0.75rem;
+  @apply flex gap-3;
 }
 
 /* 详情列表 */
 .details-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: 500px;
-  overflow-y: auto;
+  @apply flex flex-col gap-3 max-h-[500px] overflow-y-auto;
 }
 
 .detail-item {
-  padding: 1rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  background: #ffffff;
+  @apply px-4 py-4 border border-[#e5e7eb] rounded-md bg-bg;
 }
 
 .dark .detail-item {
@@ -448,28 +413,23 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .detail-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  @apply flex items-center gap-2 mb-2;
 }
 
 .detail-status {
-  font-size: 1rem;
+  @apply text-base;
 }
 
 .detail-status.answered {
-  color: #10b981;
+  @apply text-[#10b981];
 }
 
 .detail-status.unanswered {
-  color: #d1d5db;
+  @apply text-[#d1d5db];
 }
 
 .detail-index {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #6b7280;
+  @apply text-sm font-medium text-[#6b7280];
 }
 
 .dark .detail-index {
@@ -477,10 +437,8 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .detail-content {
-  font-size: 0.875rem;
+  @apply text-sm leading-[1.5] mb-2 m-0;
   color: #374151;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.5;
 }
 
 .dark .detail-content {
@@ -488,11 +446,7 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .detail-explanation {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  background: #dbeafe;
-  border-radius: 0.5rem;
-  border: 1px solid #93c5fd;
+  @apply mt-3 px-3 py-3 bg-[#dbeafe] rounded-md border border-[#93c5fd];
 }
 
 .dark .detail-explanation {
@@ -501,10 +455,8 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .explanation-label {
-  font-size: 0.75rem;
-  font-weight: 600;
+  @apply text-xs font-semibold mb-1 m-0;
   color: #1e40af;
-  margin: 0 0 0.25rem 0;
 }
 
 .dark .explanation-label {
@@ -512,9 +464,8 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .explanation-text {
-  font-size: 0.75rem;
+  @apply text-xs m-0;
   color: #1e3a8a;
-  margin: 0;
 }
 
 .dark .explanation-text {
@@ -523,17 +474,11 @@ const getDifficultyColor = (difficulty: string) => {
 
 /* 分析 */
 .analysis-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
+  @apply grid grid-cols-2 gap-4 mb-4;
 }
 
 .analysis-card {
-  padding: 1rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
+  @apply px-4 py-4 bg-[#f9fafb] border border-[#e5e7eb] rounded-md;
 }
 
 .dark .analysis-card {
@@ -542,10 +487,8 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .analysis-title {
-  font-size: 0.875rem;
-  font-weight: 600;
+  @apply text-sm font-semibold mb-3 m-0;
   color: #111827;
-  margin: 0 0 0.75rem 0;
 }
 
 .dark .analysis-title {
@@ -553,39 +496,32 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .stat-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  @apply flex flex-col gap-2;
 }
 
 .stat-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @apply flex items-center gap-2;
 }
 
 .stat-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 9999px;
+  @apply w-2 h-2 rounded-full;
 }
 
 .stat-dot.easy {
-  background: #10b981;
+  @apply bg-[#10b981];
 }
 
 .stat-dot.medium {
-  background: #f59e0b;
+  @apply bg-[#f59e0b];
 }
 
 .stat-dot.hard {
-  background: #ef4444;
+  @apply bg-[#ef4444];
 }
 
 .stat-name {
-  font-size: 0.875rem;
+  @apply text-sm flex-1;
   color: #374151;
-  flex: 1;
 }
 
 .dark .stat-name {
@@ -593,8 +529,7 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .stat-count {
-  font-size: 0.875rem;
-  font-weight: 500;
+  @apply text-sm font-medium;
   color: #111827;
 }
 
@@ -603,25 +538,19 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .knowledge-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  @apply flex flex-col gap-3;
 }
 
 .knowledge-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  @apply flex flex-col gap-1;
 }
 
 .knowledge-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
 }
 
 .knowledge-name {
-  font-size: 0.875rem;
+  @apply text-sm;
   color: #374151;
 }
 
@@ -630,8 +559,7 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .knowledge-percent {
-  font-size: 0.875rem;
-  font-weight: 500;
+  @apply text-sm font-medium;
   color: #111827;
 }
 
@@ -640,10 +568,7 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .suggestions {
-  padding: 1rem;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  border-radius: 0.5rem;
+  @apply px-4 py-4 bg-[#fef3c7] border border-[#fcd34d] rounded-md;
 }
 
 .dark .suggestions {
@@ -652,10 +577,8 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .suggestions-title {
-  font-size: 0.875rem;
-  font-weight: 600;
+  @apply text-sm font-semibold mb-2 m-0;
   color: #92400e;
-  margin: 0 0 0.5rem 0;
 }
 
 .dark .suggestions-title {
@@ -663,10 +586,8 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .suggestions-list {
-  font-size: 0.875rem;
+  @apply text-sm m-0 pl-5;
   color: #78350f;
-  margin: 0;
-  padding-left: 1.25rem;
 }
 
 .dark .suggestions-list {
@@ -674,7 +595,7 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .suggestions-list li {
-  margin-bottom: 0.25rem;
+  @apply mb-1;
 }
 
 /* 滚动条 */

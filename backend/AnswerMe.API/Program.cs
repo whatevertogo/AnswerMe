@@ -8,6 +8,7 @@ using AnswerMe.Application;
 using AnswerMe.Application.DTOs;
 using AnswerMe.Infrastructure;
 using AnswerMe.Infrastructure.Data;
+using AnswerMe.API.BackgroundServices;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,6 +32,21 @@ builder.Host.UseSerilog();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+
+// 配置 AI 生成选项
+builder.Services.Configure<AIGenerationOptions>(builder.Configuration.GetSection(AIGenerationOptions.SectionName));
+
+// 注册 AI 生成后台服务（需要先检查 Redis 是否配置）
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConnectionString))
+{
+    builder.Services.AddHostedService<AIGenerationWorker>();
+    Log.Information("AI 生成后台服务已注册");
+}
+else
+{
+    Log.Warning("Redis 未配置，AI 生成后台服务未注册，异步生成功能将不可用");
+}
 
 // 配置JWT认证
 var jwtSecret = GetJwtSecret(builder.Configuration);
@@ -129,6 +145,8 @@ builder.Services.AddControllers(options =>
 })
 .AddJsonOptions(options =>
 {
+    // 使用 camelCase 命名策略，与前端 JavaScript 保持一致
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     // 配置 DateTime 序列化为 ISO 8601 格式（前端兼容）
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;

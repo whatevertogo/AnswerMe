@@ -72,8 +72,6 @@ const handleLocalLogin = async () => {
 
       <div class="options-row">
         <el-checkbox>记住我</el-checkbox>
-        <!-- MVP 版本暂不支持忘记密码功能 -->
-        <!-- <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link> -->
       </div>
 
       <el-button type="primary" size="large" :loading="loading" class="login-button" @click="handleLogin">
@@ -94,8 +92,7 @@ const handleLocalLogin = async () => {
 
 <style scoped>
 .login-content {
-  width: 100%;
-  max-width: 360px;
+  @apply w-full max-w-[360px];
   animation: fadeIn 0.5s ease-out;
 }
 
@@ -112,124 +109,70 @@ const handleLocalLogin = async () => {
 }
 
 .form-header {
-  text-align: center;
-  margin-bottom: 32px;
+  @apply text-center mb-8;
 }
 
 .form-title {
-  font-size: 1.8rem;
-  font-weight: 1000;
-  color: #073642;
-  margin: 0 0 8px 0;
+  @apply text-[1.8rem] font-bold text-text-primary m-0 mb-2;
 }
 
 .form-subtitle {
-  font-size: 1rem;
-  color: #586E75;
-  margin: 0;
+  @apply text-base text-text-secondary m-0;
 }
 
 .login-form {
-  display: flex;
-  flex-direction: column;
+  @apply flex flex-col;
 }
 
 .form-item {
-  margin-bottom: 20px;
+  @apply mb-5;
 }
 
 .form-item :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #073642;
-  padding-bottom: 8px;
+  @apply font-medium text-text-primary pb-2;
 }
 
 .custom-input :deep(.el-input__wrapper) {
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s ease;
+  @apply rounded-md shadow-xs transition-all duration-400 ease-smooth;
 }
 
 .custom-input :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  @apply shadow-sm;
 }
 
 .custom-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 4px 16px rgba(38, 139, 210, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .options-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  font-size: 0.875rem;
-}
-
-.forgot-link {
-  color: #268BD2;
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-.forgot-link:hover {
-  color: #2AA198;
+  @apply flex justify-between items-center mb-6 text-sm;
 }
 
 .login-button {
-  width: 100%;
-  height: 48px;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #268BD2 0%, #2AA198 100%);
-  border: none;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
-}
-
-.login-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(38, 139, 210, 0.3);
+  @apply w-full h-12 text-base font-semibold rounded-md mb-5;
 }
 
 .form-footer {
-  text-align: center;
+  @apply text-center;
 }
 
 .footer-text {
-  font-size: 0.875rem;
-  color: #586E75;
+  @apply text-sm text-text-secondary;
 }
 
 .footer-link {
-  font-size: 0.875rem;
-  color: #268BD2;
-  font-weight: 600;
-  margin-left: 4px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-.footer-link:hover {
-  color: #2AA198;
+  @apply text-sm text-primary font-semibold ml-1;
 }
 
 .local-login-wrapper {
-  text-align: center;
-  margin-top: 12px;
+  @apply text-center mt-3;
 }
 
 .local-login-text {
-  font-size: 0.875rem;
-  color: #268BD2;
-  font-weight: 600;
-  font-style: italic;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  @apply text-sm text-primary font-semibold italic cursor-pointer transition-all duration-400 ease-smooth;
 }
 
 .local-login-text:hover {
-  color: #2AA198;
+  @apply text-primary-hover;
 }
 </style>

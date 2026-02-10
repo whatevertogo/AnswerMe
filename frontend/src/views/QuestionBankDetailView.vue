@@ -29,6 +29,15 @@ const bankId = computed(() => parseInt(route.params.id as string))
 const currentQuestionBank = computed(() => questionBankStore.currentBank)
 const questions = computed(() => questionBankStore.questions)
 
+// 过滤掉可能的 null 值，确保始终返回数组
+const filteredQuestions = computed(() => {
+  if (!Array.isArray(questions.value)) {
+    console.warn('questions.value is not an array:', questions.value)
+    return []
+  }
+  return questions.value.filter(q => q != null && q.id != null)
+})
+
 onMounted(async () => {
   await fetchBankDetail()
 })
@@ -251,7 +260,7 @@ const getOptionIndex = (index: number) => {
 
       <div v-else class="questions-list">
         <div
-          v-for="(question, index) in questions"
+          v-for="(question, index) in filteredQuestions"
           :key="question.id"
           class="question-item"
         >
@@ -330,182 +339,122 @@ export default {
 
 <style scoped>
 .question-bank-detail {
-  min-height: calc(100vh - 140px);
+  @apply min-h-[calc(100vh-140px)];
 }
 
 .page-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  @apply flex items-center gap-4 mb-6;
 }
 
 .page-header h2 {
-  margin: 0;
+  @apply m-0 text-[1.5rem] font-bold;
   color: #073642;
-  font-size: 1.5rem;
-  font-weight: 700;
 }
 
 .bank-info {
-  margin-bottom: 1.5rem;
+  @apply mb-6;
 }
 
 .info-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
+  @apply flex justify-between items-start gap-6;
 }
 
 .description {
-  color: #657B83;
-  font-size: 0.9375rem;
-  margin-bottom: 0.75rem;
-  line-height: 1.6;
+  @apply text-[#657B83] text-[0.9375rem] mb-3 leading-[1.6];
 }
 
 .meta {
-  display: flex;
-  gap: 1.5rem;
-  color: #586E75;
-  font-size: 0.8125rem;
-  flex-wrap: wrap;
+  @apply flex gap-6 text-[0.8125rem] text-[#586E75] flex-wrap;
 }
 
 .meta span {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
+  @apply flex items-center gap-1.5;
 }
 
 .info-actions {
-  display: flex;
-  gap: 0.75rem;
+  @apply flex gap-3;
 }
 
 .action-bar {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background: #EEE8D5;
-  border-radius: 8px;
+  @apply flex gap-3 mb-6 px-4 py-4 bg-[#EEE8D5] rounded-lg;
 }
 
 .questions-section {
-  min-height: 200px;
+  @apply min-h-[200px];
 }
 
 .questions-list {
-  display: grid;
+  @apply grid gap-4;
   grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
-  gap: 1rem;
 }
 
 .question-item {
-  padding: 1rem;
-  border: 1px solid #E8E4CE;
-  border-radius: 8px;
-  background: #FFFFFF;
-  transition: all 0.15s;
-}
-
-.question-item:hover {
-  border-color: #268BD2;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  @apply px-4 py-4 border border-[#E8E4CE] rounded-lg bg-bg
+         transition-all duration-150
+         hover:border-[#268BD2] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)];
 }
 
 .question-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  @apply flex items-center gap-3 mb-3;
 }
 
 .question-number {
-  font-weight: 600;
-  color: #268BD2;
-  font-size: 0.875rem;
+  @apply font-semibold text-[#268BD2] text-sm;
 }
 
 .question-content {
-  font-size: 0.9375rem;
+  @apply text-[0.9375rem] leading-[1.6] mb-3;
   color: #073642;
-  margin-bottom: 0.75rem;
-  line-height: 1.6;
 }
 
 .question-options {
-  margin-bottom: 0.75rem;
-  padding-left: 1.25rem;
+  @apply mb-3 pl-5;
 }
 
 .options-label {
-  color: #586E75;
-  font-size: 0.8125rem;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
+  @apply text-[#586E75] text-xs mb-2 font-medium;
 }
 
 .question-options ul {
-  margin: 0;
-  padding-left: 0;
-  list-style-type: none;
+  @apply m-0 p-0 list-none;
 }
 
 .question-options li {
-  padding: 0.25rem 0;
-  color: #657B83;
-  font-size: 0.875rem;
+  @apply py-1 text-[#657B83] text-sm;
 }
 
 .question-answer {
-  margin-bottom: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: #DBF0E8;
-  border-radius: 6px;
-  border: 1px solid #2AA198;
+  @apply mb-2 px-3 py-2 bg-[#DBF0E8] rounded-md border border-[#2AA198];
 }
 
 .answer-label {
-  font-weight: 500;
-  color: #2AA198;
-  font-size: 0.8125rem;
+  @apply font-medium text-[#2AA198] text-xs;
 }
 
 .question-explanation {
-  margin-bottom: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: #FDF6E3;
-  border-radius: 6px;
-  border: 1px solid #EEE8D5;
+  @apply mb-3 px-3 py-2 bg-[#FDF6E3] rounded-md border border-[#EEE8D5];
 }
 
 .explanation-label {
-  font-weight: 500;
-  color: #B58900;
-  font-size: 0.8125rem;
+  @apply font-medium text-[#B58900] text-xs;
 }
 
 .question-tags {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  @apply flex gap-2 flex-wrap;
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
   .info-header {
-    flex-direction: column;
+    @apply flex-col;
   }
 
   .questions-list {
-    grid-template-columns: 1fr;
+    @apply grid-cols-1;
   }
 
   .action-bar {
-    flex-wrap: wrap;
+    @apply flex-wrap;
   }
 }
 </style>

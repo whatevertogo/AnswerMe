@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 
 /**
  * 答题开始参数
@@ -34,7 +34,8 @@ export interface QuizResult {
   questionBankId: number
   questionBankName: string
   startedAt?: string
-  score: number
+  /** 分数（可能为null，表示未完成或未评分） */
+  score: number | null
   totalQuestions: number
   correctCount: number
   durationSeconds?: number
@@ -63,10 +64,11 @@ export interface QuizDetail {
  */
 export interface QuizStatistics {
   totalAttempts: number
+  completedAttempts: number
   totalQuestions: number
+  totalCorrectAnswers: number
   averageScore: number
-  averageTime: number
-  completionRate: number
+  overallAccuracy: number
 }
 
 /**
@@ -95,15 +97,15 @@ export function completeQuiz(data: {
 /**
  * 获取答题记录详情
  */
-export function getQuizResult(attemptId: number): Promise<QuizResult> {
-  return request.get(`/attempts/${attemptId}`)
+export function getQuizResult(id: number): Promise<QuizResult> {
+  return request.get(`/attempts/${id}`)
 }
 
 /**
  * 获取答题详情列表
  */
-export function getQuizDetails(attemptId: number): Promise<QuizDetail[]> {
-  return request.get(`/attempts/${attemptId}/details`)
+export function getQuizDetails(id: number): Promise<QuizDetail[]> {
+  return request.get(`/attempts/${id}/details`)
 }
 
 /**

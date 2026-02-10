@@ -4,7 +4,8 @@
 - .NET 10
 - ASP.NET Core Web API
 - Entity Framework Core
-- PostgreSQL
+- SQLite (开发) / PostgreSQL (生产)
+- Redis (AI 异步任务队列)
 - JWT认证
 
 ## Clean Architecture 分层
@@ -50,10 +51,35 @@ API → Application → Domain
 ## 项目启动
 
 ### 开发环境
+
+#### 方式一：最小化启动（推荐快速开发）
+
+只启动 API，使用 SQLite 数据库（无需额外依赖）：
+
 ```bash
 cd backend
 dotnet restore
 dotnet build
+dotnet run --project AnswerMe.API
+```
+
+> 注意：此模式下 AI 异步生成功能不可用，但同步生成（≤20 题目）正常工作。
+
+#### 方式二：完整启动（包含 Redis）
+
+启动 PostgreSQL + Redis，启用所有功能：
+
+```bash
+# 1. 启动依赖服务
+docker-compose up -d db redis
+
+# 2. 配置环境变量（如需要）
+# 编辑 AnswerMe.API/appsettings.json
+# 设置 DB_TYPE=PostgreSQL
+# 设置 ConnectionStrings:Redis=localhost:6379
+
+# 3. 启动 API
+cd backend
 dotnet run --project AnswerMe.API
 ```
 
@@ -73,10 +99,33 @@ dotnet ef database update --project AnswerMe.Infrastructure
 
 ## 环境变量配置
 参见 `.env.example` 文件配置:
-- 数据库连接字符串
-- JWT密钥
-- 日志级别
-- API限流配置
+
+### 必需配置
+```bash
+# JWT 密钥（至少32字符）
+JWT_SECRET=your-secret-key-minimum-32-characters-long
+```
+
+### 可选配置
+```bash
+# 数据库类型（默认: Sqlite）
+DB_TYPE=Sqlite
+
+# Redis 连接（用于 AI 异步生成）
+ConnectionStrings__Redis=localhost:6379
+
+# AI 生成配置
+AIGeneration__MaxSyncCount=20          # 同步生成最大题目数
+AIGeneration__WorkerConcurrency=1      # 后台工作线程数
+```
+
+### Redis 说明
+
+Redis 用于 AI 异步生成任务队列：
+- **题目数量 ≤ MaxSyncCount**：同步生成，直接返回结果
+- **题目数量 > MaxSyncCount**：异步生成，任务进入 Redis 队列
+
+如果不需要异步生成功能，可以不配置 Redis。
 
 ## API端点
 - `POST /api/auth/register` - 用户注册

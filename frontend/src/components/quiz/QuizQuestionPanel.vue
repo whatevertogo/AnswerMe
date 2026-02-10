@@ -77,50 +77,38 @@ const getTypeLabel = (type: string) => {
 
 <style scoped>
 .question-panel {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1rem 1.5rem;
+  @apply bg-bg border-b border-border px-8 py-6;
 }
 
 .dark .question-panel {
-  background: #111827;
-  border-bottom-color: #374151;
+  @apply bg-bg border-b-border;
 }
 
 .question-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
+  @apply flex items-center gap-2 mb-4 flex-wrap;
 }
 
 .question-index {
-  font-size: 0.875rem;
-  color: #6b7280;
+  @apply text-sm text-text-secondary;
 }
 
 .dark .question-index {
-  color: #9ca3af;
+  @apply text-text-secondary;
 }
 
 .question-tag {
-  font-size: 0.75rem;
+  @apply text-xs;
 }
 
 .question-content {
-  max-width: none;
+  @apply max-w-none;
 }
 
 .question-text {
-  font-size: 1rem;
-  line-height: 1.625;
-  color: #111827;
-  margin: 0;
-  font-weight: 500;
+  @apply text-[1.125rem] leading-[1.625] text-text-primary m-0 font-medium;
 }
 
 .dark .question-text {
-  color: #f9fafb;
+  @apply text-text-primary;
 }
 </style>

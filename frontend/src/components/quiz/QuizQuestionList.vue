@@ -107,200 +107,147 @@ const getStatusClass = (index: number) => {
 
 <style scoped>
 .question-list {
-  width: 14rem;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
+  @apply w-56 bg-bg border-r border-border flex flex-col;
 }
 
 .dark .question-list {
-  background: #111827;
-  border-right-color: #374151;
+  @apply bg-bg border-r-border;
 }
 
 .list-header {
-  padding: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
+  @apply px-3 py-3 border-b border-border;
 }
 
 .dark .list-header {
-  border-bottom-color: #374151;
+  @apply border-b-border;
 }
 
 .list-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
+  @apply text-sm font-semibold text-text-primary m-0;
 }
 
 .dark .list-title {
-  color: #f9fafb;
+  @apply text-text-primary;
 }
 
 .list-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.5rem;
+  @apply flex-1 overflow-y-auto p-2;
 }
 
 .question-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.375rem;
+  @apply grid grid-cols-4 gap-2;
 }
 
 .question-item {
-  aspect-ratio: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  background: #ffffff;
-  cursor: pointer;
-  transition: all 0.15s;
+  @apply aspect-square relative flex items-center justify-center
+         border-2 border-border rounded-md bg-bg
+         cursor-pointer transition-all duration-400 ease-smooth;
 }
 
 .dark .question-item {
-  background: #1f2937;
-  border-color: #374151;
+  @apply bg-bg border-border;
 }
 
 .question-item:hover {
-  border-color: #d1d5db;
+  @apply border-primary scale-105;
 }
 
 .dark .question-item:hover {
-  border-color: #4b5563;
+  @apply border-primary;
 }
 
 .question-item.current {
-  ring: 2px solid #3b82f6;
-  ring-offset: 2px;
+  @apply border-primary;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .question-item.answered {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  @apply bg-bg-secondary border-primary;
 }
 
 .dark .question-item.answered {
-  background: #1e3a8a33;
-  border-color: #1e40af;
+  @apply bg-bg-secondary border-primary;
 }
 
 .question-item.marked {
-  background: #fffbeb;
-  border-color: #fcd34d;
+  @apply bg-bg-secondary border-warning;
 }
 
 .dark .question-item.marked {
-  background: #451a0333;
-  border-color: #b45309;
+  @apply bg-bg-secondary border-warning;
 }
 
 .question-number {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
+  @apply text-sm font-medium text-text-primary;
 }
 
 .dark .question-number {
-  color: #d1d5db;
+  @apply text-text-primary;
 }
 
 .difficulty-dot {
-  position: absolute;
-  top: 0.125rem;
-  left: 0.125rem;
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 9999px;
+  @apply absolute top-1 left-1 w-1.5 h-1.5 rounded-full;
 }
 
 .status-icon {
-  position: absolute;
-  font-size: 0.75rem;
+  @apply absolute text-xs;
 }
 
 .status-icon.answered {
-  top: -0.25rem;
-  right: -0.25rem;
-  color: #3b82f6;
+  @apply -top-1 -right-1 text-primary;
 }
 
 .status-icon.marked {
-  bottom: -0.125rem;
-  right: -0.125rem;
-  color: #f59e0b;
+  @apply -bottom-0.5 -right-0.5 text-warning;
 }
 
 /* 图例 */
 .list-legend {
-  padding: 0.75rem;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  @apply px-3 py-3 border-t border-border flex flex-col gap-2;
 }
 
 .dark .list-legend {
-  border-top-color: #374151;
+  @apply border-t-border;
 }
 
 .legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @apply flex items-center gap-2;
 }
 
 .legend-box {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 0.25rem;
+  @apply w-3 h-3 rounded-sm;
 }
 
 .legend-box.answered {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  @apply bg-bg-secondary border border-primary;
 }
 
 .dark .legend-box.answered {
-  background: #1e3a8a33;
-  border-color: #1e40af;
+  @apply bg-bg-secondary border-primary;
 }
 
 .legend-box.marked {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
+  @apply bg-bg-secondary border border-warning;
 }
 
 .dark .legend-box.marked {
-  background: #451a0333;
-  border-color: #b45309;
+  @apply bg-bg-secondary border-warning;
 }
 
 .legend-dots {
-  display: flex;
-  gap: 0.125rem;
+  @apply flex gap-0.5;
 }
 
 .legend-dot {
-  width: 0.25rem;
-  height: 0.25rem;
-  border-radius: 9999px;
+  @apply w-1 h-1 rounded-full;
 }
 
 .legend-text {
-  font-size: 0.75rem;
-  color: #6b7280;
+  @apply text-xs text-text-secondary;
 }
 
 .dark .legend-text {
-  color: #9ca3af;
+  @apply text-text-secondary;
 }
 
 /* 滚动条 */
@@ -309,11 +256,11 @@ const getStatusClass = (index: number) => {
 }
 
 .list-content::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
+  background: var(--color-border);
   border-radius: 2px;
 }
 
 .list-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
+  background: var(--color-text-muted);
 }
 </style>

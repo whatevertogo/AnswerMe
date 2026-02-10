@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Message } from '@element-plus/icons-vue'
+import { User, Lock, Message, Reading } from '@element-plus/icons-vue'
 import { authApi } from '@/api/auth'
 
 const router = useRouter()
@@ -66,7 +66,9 @@ const handleRegister = async () => {
     <!-- 左侧品牌区域 -->
     <div class="brand-section">
       <div class="brand-content">
-        <div class="brand-icon">🎓</div>
+        <div class="brand-icon">
+          <el-icon :size="48" color="#5B7280"><Reading /></el-icon>
+        </div>
         <h1 class="brand-title">加入 AnswerMe</h1>
         <p class="brand-subtitle">开启智能学习之旅</p>
         <p class="brand-description">
@@ -74,15 +76,15 @@ const handleRegister = async () => {
         </p>
         <div class="feature-list">
           <div class="feature-item">
-            <div class="feature-icon">✓</div>
+            <el-icon :size="16" color="#5B7280"><Reading /></el-icon>
             <span class="feature-text">智能题目生成</span>
           </div>
           <div class="feature-item">
-            <div class="feature-icon">✓</div>
+            <el-icon :size="16" color="#5B7280"><Reading /></el-icon>
             <span class="feature-text">多题型支持</span>
           </div>
           <div class="feature-item">
-            <div class="feature-icon">✓</div>
+            <el-icon :size="16" color="#5B7280"><Reading /></el-icon>
             <span class="feature-text">学习数据分析</span>
           </div>
         </div>
@@ -161,199 +163,122 @@ const handleRegister = async () => {
 
 <style scoped>
 .register-container {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 480px;
-  background: #FDF6E3;
+  @apply min-h-screen grid grid-cols-[1fr_480px] bg-bg;
 }
 
 /* 品牌区域 */
 .brand-section {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  background: linear-gradient(135deg, #EEE8D5 0%, #FDF6E3 100%);
+  @apply flex items-center justify-center p-12 bg-bg-secondary;
 }
 
 .brand-content {
-  text-align: center;
-  max-width: 480px;
+  @apply text-center max-w-[480px];
 }
 
 .brand-icon {
-  font-size: 5rem;
-  line-height: 1;
-  margin-bottom: 1.5rem;
+  @apply mb-6;
 }
 
 .brand-title {
-  font-size: 3rem;
-  font-weight: 700;
-  color: #073642;
-  margin: 0 0 0.75rem 0;
+  @apply text-[3rem] font-bold text-text-primary m-0 mb-3;
   letter-spacing: -0.02em;
 }
 
 .brand-subtitle {
-  font-size: 1.125rem;
-  color: #586E75;
-  margin: 0 0 1rem 0;
-  font-weight: 500;
+  @apply text-[1.125rem] text-text-secondary m-0 font-medium;
 }
 
 .brand-description {
-  font-size: 0.9375rem;
-  color: #657B83;
-  line-height: 1.7;
-  margin: 0 0 2rem 0;
+  @apply text-[0.9375rem] text-text-secondary leading-[1.7] m-0 mb-8;
 }
 
 .feature-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 2rem;
+  @apply flex flex-col gap-3 mt-8;
 }
 
 .feature-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  text-align: left;
-}
-
-.feature-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #268BD2;
-  color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  font-weight: 700;
-  flex-shrink: 0;
+  @apply flex items-center gap-3 text-left justify-center;
 }
 
 .feature-text {
-  font-size: 0.9375rem;
-  color: #073642;
-  font-weight: 500;
+  @apply text-[0.9375rem] text-text-primary font-medium;
 }
 
 /* 表单区域 */
 .form-section {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  background: #FFFFFF;
-  border-left: 1px solid #E8E4CE;
+  @apply flex items-center justify-center p-12 bg-bg border-l border-border;
 }
 
 .form-card {
-  width: 100%;
-  max-width: 400px;
+  @apply w-full max-w-[400px];
 }
 
 .form-header {
-  text-align: center;
-  margin-bottom: 2rem;
+  @apply text-center mb-8;
 }
 
 .form-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #073642;
-  margin: 0 0 0.5rem 0;
+  @apply text-[1.75rem] font-bold text-text-primary m-0 mb-2;
 }
 
 .form-subtitle {
-  font-size: 0.9375rem;
-  color: #586E75;
-  margin: 0;
+  @apply text-[0.9375rem] text-text-secondary m-0;
 }
 
 .register-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  @apply flex flex-col gap-5;
 }
 
 .register-form :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #073642;
+  @apply font-medium text-text-primary;
 }
 
 .register-button {
-  width: 100%;
-  height: 44px;
-  font-size: 1rem;
-  margin-top: 0.5rem;
+  @apply w-full h-11 text-base mt-2;
 }
 
 .form-footer {
-  text-align: center;
-  padding-top: 0.5rem;
+  @apply text-center pt-2;
 }
 
 .footer-text {
-  font-size: 0.875rem;
-  color: #586E75;
+  @apply text-sm text-text-secondary;
 }
 
 .footer-link {
-  font-size: 0.875rem;
-  color: #268BD2;
-  font-weight: 500;
-  margin-left: 0.25rem;
-}
-
-.footer-link:hover {
-  color: #2AA198;
+  @apply text-sm text-primary font-medium ml-1;
 }
 
 /* 响应式 */
 @media (max-width: 1024px) {
   .register-container {
-    grid-template-columns: 1fr;
+    @apply grid-cols-1;
   }
 
   .brand-section {
-    padding: 4rem 2rem 2rem;
+    @apply p-16 pt-16 pb-8 px-8;
   }
 
   .form-section {
-    border-left: none;
-    border-top: 1px solid #E8E4CE;
+    @apply border-l-0 border-t border-border;
   }
 
   .feature-list {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
+    @apply flex-row flex-wrap justify-center;
   }
 
   .feature-item {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.5rem;
+    @apply flex-col text-center gap-2;
   }
 }
 
 @media (max-width: 640px) {
-  .brand-icon {
-    font-size: 4rem;
-  }
-
   .brand-title {
-    font-size: 2.25rem;
+    @apply text-[2.25rem];
   }
 
   .form-section {
-    padding: 2rem 1.5rem;
+    @apply p-8 px-6;
   }
 }
 </style>

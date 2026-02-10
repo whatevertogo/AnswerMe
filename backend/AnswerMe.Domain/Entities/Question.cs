@@ -46,27 +46,54 @@ public class Question : BaseEntity
     {
         get
         {
+            // 如果缓存有效且 JSON 未变化，直接返回缓存
+            if (_cachedData != null && QuestionDataJson == _cachedDataJson)
+            {
+                return _cachedData;
+            }
+
+            QuestionData? result;
             if (string.IsNullOrWhiteSpace(QuestionDataJson))
-                return BuildDataFromLegacy();
-
-            try
             {
-                using var jsonDocument = JsonDocument.Parse(QuestionDataJson);
-                var root = jsonDocument.RootElement;
-
-                var parsed = DeserializeQuestionData();
-                if (parsed == null)
-                    return BuildDataFromLegacy();
-
-                return IsValidQuestionData(root, parsed) ? parsed : BuildDataFromLegacy() ?? parsed;
+                result = BuildDataFromLegacy();
             }
-            catch (JsonException)
+            else
             {
-                return BuildDataFromLegacy();
+                try
+                {
+                    using var jsonDocument = JsonDocument.Parse(QuestionDataJson);
+                    var root = jsonDocument.RootElement;
+
+                    var parsed = DeserializeQuestionData();
+                    if (parsed == null)
+                        result = BuildDataFromLegacy();
+                    else
+                        result = IsValidQuestionData(root, parsed) ? parsed : BuildDataFromLegacy() ?? parsed;
+                }
+                catch (JsonException)
+                {
+                    result = BuildDataFromLegacy();
+                }
             }
+
+            // 更新缓存
+            _cachedData = result;
+            _cachedDataJson = QuestionDataJson;
+
+            return result;
         }
-        set => QuestionDataJson = value != null ? JsonSerializer.Serialize(value, QuestionDataJsonOptions.Default) : null;
+        set
+        {
+            QuestionDataJson = value != null ? JsonSerializer.Serialize(value, QuestionDataJsonOptions.Default) : null;
+            // 更新缓存
+            _cachedData = value;
+            _cachedDataJson = QuestionDataJson;
+        }
     }
+
+    // 缓存字段，避免重复 JSON 解析
+    private QuestionData? _cachedData;
+    private string? _cachedDataJson;
 
     private QuestionData? DeserializeQuestionData()
     {

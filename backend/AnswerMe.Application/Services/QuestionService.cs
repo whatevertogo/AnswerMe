@@ -94,28 +94,27 @@ public class QuestionService : IQuestionService
             };
         }
 
-        var questionsPaged = await _questionRepository.GetPagedAsync(
+        // 将过滤条件下推到数据库
+        var typeFilterPaged = query.QuestionTypeEnum?.ToString() ?? query.QuestionType;
+        var questionsPaged = await _questionRepository.GetPagedFilteredAsync(
             query.QuestionBankId,
-            query.PageSize,
+            query.PageSize + 1,
             query.LastId,
+            query.Difficulty,
+            typeFilterPaged,
             cancellationToken);
 
-        // 根据难度和类型过滤
-        var typeFilterPaged = query.QuestionTypeEnum?.ToString() ?? query.QuestionType;
-        var filteredQuestions = questionsPaged
-            .Where(q =>
-                (string.IsNullOrEmpty(query.Difficulty) || q.Difficulty == query.Difficulty) &&
-                (string.IsNullOrEmpty(typeFilterPaged) || q.QuestionType == typeFilterPaged))
-            .ToList();
+        // 获取符合过滤条件的总数
+        var totalCount = await _questionRepository.CountFilteredAsync(
+            query.QuestionBankId,
+            query.Difficulty,
+            typeFilterPaged,
+            cancellationToken);
 
-        var resultList = filteredQuestions.ToDtoList();
-
-        // 获取总数
-        var totalCount = await _questionRepository.CountByQuestionBankIdAsync(query.QuestionBankId, cancellationToken);
-
-        // 判断是否有更多数据
-        var hasMore = filteredQuestions.Count == query.PageSize;
-        int? nextCursor = hasMore ? filteredQuestions.LastOrDefault()?.Id : (int?)null;
+        var hasMore = questionsPaged.Count > query.PageSize;
+        var pageItems = hasMore ? questionsPaged.Take(query.PageSize).ToList() : questionsPaged;
+        var resultList = pageItems.ToDtoList();
+        int? nextCursor = hasMore ? pageItems.LastOrDefault()?.Id : (int?)null;
 
         return new QuestionListDto
         {

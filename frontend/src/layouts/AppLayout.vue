@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   HomeFilled,
@@ -8,10 +8,12 @@ import {
   Setting,
   User,
   SwitchButton,
-  ArrowDown
+  ArrowDown,
+  Setting as SettingIcon
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import SettingsDialog from '@/components/SettingsDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -42,6 +44,17 @@ const menuItems = [
 
 const activeMenu = computed(() => route.path)
 
+// 设置对话框
+const settingsDialogVisible = ref(false)
+
+const handleCommand = (command: string) => {
+  if (command === 'settings') {
+    settingsDialogVisible.value = true
+  } else if (command === 'logout') {
+    handleLogout()
+  }
+}
+
 const handleLogout = async () => {
   try {
     await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
@@ -66,7 +79,9 @@ const handleLogout = async () => {
       <div class="header-container">
         <!-- Logo -->
         <div class="logo-section">
-          <div class="logo-icon">🎓</div>
+          <div class="logo-icon">
+            <el-icon :size="28"><Reading /></el-icon>
+          </div>
           <h1 class="logo-text">AnswerMe</h1>
         </div>
 
@@ -85,7 +100,7 @@ const handleLogout = async () => {
 
         <!-- 用户信息 -->
         <div class="user-section">
-          <el-dropdown @command="handleLogout" trigger="click">
+          <el-dropdown @command="handleCommand" trigger="click">
             <div class="user-dropdown">
               <el-avatar :size="36" class="user-avatar">
                 <el-icon><User /></el-icon>
@@ -97,6 +112,10 @@ const handleLogout = async () => {
             </div>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item command="settings">
+                  <el-icon><SettingIcon /></el-icon>
+                  设置
+                </el-dropdown-item>
                 <el-dropdown-item command="logout">
                   <el-icon><SwitchButton /></el-icon>
                   退出登录
@@ -111,236 +130,145 @@ const handleLogout = async () => {
     <!-- 内容区域 -->
     <main class="app-main">
       <div class="content-container">
-        <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
+        <router-view v-slot="{ Component, route }">
+          <transition :name="(route.meta?.transition as string) || 'fade'" mode="out-in">
+            <component :is="Component" :key="route.path" />
           </transition>
         </router-view>
       </div>
     </main>
+
+    <!-- 设置对话框 -->
+    <SettingsDialog v-model="settingsDialogVisible" />
   </div>
 </template>
 
 <style scoped>
 .app-layout {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: #FDF6E3;
-}
-
-.dark .app-layout {
-  background: #002B36;
+  @apply min-h-screen flex flex-col bg-bg;
 }
 
 /* 顶部导航栏 */
 .app-header {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E8E4CE;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.dark .app-header {
-  background: #073642;
-  border-bottom-color: #586E75;
+  @apply bg-bg border-b border-border sticky top-0 z-[100] shadow-xs;
 }
 
 .header-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply max-w-[1400px] mx-auto px-8 h-16 flex items-center justify-between;
 }
 
 /* Logo */
 .logo-section {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-shrink: 0;
+  @apply flex items-center gap-3 flex-shrink-0;
 }
 
 .logo-icon {
-  font-size: 1.75rem;
-  line-height: 1;
+  @apply w-11 h-11 bg-primary rounded-md flex items-center justify-center text-white shadow-sm;
 }
 
 .logo-text {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #073642;
-  margin: 0;
-  white-space: nowrap;
-}
-
-.dark .logo-text {
-  color: #839496;
+  @apply text-xl font-bold text-text-primary m-0 whitespace-nowrap;
 }
 
 /* 导航菜单 */
 .nav-menu {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1;
-  margin: 0 3rem;
+  @apply flex items-center gap-2 flex-1 mx-12;
 }
 
 .nav-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  color: #586E75;
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.15s;
-}
-
-.dark .nav-item {
-  color: #839496;
-}
-
-.nav-item:hover {
-  background: #EEE8D5;
-  color: #073642;
-}
-
-.dark .nav-item:hover {
-  background: #073642;
-  color: #FDF6E3;
+  @apply flex items-center gap-2 px-4 py-2 rounded-md text-text-secondary
+         no-underline text-sm font-medium
+         transition-all duration-400 ease-smooth
+         hover:bg-bg-secondary hover:text-text-primary;
 }
 
 .nav-item.active {
-  background: #268BD2;
-  color: #FFFFFF;
-}
-
-.dark .nav-item.active {
-  background: #268BD2;
-  color: #FFFFFF;
+  @apply bg-primary text-white;
 }
 
 .nav-text {
-  white-space: nowrap;
+  @apply whitespace-nowrap;
 }
 
 /* 用户信息 */
 .user-section {
-  flex-shrink: 0;
+  @apply flex-shrink-0;
 }
 
 .user-dropdown {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.user-dropdown:hover {
-  background: #EEE8D5;
-}
-
-.dark .user-dropdown:hover {
-  background: #073642;
+  @apply flex items-center gap-2 px-3 py-1.5 rounded-md cursor-pointer
+         transition-all duration-400 ease-smooth
+         hover:bg-bg-secondary;
 }
 
 .user-avatar {
-  background: linear-gradient(135deg, #268BD2 0%, #2AA198 100%);
-  flex-shrink: 0;
+  @apply bg-primary flex-shrink-0;
 }
 
 .user-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #073642;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dark .user-name {
-  color: #839496;
+  @apply text-sm font-medium text-text-primary max-w-[150px] overflow-hidden
+         text-ellipsis whitespace-nowrap;
 }
 
 .dropdown-icon {
-  color: #9ca3af;
-  flex-shrink: 0;
+  @apply text-text-muted flex-shrink-0;
 }
 
 /* 内容区域 */
 .app-main {
-  flex: 1;
-  overflow-y: auto;
+  @apply flex-1 overflow-y-auto;
 }
 
 .content-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
-  min-height: calc(100vh - 64px);
+  @apply max-w-[1400px] mx-auto p-8 min-h-[calc(100vh-64px)];
 }
 
 /* 过渡动画 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
+  @apply transition-all duration-400 ease-smooth;
 }
 
 .fade-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
+  @apply opacity-0 -translate-y-2.5;
 }
 
 .fade-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
+  @apply opacity-0 translate-y-2.5;
 }
 
 /* 响应式 */
 @media (max-width: 1024px) {
   .nav-menu {
-    margin: 0 1.5rem;
+    @apply mx-6;
   }
 
   .user-name {
-    display: none;
+    @apply hidden;
   }
 }
 
 @media (max-width: 768px) {
   .header-container {
-    padding: 0 1rem;
+    @apply px-4;
   }
 
   .nav-text {
-    display: none;
+    @apply hidden;
   }
 
   .content-container {
-    padding: 1rem;
+    @apply p-4;
   }
 }
 
 @media (max-width: 640px) {
   .logo-text {
-    display: none;
+    @apply hidden;
   }
 
   .nav-menu {
-    margin: 0 0.75rem;
+    @apply mx-3;
   }
 }
 </style>

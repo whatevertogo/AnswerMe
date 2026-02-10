@@ -94,17 +94,43 @@ public static class EntityMappingExtensions
 
     /// <summary>
     /// 批量映射 QuestionBank 实体为 DTO (异步)
+    /// 优化：使用批量统计避免 N+1 查询
     /// </summary>
     public static async Task<List<QuestionBankDto>> ToDtoListAsync(
         this IEnumerable<QuestionBank> entities,
         IQuestionRepository questionRepository,
         CancellationToken cancellationToken = default)
     {
+        var entityList = entities.ToList();
+        if (entityList.Count == 0)
+        {
+            return new List<QuestionBankDto>();
+        }
+
+        // 批量获取题目数量
+        var bankIds = entityList.Select(e => e.Id).ToList();
+        var countMap = await questionRepository.CountByQuestionBankIdsAsync(bankIds, cancellationToken);
+
         var result = new List<QuestionBankDto>();
 
-        foreach (var entity in entities)
+        foreach (var entity in entityList)
         {
-            result.Add(await entity.ToDtoAsync(questionRepository, cancellationToken));
+            var tags = ParseTags(entity.Tags);
+
+            result.Add(new QuestionBankDto
+            {
+                Id = entity.Id,
+                UserId = entity.UserId,
+                Name = entity.Name,
+                Description = entity.Description,
+                Tags = tags,
+                DataSourceId = entity.DataSourceId,
+                DataSourceName = entity.DataSource?.Name,
+                QuestionCount = countMap.GetValueOrDefault(entity.Id, 0),
+                Version = entity.Version ?? Array.Empty<byte>(),
+                CreatedAt = entity.CreatedAt,
+                UpdatedAt = entity.UpdatedAt
+            });
         }
 
         return result;

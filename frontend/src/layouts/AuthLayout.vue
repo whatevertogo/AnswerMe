@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Reading, Star, Collection, Trophy } from '@element-plus/icons-vue'
 </script>
 
 <template>
@@ -8,7 +9,7 @@
       <div class="brand-content">
         <div class="brand-header">
           <div class="logo-icon">
-            <span class="logo-emoji">🎓</span>
+            <el-icon :size="32" color="#FFFFFF"><Reading /></el-icon>
           </div>
           <h1 class="brand-title">AnswerMe</h1>
           <p class="brand-subtitle">智能题库系统</p>
@@ -20,17 +21,23 @@
 
         <div class="feature-grid">
           <div class="feature-box">
-            <span class="feature-icon">✨</span>
+            <div class="feature-icon">
+              <el-icon :size="24" color="#5B7280"><Star /></el-icon>
+            </div>
             <h3>AI 智能生成</h3>
             <p>基于大语言模型自动生成高质量题目</p>
           </div>
           <div class="feature-box">
-            <span class="feature-icon">📚</span>
+            <div class="feature-icon">
+              <el-icon :size="24" color="#5B7280"><Collection /></el-icon>
+            </div>
             <h3>题库管理</h3>
             <p>多维度分类管理，支持导入导出</p>
           </div>
           <div class="feature-box">
-            <span class="feature-icon">🎯</span>
+            <div class="feature-icon">
+              <el-icon :size="24" color="#5B7280"><Trophy /></el-icon>
+            </div>
             <h3>智能练习</h3>
             <p>个性化推荐，针对性提升</p>
           </div>
@@ -45,9 +52,9 @@
     <!-- 右侧登录卡片 -->
     <div class="form-card">
       <div class="form-content">
-        <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
+        <router-view v-slot="{ Component, route }">
+          <transition :name="(route.meta?.transition as string) || 'fade'" mode="out-in">
+            <component :is="Component" :key="route.path" />
           </transition>
         </router-view>
       </div>
@@ -61,26 +68,16 @@
  * 使用 vw/vh 单位确保响应式
  */
 .auth-layout {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  background: #FDF6E3;
+  @apply w-screen h-screen flex bg-bg;
 }
 
 /* ─── 左侧品牌区域 ─── */
 .brand-card {
-  width: 50vw;
-  min-width: 320px;
-  background: #EEE8D5;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 3vh 3vw;
-  overflow-y: auto;
+  @apply w-[50vw] min-w-[320px] bg-bg-secondary
+         flex flex-col justify-center items-center
+         py-[3vh] px-[3vw] overflow-y-auto
+         border-r border-border;
 }
-
-
 
 @keyframes slideUp {
   from {
@@ -94,316 +91,223 @@
 }
 
 .brand-header {
-  text-align: center;
-  margin-bottom: 4vh;
+  @apply text-center mb-[4vh];
 }
 
 .logo-icon {
-  width: 70px;
-  height: 70px;
-  background: linear-gradient(135deg, #268BD2 0%, #2AA198 100%);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 2vh;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    box-shadow: 0 8px 30px rgba(38, 139, 210, 0.3);
-  }
-  50% {
-    box-shadow: 0 8px 40px rgba(38, 139, 210, 0.5);
-  }
-}
-
-.logo-emoji {
-  font-size: 36px;
-  filter: grayscale(0.3);
+  @apply w-16 h-16 bg-primary rounded-lg
+         flex items-center justify-center
+         mx-auto mb-[2vh] shadow-md
+         transition-all duration-400 ease-smooth
+         hover:-translate-y-0.5 hover:shadow-lg;
 }
 
 .brand-title {
-  font-size: clamp(1.5rem, 3vw, 2.2rem);
-  font-weight: 800;
-  margin: 0 0 1vh;
-  color: #073642;
+  @apply text-[clamp(1.5rem,3vw,2.2rem)] font-bold m-0 mb-[1vh] text-text-primary;
   letter-spacing: -0.02em;
 }
 
 .brand-subtitle {
-  font-size: clamp(0.875rem, 1.2vw, 1.1rem);
-  margin: 0;
-  color: #586E75;
-  font-weight: 500;
+  @apply text-[clamp(0.875rem,1.2vw,1.1rem)] m-0 text-text-secondary font-medium;
 }
 
 .brand-description {
-  text-align: center;
-  margin-bottom: 5vh;
-  padding: 0 1vw;
+  @apply text-center mb-[5vh] px-[1vw];
 }
 
 .brand-description p {
-  font-size: clamp(0.875rem, 1.1vw, 1rem);
-  line-height: 1.7;
-  margin: 0;
-  color: #657B83;
+  @apply text-[clamp(0.875rem,1.1vw,1rem)] leading-[1.7] m-0 text-text-secondary;
 }
 
 .feature-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1vw;
-  margin-bottom: 6vh;
+  @apply grid grid-cols-3 gap-[1vw] mb-[6vh];
 }
 
 .feature-box {
-  background: linear-gradient(135deg, #FDF6E3 0%, #F5F0E6 100%);
-  border-radius: 14px;
-  padding: 5vh 1vw;
-  text-align: center;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(238, 232, 213, 0.8);
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.feature-box:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-  background: linear-gradient(135deg, #FFFFFF 0%, #FDF6E3 100%);
+  @apply bg-bg rounded-lg py-[2vh] px-[1vw]
+         text-center transition-all duration-400 ease-smooth
+         border border-border min-h-[180px]
+         flex flex-col justify-center shadow-sm
+         hover:-translate-y-1 hover:shadow-lg hover:border-primary;
 }
 
 .feature-box .feature-icon {
-  font-size: 24px;
-  margin-bottom: 1vh;
-  display: block;
+  @apply mb-[1vh] flex justify-center items-center;
 }
 
 .feature-box h3 {
-  font-size: clamp(0.75rem, 1vw, 0.875rem);
-  font-weight: 600;
-  margin: 0 0 0.5vh;
-  color: #073642;
+  @apply text-[clamp(0.75rem,1vw,0.875rem)] font-semibold
+         m-0 mb-[0.5vh] text-text-primary;
 }
 
 .feature-box p {
-  font-size: clamp(0.6875rem, 0.9vw, 0.75rem);
-  margin: 0;
-  color: #657B83;
-  line-height: 1.4;
+  @apply text-[clamp(0.6875rem,0.9vw,0.75rem)] m-0 text-text-secondary leading-[1.4];
 }
 
 .brand-footer {
-  text-align: center;
-  padding-top: 4vh;
-  margin-top: 4vh;
-  border-top: 1px solid #D3D7CF;
+  @apply text-center pt-[4vh] mt-[4vh] border-t border-border;
 }
 
 .brand-footer p {
-  font-size: 0.8125rem;
-  color: #839496;
-  margin: 0;
+  @apply text-[0.8125rem] text-text-muted m-0;
 }
 
 /* ─── 右侧表单区域 ─── */
 .form-card {
-  flex: 1;
-  min-width: 300px;
-  background: #FDF6E3;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 3vh 3vw;
-  overflow-y: auto;
+  @apply flex-1 min-w-[300px] bg-bg
+         flex flex-col justify-center items-center
+         py-[3vh] px-[3vw] overflow-y-auto;
 }
 
 .form-content {
-  width: 90%;
-  max-width: 360px;
-  margin: 0 auto;
+  @apply w-[90%] max-w-[360px] mx-auto;
 }
 
 /* ─── 过渡动画 ─── */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  @apply transition-all duration-400 ease-smooth;
 }
 
 .fade-enter-from {
-  opacity: 0;
-  transform: translateX(10px);
+  @apply opacity-0 translate-x-2.5;
 }
 
 .fade-leave-to {
-  opacity: 0;
-  transform: translateX(-10px);
+  @apply opacity-0 -translate-x-2.5;
 }
 
 /* ─── 响应式 - 平板 (宽度 < 1024px) ─── */
 @media (max-width: 1024px) {
   .brand-card {
-    width: 50vw;
-    padding: 2vh 2vw;
+    @apply w-[50vw] py-[2vh] px-[2vw];
   }
 
   .brand-content {
-    padding: 3vh 2vw;
+    @apply py-[3vh] px-[2vw];
   }
 
   .feature-grid {
-    grid-template-columns: 1fr;
-    gap: 1vh;
+    @apply grid-cols-1 gap-[1vh];
   }
 
   .feature-box {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    text-align: left;
-    padding: 1.5vh 2vw;
-    min-height: auto;
+    @apply flex items-center gap-3 text-left py-[1.5vh] px-[2vw];
   }
 
   .feature-box .feature-icon {
-    margin-bottom: 0;
-    font-size: 24px;
+    @apply mb-0;
   }
 
   .form-card {
-    padding: 2vh 2vw;
+    @apply py-[2vh] px-[2vw];
   }
 }
 
 /* ─── 响应式 - 小平板 (宽度 < 900px) ─── */
 @media (max-width: 900px) {
   .auth-layout {
-    flex-direction: column;
-    overflow-y: auto;
-    height: auto;
-    min-height: 100vh;
+    @apply flex-col overflow-y-auto h-auto min-h-screen;
   }
 
   .brand-card {
-    width: 100vw;
-    max-width: none;
-    min-height: auto;
-    padding: 4vh 5vw;
+    @apply w-screen max-w-none py-[4vh] px-[5vw]
+           border-r-0 border-b border-border;
   }
 
   .brand-content {
-    max-width: 600px;
-    padding: 4vh 4vw;
+    @apply max-w-[600px] py-[4vh] px-[4vw];
   }
 
   .feature-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2vw;
+    @apply grid-cols-3 gap-[2vw];
   }
 
   .feature-box {
-    flex-direction: column;
-    text-align: center;
-    padding: 2vh 2vw;
-    min-height: auto;
+    @apply flex-col text-center py-[2vh] px-[2vw];
   }
 
   .feature-box .feature-icon {
-    margin-bottom: 1vh;
+    @apply mb-[1vh];
   }
 
   .form-card {
-    width: 100vw;
-    min-height: 50vh;
-    padding: 4vh 5vw;
+    @apply w-screen min-h-[50vh] py-[4vh] px-[5vw];
   }
 
   .form-content {
-    max-width: 400px;
+    @apply max-w-[400px];
   }
 }
 
 /* ─── 响应式 - 手机 (宽度 < 640px) ─── */
 @media (max-width: 640px) {
   .brand-card {
-    display: none;
+    @apply hidden;
   }
 
   .form-card {
-    width: 100vw;
-    min-height: 100vh;
-    padding: 3vh 5vw;
+    @apply w-screen min-h-screen py-[3vh] px-[5vw];
   }
 
   .form-content {
-    max-width: 100%;
+    @apply max-w-full;
   }
 }
 
 /* ─── 超小屏幕 ─── */
 @media (max-width: 360px) {
   .form-card {
-    padding: 2vh 4vw;
+    @apply py-[2vh] px-[4vw];
   }
 }
 
 /* ─── 超宽屏幕优化 ─── */
 @media (min-width: 1920px) {
   .brand-card {
-    width: 50vw;
+    @apply w-[50vw];
   }
 
   .brand-content {
-    max-width: 560px;
+    @apply max-w-[560px];
   }
 
   .form-content {
-    max-width: 420px;
+    @apply max-w-[420px];
   }
 }
 
 /* ─── 超高屏幕优化 ─── */
 @media (min-height: 1200px) {
   .brand-content {
-    padding: 5vh 3vw;
+    @apply py-[5vh] px-[3vw];
   }
 
   .form-card {
-    padding: 5vh 3vw;
+    @apply py-[5vh] px-[3vw];
   }
 }
 
 /* ─── 矮屏幕优化 ─── */
 @media (max-height: 700px) {
   .brand-content {
-    padding: 2vh 2vw;
+    @apply py-[2vh] px-[2vw];
   }
 
   .brand-header {
-    margin-bottom: 2vh;
+    @apply mb-[2vh];
   }
 
   .brand-description {
-    margin-bottom: 2vh;
+    @apply mb-[2vh];
   }
 
   .feature-grid {
-    margin-bottom: 2vh;
+    @apply mb-[2vh];
   }
 
   .logo-icon {
-    width: 50px;
-    height: 50px;
-  }
-
-  .logo-emoji {
-    font-size: 28px;
+    @apply w-[52px] h-[52px];
   }
 }
 </style>

@@ -38,6 +38,74 @@ public class QuestionRepository : IQuestionRepository
             .CountAsync(q => q.QuestionBankId == questionBankId, cancellationToken);
     }
 
+    public async Task<Dictionary<int, int>> CountByQuestionBankIdsAsync(List<int> bankIds, CancellationToken cancellationToken = default)
+    {
+        if (bankIds == null || bankIds.Count == 0)
+        {
+            return new Dictionary<int, int>();
+        }
+
+        return await _context.Questions
+            .Where(q => bankIds.Contains(q.QuestionBankId))
+            .GroupBy(q => q.QuestionBankId)
+            .Select(g => new { BankId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.BankId, g => g.Count, cancellationToken);
+    }
+
+    public async Task<List<Question>> GetPagedFilteredAsync(
+        int questionBankId,
+        int pageSize,
+        int? lastId,
+        string? difficulty,
+        string? questionType,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Questions
+            .Where(q => q.QuestionBankId == questionBankId)
+            .OrderByDescending(q => q.Id)
+            .Take(pageSize);
+
+        if (lastId.HasValue)
+        {
+            query = query.Where(q => q.Id < lastId.Value);
+        }
+
+        // 将过滤条件下推到数据库
+        if (!string.IsNullOrEmpty(difficulty))
+        {
+            query = query.Where(q => q.Difficulty == difficulty);
+        }
+
+        if (!string.IsNullOrEmpty(questionType))
+        {
+            query = query.Where(q => q.QuestionType == questionType);
+        }
+
+        return await query.ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountFilteredAsync(
+        int questionBankId,
+        string? difficulty,
+        string? questionType,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Questions
+            .Where(q => q.QuestionBankId == questionBankId);
+
+        if (!string.IsNullOrEmpty(difficulty))
+        {
+            query = query.Where(q => q.Difficulty == difficulty);
+        }
+
+        if (!string.IsNullOrEmpty(questionType))
+        {
+            query = query.Where(q => q.QuestionType == questionType);
+        }
+
+        return await query.CountAsync(cancellationToken);
+    }
+
     public async Task<List<Question>> GetPagedAsync(int questionBankId, int pageSize, int? lastId, CancellationToken cancellationToken = default)
     {
         var query = _context.Questions
