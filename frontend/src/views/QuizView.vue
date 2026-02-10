@@ -35,7 +35,7 @@ let timer: number | null = null
 // Computed
 const currentQuestion = computed(() => {
   const qid = quizStore.currentQuestionId
-  if (qid === null) return null
+  if (qid === null || qid === undefined) return null
   return questionMap.value.get(qid) || null
 })
 
@@ -104,7 +104,7 @@ async function initializeQuiz() {
 async function startNewQuiz() {
   try {
     // 调用 startQuiz API
-    const response = await quizStore.startQuiz(bankId.value, 'sequential')
+    await quizStore.startQuiz(bankId.value, 'sequential')
 
     // 获取题目详情
     await loadQuestionsDetails(quizStore.questionIds)
@@ -120,7 +120,7 @@ async function loadExistingQuiz() {
     const attemptId = parseInt(sessionId.value)
 
     // 加载答题详情
-    const details = await quizStore.fetchQuizDetails(sessionId.value)
+    const details = await quizStore.fetchQuizDetails(attemptId)
 
     // 从详情中提取题目ID
     const questionIds = details.map((d: any) => d.questionId)
@@ -153,7 +153,7 @@ async function loadExistingQuiz() {
 async function loadQuestionsDetails(questionIds: number[]) {
   try {
     // 批量获取题目详情
-    const questionPromises = questionIds.map(id => getQuestionDetail(id.toString()))
+    const questionPromises = questionIds.map(id => getQuestionDetail(id))
     const questionDetails = await Promise.all(questionPromises)
 
     // 转换为 QuizQuestion 格式
@@ -254,7 +254,7 @@ const goToPrevious = () => {
 const handleSubmit = async () => {
   try {
     loading.value = true
-    const result = await quizStore.completeQuiz()
+    await quizStore.completeQuiz()
     showResult.value = true
     ElMessage.success('交卷成功！')
   } catch (error: any) {

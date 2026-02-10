@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as quizApi from '@/api/quiz'
-import { extractErrorMessage } from '@/utils/errorHandler'
 
 export interface QuizQuestion {
   id: number
@@ -22,27 +21,21 @@ export interface QuizAnswer {
 
 export interface QuizResult {
   id: number
+  userId: number
   questionBankId: number
-  questionBankName: string
-  startedAt: string
-  completedAt: string
   score: number
   totalQuestions: number
   correctCount: number
-  durationSeconds: number
+  completedAt: string
+  details: QuizDetail[]
 }
 
 export interface QuizDetail {
-  id: number
   questionId: number
-  questionText: string
-  questionType: string
-  options: string | null
-  userAnswer: string | null
-  correctAnswer: string
-  isCorrect: boolean | null
-  timeSpent: number | null
-  explanation: string | null
+  userAnswer: string | string[]
+  correctAnswer: string | string[]
+  isCorrect: boolean
+  timeSpent: number
 }
 
 export interface QuizStatistics {
@@ -54,12 +47,52 @@ export interface QuizStatistics {
   overallAccuracy: number | null
 }
 
+/**
+ * 比较多选题答案（全对才得分）
+ * @param userAnswer 用户答案（字符串或数组）
+ * @param correctAnswer 正确答案（字符串或数组）
+ * @returns 是否正确
+ */
+export function compareMultipleChoiceAnswers(
+  userAnswer: string | string[],
+  correctAnswer: string | string[]
+): boolean {
+  // 将答案统一转换为数组
+  const userArray = typeof userAnswer === 'string'
+    ? userAnswer.split(',').map(a => a.trim())
+    : userAnswer
+
+  const correctArray = typeof correctAnswer === 'string'
+    ? correctAnswer.split(',').map(a => a.trim())
+    : correctAnswer
+
+  // 数量必须相同
+  if (userArray.length !== correctArray.length) {
+    return false
+  }
+
+  // 排序后比较
+  const sortedUser = [...userArray].sort()
+  const sortedCorrect = [...correctArray].sort()
+
+  // 每个答案都必须匹配
+  return sortedUser.every((answer, index) => answer === sortedCorrect[index])
+}
+
+/**
+ * 判断题目是否为多选题
+ */
+export function isMultipleChoiceQuestion(type: string): boolean {
+  return type === 'multiple' || type === 'MultipleChoice' || type === 'multiple-choice'
+}
+
 export const useQuizStore = defineStore('quiz', () => {
   // State
   const currentAttemptId = ref<number | null>(null)
   const questionIds = ref<number[]>([])
   const currentQuestionIndex = ref(0)
-  const answers = ref<Record<number, string>>({})
+  // 支持字符串或字符串数组（多选题）
+  const answers = ref<Record<number, string | string[]>>({})
   const timeSpents = ref<Record<number, number>>({})
   const startedAt = ref<Date | null>(null)
   const loading = ref(false)
@@ -94,13 +127,14 @@ export const useQuizStore = defineStore('quiz', () => {
     error.value = null
     try {
       const response = await quizApi.startQuiz({ questionBankId, mode })
-      currentAttemptId.value = response.attemptId
-      questionIds.value = response.questionIds
+      currentAttemptId.value = response.data.attemptId
+      // 注意：API响应中无questionIds，需要后续获取
+      questionIds.value = []
       currentQuestionIndex.value = 0
       answers.value = {}
       timeSpents.value = {}
       startedAt.value = new Date()
-      return response
+      return response.data
     } catch (err: any) {
       error.value = err.response?.data?.message || '开始答题失败'
       throw error.value
@@ -109,7 +143,7 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  async function submitAnswer(questionId: number, userAnswer: string, timeSpent?: number) {
+  async function submitAnswer(questionId: number, userAnswer: string | string[], timeSpent?: number) {
     if (!currentAttemptId.value) {
       throw new Error('答题未开始')
     }
@@ -117,14 +151,19 @@ export const useQuizStore = defineStore('quiz', () => {
     loading.value = true
     error.value = null
     try {
+      // 将数组答案转换为字符串（用于 API 传输）
+      const answerString = Array.isArray(userAnswer)
+        ? JSON.stringify(userAnswer)
+        : userAnswer
+
       await quizApi.submitAnswer({
         attemptId: currentAttemptId.value,
         questionId,
-        userAnswer,
+        userAnswer: answerString,
         timeSpent
       })
 
-      // 本地保存答案
+      // 本地保存答案（保持原格式）
       answers.value[questionId] = userAnswer
       if (timeSpent) {
         timeSpents.value[questionId] = timeSpent
@@ -150,8 +189,8 @@ export const useQuizStore = defineStore('quiz', () => {
       const response = await quizApi.completeQuiz({
         attemptId: currentAttemptId.value
       })
-      result.value = response
-      return response
+      result.value = response.data
+      return response.data
     } catch (err: any) {
       error.value = err.response?.data?.message || '完成答题失败'
       throw error.value
@@ -165,8 +204,8 @@ export const useQuizStore = defineStore('quiz', () => {
     error.value = null
     try {
       const response = await quizApi.getQuizResult(attemptId)
-      result.value = response
-      return response
+      result.value = response.data
+      return response.data
     } catch (err: any) {
       error.value = err.response?.data?.message || '获取答题结果失败'
       throw error.value
@@ -180,8 +219,8 @@ export const useQuizStore = defineStore('quiz', () => {
     error.value = null
     try {
       const response = await quizApi.getQuizDetails(attemptId)
-      details.value = response
-      return response
+      details.value = response.data
+      return response.data
     } catch (err: any) {
       error.value = err.response?.data?.message || '获取答题详情失败'
       throw error.value

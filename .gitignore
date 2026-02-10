@@ -191,3 +191,4 @@ NOTES.md
 keys/
 *.key
 *.xml
+"backend/AnswerMe.API/answerme.db*" 

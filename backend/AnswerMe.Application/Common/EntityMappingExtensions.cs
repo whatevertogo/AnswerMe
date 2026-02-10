@@ -45,13 +45,14 @@ public static class EntityMappingExtensions
     /// </summary>
     public static QuestionDto ToDto(this Question entity)
     {
-        return new QuestionDto
+        var dto = new QuestionDto
         {
             Id = entity.Id,
             QuestionBankId = entity.QuestionBankId,
             QuestionBankName = entity.QuestionBank?.Name ?? string.Empty,
             QuestionText = entity.QuestionText,
-            QuestionType = entity.QuestionType,
+            QuestionTypeEnum = entity.QuestionTypeEnum,
+            Data = entity.Data,
             Options = entity.Options,
             CorrectAnswer = entity.CorrectAnswer,
             Explanation = entity.Explanation,
@@ -60,6 +61,9 @@ public static class EntityMappingExtensions
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
+
+        dto.PopulateLegacyFieldsFromData();
+        return dto;
     }
 
     /// <summary>

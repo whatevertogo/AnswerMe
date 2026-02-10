@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Question {
   id: number
   type: 'single' | 'multiple' | 'boolean' | 'fill' | 'essay'
@@ -16,6 +18,14 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:answer': [answer: string | string[]]
 }>()
+
+// 计算已选答案数量
+const selectedCount = computed(() => {
+  if (Array.isArray(props.answer)) {
+    return props.answer.length
+  }
+  return props.answer ? 1 : 0
+})
 
 const handleSingleSelect = (option: string) => {
   emit('update:answer', option)
@@ -64,20 +74,26 @@ const getOptionLabel = (index: number) => {
     </el-radio-group>
 
     <!-- 多选题 -->
-    <div v-if="question.type === 'multiple'" class="options-list">
-      <div
-        v-for="(option, index) in question.options"
-        :key="index"
-        :class="['option-item', { 'is-selected': (answer as string[])?.includes(option) }]"
-      >
-        <el-checkbox
-          :model-value="(answer as string[])?.includes(option)"
-          @update:model-value="(val: any) => handleMultipleSelect(option, val as boolean)"
-          :disabled="disabled"
+    <div v-if="question.type === 'multiple'" class="multiple-choice-container">
+      <div class="selection-info">
+        <span class="selection-hint">请选择所有正确答案</span>
+        <span class="selection-count">已选: {{ selectedCount }} 项</span>
+      </div>
+      <div class="options-list">
+        <div
+          v-for="(option, index) in question.options"
+          :key="index"
+          :class="['option-item', { 'is-selected': (answer as string[])?.includes(option) }]"
         >
-          <span class="option-label">{{ getOptionLabel(index) }}.</span>
-          <span class="option-text">{{ option }}</span>
-        </el-checkbox>
+          <el-checkbox
+            :model-value="(answer as string[])?.includes(option)"
+            @update:model-value="(val: any) => handleMultipleSelect(option, val as boolean)"
+            :disabled="disabled"
+          >
+            <span class="option-label">{{ getOptionLabel(index) }}.</span>
+            <span class="option-text">{{ option }}</span>
+          </el-checkbox>
+        </div>
       </div>
     </div>
 
@@ -166,5 +182,39 @@ const getOptionLabel = (index: number) => {
 .essay-input :deep(.el-textarea__inner) {
   font-size: 0.875rem;
   line-height: 1.625;
+}
+
+.multiple-choice-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.selection-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: #f9fafb;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.dark .selection-info {
+  background: #1f2937;
+}
+
+.selection-hint {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.dark .selection-hint {
+  color: #9ca3af;
+}
+
+.selection-count {
+  color: #3b82f6;
+  font-weight: 600;
 }
 </style>

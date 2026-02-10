@@ -6,7 +6,8 @@ import { Plus, View, Edit, Delete, Search, Refresh, ArrowLeft } from '@element-p
 import { useQuestionStore } from '@/stores/question'
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionForm from '@/components/QuestionForm.vue'
-import { QuestionType, Difficulty, type Question } from '@/stores/question'
+import type { Question } from '@/stores/question'
+import { QuestionType, getQuestionCorrectAnswers, getQuestionOptions } from '@/types'
 
 const route = useRoute()
 const questionStore = useQuestionStore()
@@ -29,7 +30,7 @@ const currentBankId = computed(() => route.params.bankId as string || route.quer
 onMounted(async () => {
   if (currentBankId.value) {
     // 先加载题库信息
-    await questionBankStore.fetchQuestionBank(currentBankId.value)
+    await questionBankStore.fetchQuestionBank(Number(currentBankId.value))
   }
   await fetchQuestions()
 })
@@ -40,8 +41,8 @@ const fetchQuestions = async (page = 1) => {
     await questionStore.fetchQuestions({
       page,
       pageSize: 20,
-      questionBankId: currentBankId.value,
-      type: selectedType.value || undefined,
+      questionBankId: Number(currentBankId.value) || undefined,
+      questionTypeEnum: selectedType.value || undefined,
       difficulty: selectedDifficulty.value || undefined,
       search: searchKeyword.value || undefined
     })
@@ -81,8 +82,12 @@ const handleEdit = (question: Question) => {
 
 const handleDelete = async (question: Question) => {
   try {
+    // 兼容新旧数据格式
+    const questionText = (question as any).questionText || (question as any).content || ''
+    const displayText = questionText.substring(0, 50)
+
     await ElMessageBox.confirm(
-      `确定要删除题目"${question.content.substring(0, 50)}..."吗？删除后无法恢复。`,
+      `确定要删除题目"${displayText}..."吗？删除后无法恢复。`,
       '删除确认',
       {
         confirmButtonText: '确定删除',
@@ -127,50 +132,64 @@ const handleBackToBank = () => {
 
 const getQuestionTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
-    [QuestionType.CHOICE]: '单选',
-    [QuestionType.MULTIPLE_CHOICE]: '多选',
-    [QuestionType.TRUE_FALSE]: '判断',
-    [QuestionType.SHORT_ANSWER]: '填空'
+    'SingleChoice': '单选',
+    'MultipleChoice': '多选',
+    'TrueFalse': '判断',
+    'FillBlank': '填空',
+    'ShortAnswer': '简答',
+    'choice': '单选',
+    'multiple-choice': '多选',
+    'true-false': '判断',
+    'short-answer': '填空'
   }
   return labels[type] || '未知'
 }
 
 const getQuestionTypeColor = (type: string) => {
   const colors: Record<string, string> = {
-    [QuestionType.CHOICE]: 'primary',
-    [QuestionType.MULTIPLE_CHOICE]: 'success',
-    [QuestionType.TRUE_FALSE]: 'warning',
-    [QuestionType.SHORT_ANSWER]: 'info'
+    'SingleChoice': 'primary',
+    'MultipleChoice': 'success',
+    'TrueFalse': 'warning',
+    'FillBlank': 'info',
+    'ShortAnswer': 'info',
+    'choice': 'primary',
+    'multiple-choice': 'success',
+    'true-false': 'warning',
+    'short-answer': 'info'
   }
   return colors[type] || 'info'
 }
 
 const getDifficultyColor = (difficulty: string) => {
   switch (difficulty) {
-    case Difficulty.EASY: return 'success'
-    case Difficulty.MEDIUM: return 'warning'
-    case Difficulty.HARD: return 'danger'
+    case 'easy': return 'success'
+    case 'medium': return 'warning'
+    case 'hard': return 'danger'
     default: return 'info'
   }
 }
 
 const getDifficultyLabel = (difficulty: string) => {
   switch (difficulty) {
-    case Difficulty.EASY: return '简单'
-    case Difficulty.MEDIUM: return '中等'
-    case Difficulty.HARD: return '困难'
+    case 'easy': return '简单'
+    case 'medium': return '中等'
+    case 'hard': return '困难'
     default: return '未知'
   }
 }
 
 const formatCorrectAnswer = (question: Question) => {
-  if (question.type === QuestionType.TRUE_FALSE) {
-    return question.correctAnswer === 'true' ? '正确' : '错误'
+  const answer = getQuestionCorrectAnswers(question as any)
+
+  if (answer === undefined || answer === null || answer === '') return '-'
+
+  if (typeof answer === 'boolean') {
+    return answer ? '正确' : '错误'
   }
-  if (question.type === QuestionType.MULTIPLE_CHOICE) {
-    return question.correctAnswer.split('').join(', ')
+  if (Array.isArray(answer)) {
+    return answer.join(', ')
   }
-  return question.correctAnswer
+  return answer
 }
 </script>
 
@@ -217,10 +236,11 @@ const formatCorrectAnswer = (question: Question) => {
         clearable
         class="filter-select"
       >
-        <el-option label="单选题" :value="QuestionType.CHOICE" />
-        <el-option label="多选题" :value="QuestionType.MULTIPLE_CHOICE" />
-        <el-option label="判断题" :value="QuestionType.TRUE_FALSE" />
-        <el-option label="填空题" :value="QuestionType.SHORT_ANSWER" />
+        <el-option label="单选题" :value="QuestionType.SingleChoice" />
+        <el-option label="多选题" :value="QuestionType.MultipleChoice" />
+        <el-option label="判断题" :value="QuestionType.TrueFalse" />
+        <el-option label="填空题" :value="QuestionType.FillBlank" />
+        <el-option label="简答题" :value="QuestionType.ShortAnswer" />
       </el-select>
       <el-select
         v-model="selectedDifficulty"
@@ -228,9 +248,9 @@ const formatCorrectAnswer = (question: Question) => {
         clearable
         class="filter-select"
       >
-        <el-option label="简单" :value="Difficulty.EASY" />
-        <el-option label="中等" :value="Difficulty.MEDIUM" />
-        <el-option label="困难" :value="Difficulty.HARD" />
+        <el-option label="简单" value="easy" />
+        <el-option label="中等" value="medium" />
+        <el-option label="困难" value="hard" />
       </el-select>
       <el-button :icon="Refresh" @click="fetchQuestions(1)">刷新</el-button>
     </div>
@@ -243,16 +263,16 @@ const formatCorrectAnswer = (question: Question) => {
         style="width: 100%"
         stripe
       >
-        <el-table-column prop="content" label="题目内容" min-width="300">
+        <el-table-column prop="questionText" label="题目内容" min-width="300">
           <template #default="{ row }">
             <div class="question-content">
-              <span class="question-text" :title="row.content">{{ row.content }}</span>
+              <span class="question-text" :title="(row as any).content || (row as any).questionText">{{ (row as any).content || (row as any).questionText }}</span>
               <div class="question-meta">
                 <el-tag
-                  :type="getQuestionTypeColor(row.type)"
+                  :type="getQuestionTypeColor((row as any).questionType || (row as any).type)"
                   size="small"
                 >
-                  {{ getQuestionTypeLabel(row.type) }}
+                  {{ getQuestionTypeLabel((row as any).questionType || (row as any).type) }}
                 </el-tag>
                 <el-tag
                   v-if="row.difficulty"
@@ -269,12 +289,12 @@ const formatCorrectAnswer = (question: Question) => {
         <el-table-column label="选项/答案" min-width="250">
           <template #default="{ row }">
             <div class="answer-cell">
-              <div v-if="row.type === QuestionType.CHOICE || row.type === QuestionType.MULTIPLE_CHOICE" class="options-preview">
-                <div v-for="(opt, idx) in (row.options?.slice(0, 2) || [])" :key="idx" class="option-line">
-                  {{ String.fromCharCode(65 + idx) }}. {{ opt }}
+              <div v-if="(row as any).questionType === QuestionType.SingleChoice || (row as any).questionType === QuestionType.MultipleChoice || (row as any).type === 'choice' || (row as any).type === 'multiple-choice'" class="options-preview">
+                <div v-for="(opt, idx) in getQuestionOptions(row as any).slice(0, 2)" :key="idx" class="option-line">
+                  {{ String.fromCharCode(65 + (idx as number)) }}. {{ opt }}
                 </div>
-                <span v-if="row.options && row.options.length > 2" class="more-hint">
-                  +{{ row.options.length - 2 }} 个选项
+                <span v-if="(row as any).options && (row as any).options.length > 2" class="more-hint">
+                  +{{ (row as any).options.length - 2 }} 个选项
                 </span>
               </div>
               <div v-else class="answer-preview">
@@ -446,6 +466,7 @@ const formatCorrectAnswer = (question: Question) => {
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   line-height: 1.5;

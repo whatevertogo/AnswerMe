@@ -40,7 +40,7 @@ instance.interceptors.request.use(
 // 响应拦截器
 instance.interceptors.response.use(
   (response: AxiosResponse) => {
-    return response.data
+    return response
   },
   error => {
     const { response } = error

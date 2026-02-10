@@ -12,28 +12,28 @@ import type {
  * 获取题库列表（游标分页）
  */
 export function getQuestionBanks(params: QuestionBankQueryParams): Promise<QuestionBankListResponse> {
-  return request.get<QuestionBankListResponse>('/QuestionBanks', { params })
+  return request.get<QuestionBankListResponse>('/questionbanks', { params }).then(response => response.data)
 }
 
 /**
  * 获取题库详情
  */
 export function getQuestionBankDetail(id: number): Promise<QuestionBank & { questions: Question[] }> {
-  return request.get<QuestionBank & { questions: Question[] }>(`/QuestionBanks/${id}`)
+  return request.get<QuestionBank & { questions: Question[] }>(`/questionbanks/${id}`).then(response => response.data)
 }
 
 /**
  * 搜索题库
  */
 export function searchQuestionBanks(searchTerm: string): Promise<QuestionBank[]> {
-  return request.get<QuestionBank[]>('/QuestionBanks/search', { params: { searchTerm } })
+  return request.get<QuestionBank[]>('/questionbanks/search', { params: { searchTerm } }).then(response => response.data)
 }
 
 /**
  * 创建题库
  */
 export function createQuestionBank(data: CreateQuestionBankDto): Promise<QuestionBank> {
-  return request.post<QuestionBank>('/QuestionBanks', data)
+  return request.post<QuestionBank>('/questionbanks', data).then(response => response.data)
 }
 
 /**
@@ -43,21 +43,21 @@ export function updateQuestionBank(
   id: number,
   data: UpdateQuestionBankDto
 ): Promise<QuestionBank> {
-  return request.put<QuestionBank>(`/QuestionBanks/${id}`, data)
+  return request.put<QuestionBank>(`/questionbanks/${id}`, data).then(response => response.data)
 }
 
 /**
  * 删除题库
  */
 export function deleteQuestionBank(id: number): Promise<{ message: string }> {
-  return request.delete<{ message: string }>(`/QuestionBanks/${id}`)
+  return request.delete<{ message: string }>(`/questionbanks/${id}`).then(response => response.data)
 }
 
 /**
  * 导出题库（返回文件URL）
  */
 export function exportQuestionBank(id: number): string {
-  return `/api/QuestionBanks/${id}/export`
+  return `/api/questionbanks/${id}/export`
 }
 
 /**

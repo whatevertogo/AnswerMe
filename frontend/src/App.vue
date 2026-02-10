@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElConfigProvider } from 'element-plus'
-// @ts-ignore - Element Plus locale types not available
-import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import AppLayout from './layouts/AppLayout.vue'
 import AuthLayout from './layouts/AuthLayout.vue'
 
 const route = useRoute()
+const zhCn = ref<any>(null)
 
 const layout = computed(() => {
   const layoutName = route.meta?.layout || 'app'
   return layoutName === 'auth' ? AuthLayout : AppLayout
+})
+
+onMounted(async () => {
+  // 动态导入Element Plus中文 locale，避免类型问题
+  const module = await import('element-plus/dist/locale/zh-cn.mjs')
+  zhCn.value = module.default
 })
 </script>
 

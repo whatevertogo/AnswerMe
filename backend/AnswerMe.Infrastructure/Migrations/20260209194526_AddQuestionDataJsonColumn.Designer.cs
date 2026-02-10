@@ -3,6 +3,7 @@ using System;
 using AnswerMe.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AnswerMe.Infrastructure.Migrations
 {
     [DbContext(typeof(AnswerMeDbContext))]
-    partial class AnswerMeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260209194526_AddQuestionDataJsonColumn")]
+    partial class AddQuestionDataJsonColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.2");

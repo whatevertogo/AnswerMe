@@ -79,7 +79,8 @@ public class OpenAIProvider : IAIProvider
                 Content = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json")
             };
 
-            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+            // 使用重试机制发送请求（支持指数退避）
+            var response = await HttpRetryHelper.SendWithRetryAsync(_httpClient, httpRequest, _logger, cancellationToken);
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)

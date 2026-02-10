@@ -3,9 +3,12 @@ using AnswerMe.Application.DTOs;
 using AnswerMe.Application.AI;
 using AnswerMe.Application.Interfaces;
 using AnswerMe.Domain.Entities;
+using AnswerMe.Domain.Enums;
+using AnswerMe.Domain.Models;
 using AnswerMe.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace AnswerMe.Application.Services;
 
@@ -115,7 +118,7 @@ public class AIGenerationService : IAIGenerationService
             Subject = dto.Subject,
             Count = dto.Count,
             Difficulty = dto.Difficulty,
-            QuestionTypes = dto.QuestionTypes,
+            QuestionTypes = dto.QuestionTypes,  // List<QuestionType> 直接使用
             Language = dto.Language,
             CustomPrompt = dto.CustomPrompt
         };
@@ -161,33 +164,44 @@ public class AIGenerationService : IAIGenerationService
         {
             try
             {
+                var resolvedType = ResolveQuestionType(question.QuestionTypeEnum, question.Data, question.QuestionType);
+                var data = NormalizeQuestionData(
+                    question.Data,
+                    resolvedType,
+                    question.Options,
+                    question.CorrectAnswer,
+                    question.Explanation,
+                    question.Difficulty);
+
                 var questionEntity = new Question
                 {
-                    QuestionType = question.QuestionType,
+                    QuestionTypeEnum = resolvedType,
                     QuestionText = question.QuestionText,
-                    Options = JsonSerializer.Serialize(question.Options),
-                    CorrectAnswer = question.CorrectAnswer,
                     Explanation = question.Explanation,
                     Difficulty = question.Difficulty,
                     QuestionBankId = questionBankId,
                     CreatedAt = DateTime.UtcNow
                 };
 
+                ApplyQuestionData(questionEntity, data);
                 await _questionRepository.AddAsync(questionEntity, cancellationToken);
 
                 // 添加到已保存列表
-                savedQuestions.Add(new GeneratedQuestionDto
+                var dto = new GeneratedQuestionDto
                 {
                     Id = questionEntity.Id,
-                    QuestionType = question.QuestionType,
-                    QuestionText = question.QuestionText,
+                    QuestionTypeEnum = questionEntity.QuestionTypeEnum,
+                    QuestionText = questionEntity.QuestionText,
+                    Data = questionEntity.Data,
                     Options = question.Options,
                     CorrectAnswer = question.CorrectAnswer,
                     Explanation = question.Explanation,
                     Difficulty = question.Difficulty,
                     QuestionBankId = questionBankId,
                     CreatedAt = questionEntity.CreatedAt
-                });
+                };
+                dto.PopulateLegacyFieldsFromData();
+                savedQuestions.Add(dto);
             }
             catch (Exception ex)
             {
@@ -456,11 +470,12 @@ public class AIGenerationService : IAIGenerationService
             }
         }
 
-        return new GeneratedQuestionDto
+        var dto = new GeneratedQuestionDto
         {
             Id = question.Id,
-            QuestionType = question.QuestionType,
+            QuestionTypeEnum = question.QuestionTypeEnum,
             QuestionText = question.QuestionText,
+            Data = question.Data,
             Options = options,
             CorrectAnswer = question.CorrectAnswer,
             Explanation = question.Explanation,
@@ -468,5 +483,208 @@ public class AIGenerationService : IAIGenerationService
             QuestionBankId = question.QuestionBankId,
             CreatedAt = question.CreatedAt
         };
+        dto.PopulateLegacyFieldsFromData();
+        return dto;
+    }
+
+    private static QuestionType? ResolveQuestionType(QuestionType? requestedType, QuestionData? data, string? legacyType)
+    {
+        if (requestedType.HasValue)
+        {
+            return requestedType;
+        }
+
+        if (data is ChoiceQuestionData choiceData)
+        {
+            return choiceData.CorrectAnswers.Count > 1
+                ? QuestionType.MultipleChoice
+                : QuestionType.SingleChoice;
+        }
+
+        if (!string.IsNullOrWhiteSpace(legacyType))
+        {
+            return QuestionTypeExtensions.ParseFromString(legacyType);
+        }
+
+        return data switch
+        {
+            BooleanQuestionData => QuestionType.TrueFalse,
+            FillBlankQuestionData => QuestionType.FillBlank,
+            ShortAnswerQuestionData => QuestionType.ShortAnswer,
+            _ => null
+        };
+    }
+
+    private static QuestionData? NormalizeQuestionData(
+        QuestionData? data,
+        QuestionType? questionType,
+        List<string>? legacyOptions,
+        string? legacyCorrectAnswer,
+        string? explanation,
+        string? difficulty)
+    {
+        if (data == null)
+        {
+            data = BuildDataFromLegacy(questionType, legacyOptions, legacyCorrectAnswer, explanation, difficulty);
+        }
+
+        if (data == null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(explanation) && string.IsNullOrWhiteSpace(data.Explanation))
+        {
+            data.Explanation = explanation;
+        }
+
+        if (!string.IsNullOrWhiteSpace(difficulty))
+        {
+            data.Difficulty = difficulty;
+        }
+
+        return data;
+    }
+
+    private static void ApplyQuestionData(Question question, QuestionData? data)
+    {
+        if (data == null)
+        {
+            return;
+        }
+
+        question.Data = data;
+
+        if (!string.IsNullOrWhiteSpace(data.Explanation))
+        {
+            question.Explanation = data.Explanation;
+        }
+
+        if (!string.IsNullOrWhiteSpace(data.Difficulty))
+        {
+            question.Difficulty = data.Difficulty;
+        }
+
+        switch (data)
+        {
+            case ChoiceQuestionData choiceData:
+                question.Options = JsonSerializer.Serialize(choiceData.Options);
+                question.CorrectAnswer = string.Join(",", choiceData.CorrectAnswers);
+                break;
+            case BooleanQuestionData booleanData:
+                question.Options = null;
+                question.CorrectAnswer = booleanData.CorrectAnswer ? "true" : "false";
+                break;
+            case FillBlankQuestionData fillBlankData:
+                question.Options = null;
+                question.CorrectAnswer = string.Join(",", fillBlankData.AcceptableAnswers);
+                break;
+            case ShortAnswerQuestionData shortAnswerData:
+                question.Options = null;
+                question.CorrectAnswer = shortAnswerData.ReferenceAnswer;
+                break;
+        }
+    }
+
+    private static QuestionData? BuildDataFromLegacy(
+        QuestionType? questionType,
+        List<string>? legacyOptions,
+        string? legacyCorrectAnswer,
+        string? explanation,
+        string? difficulty)
+    {
+        if (questionType == null)
+        {
+            return null;
+        }
+
+        switch (questionType)
+        {
+            case QuestionType.SingleChoice:
+            case QuestionType.MultipleChoice:
+            {
+                var options = legacyOptions ?? new List<string>();
+                var correctAnswers = ParseLegacyAnswers(legacyCorrectAnswer);
+                if (options.Count == 0 && correctAnswers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
+                {
+                    return null;
+                }
+                return new ChoiceQuestionData
+                {
+                    Options = options,
+                    CorrectAnswers = correctAnswers,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            case QuestionType.TrueFalse:
+            {
+                if (!bool.TryParse(legacyCorrectAnswer, out var booleanAnswer))
+                {
+                    return null;
+                }
+                return new BooleanQuestionData
+                {
+                    CorrectAnswer = booleanAnswer,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            case QuestionType.FillBlank:
+            {
+                var answers = ParseLegacyAnswers(legacyCorrectAnswer);
+                if (answers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
+                {
+                    return null;
+                }
+                return new FillBlankQuestionData
+                {
+                    AcceptableAnswers = answers,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            case QuestionType.ShortAnswer:
+            {
+                if (string.IsNullOrWhiteSpace(legacyCorrectAnswer) && string.IsNullOrWhiteSpace(explanation))
+                {
+                    return null;
+                }
+                return new ShortAnswerQuestionData
+                {
+                    ReferenceAnswer = legacyCorrectAnswer ?? string.Empty,
+                    Explanation = explanation,
+                    Difficulty = difficulty ?? "medium"
+                };
+            }
+            default:
+                return null;
+        }
+    }
+
+    private static List<string> ParseLegacyAnswers(string? legacyAnswers)
+    {
+        if (string.IsNullOrWhiteSpace(legacyAnswers))
+        {
+            return new List<string>();
+        }
+
+        var trimmed = legacyAnswers.Trim();
+        if (trimmed.StartsWith("["))
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<List<string>>(legacyAnswers) ?? new List<string>();
+            }
+            catch
+            {
+                return new List<string>();
+            }
+        }
+
+        return trimmed
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToList();
     }
 }

@@ -3,8 +3,17 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Delete, Plus } from '@element-plus/icons-vue'
 import { useQuestionStore } from '@/stores/question'
-import { QuestionType, Difficulty } from '@/types'
 import type { Question, CreateQuestionDto, UpdateQuestionDto } from '@/types'
+import type {
+  QuestionType,
+  Difficulty,
+  QuestionData,
+  ChoiceQuestionData,
+  BooleanQuestionData,
+  FillBlankQuestionData,
+  ShortAnswerQuestionData
+} from '@/types/question'
+import { QuestionType as QuestionTypeEnum } from '@/types/question'
 
 interface Props {
   question?: Question | null
@@ -24,14 +33,25 @@ const questionStore = useQuestionStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 
-const form = ref<CreateQuestionDto>({
-  questionBankId: props.questionBankId || '',
-  content: '',
-  type: QuestionType.CHOICE,
+interface QuestionFormState {
+  questionBankId: number
+  questionText: string
+  questionTypeEnum: QuestionType
+  options?: string[]
+  correctAnswer: string | string[]
+  explanation?: string
+  difficulty: Difficulty
+  tags?: string[]
+}
+
+const form = ref<QuestionFormState>({
+  questionBankId: props.questionBankId ? Number(props.questionBankId) : 0,
+  questionText: '',
+  questionTypeEnum: QuestionTypeEnum.SingleChoice,
   options: ['', '', '', ''],
   correctAnswer: '',
   explanation: '',
-  difficulty: Difficulty.MEDIUM,
+  difficulty: 'medium',
   tags: []
 })
 
@@ -41,26 +61,23 @@ const inputTagRef = ref<HTMLInputElement>()
 
 // 判断是否需要选项
 const needsOptions = computed(() => {
-  return [
-    QuestionType.CHOICE,
-    QuestionType.MULTIPLE_CHOICE
-  ].includes(form.value.type as any)
+  return [QuestionTypeEnum.SingleChoice, QuestionTypeEnum.MultipleChoice].includes(form.value.questionTypeEnum)
 })
 
 // 判断是否为多选题
 const isMultipleChoice = computed(() => {
-  return form.value.type === QuestionType.MULTIPLE_CHOICE
+  return form.value.questionTypeEnum === QuestionTypeEnum.MultipleChoice
 })
 
 const rules: FormRules = {
   questionBankId: [
     { required: true, message: '请选择题库', trigger: 'change' }
   ],
-  content: [
+  questionText: [
     { required: true, message: '请输入题目内容', trigger: 'blur' },
     { min: 5, max: 1000, message: '题目内容长度应在5-1000个字符之间', trigger: 'blur' }
   ],
-  type: [
+  questionTypeEnum: [
     { required: true, message: '请选择题型', trigger: 'change' }
   ],
   options: [
@@ -92,16 +109,17 @@ const rules: FormRules = {
 const dialogTitle = computed(() => (props.mode === 'create' ? '创建题目' : '编辑题目'))
 
 const questionTypeOptions = [
-  { label: '单选题', value: QuestionType.CHOICE },
-  { label: '多选题', value: QuestionType.MULTIPLE_CHOICE },
-  { label: '判断题', value: QuestionType.TRUE_FALSE },
-  { label: '填空题', value: QuestionType.SHORT_ANSWER }
+  { label: '单选题', value: QuestionTypeEnum.SingleChoice },
+  { label: '多选题', value: QuestionTypeEnum.MultipleChoice },
+  { label: '判断题', value: QuestionTypeEnum.TrueFalse },
+  { label: '填空题', value: QuestionTypeEnum.FillBlank },
+  { label: '简答题', value: QuestionTypeEnum.ShortAnswer }
 ]
 
 const difficultyOptions = [
-  { label: '简单', value: Difficulty.EASY },
-  { label: '中等', value: Difficulty.MEDIUM },
-  { label: '困难', value: Difficulty.HARD }
+  { label: '简单', value: 'easy' },
+  { label: '中等', value: 'medium' },
+  { label: '困难', value: 'hard' }
 ]
 
 // 判断题选项
@@ -114,56 +132,93 @@ watch(
   () => props.visible,
   val => {
     if (val && props.question) {
-      // 编辑模式
+      // 编辑模式 - 需要适配新旧数据格式
       form.value = {
-        questionBankId: props.questionBankId || '',
-        content: props.question.content,
-        type: props.question.type,
-        options: props.question.options || ['', '', '', ''],
-        correctAnswer: props.question.correctAnswer,
-        explanation: props.question.explanation || '',
-        difficulty: props.question.difficulty,
-        tags: props.question.tags || []
+        questionBankId: props.questionBankId ? Number(props.questionBankId) : 0,
+        // 兼容新旧数据格式
+        questionText: (props.question as any).questionText || (props.question as any).content || '',
+        questionTypeEnum: normalizeQuestionType((props.question as any).questionType || (props.question as any).type),
+        options: (props.question as any).data?.options || (props.question as any).options || ['', '', '', ''],
+        correctAnswer: extractCorrectAnswer(props.question),
+        explanation: props.question.explanation || (props.question as any).data?.explanation || '',
+        difficulty: (props.question as any).data?.difficulty || props.question.difficulty || 'medium',
+        tags: (props.question as any).tags || []
       }
     } else if (val && props.mode === 'create') {
       // 创建模式
       form.value = {
-        questionBankId: props.questionBankId || '',
-        content: '',
-        type: QuestionType.CHOICE,
+        questionBankId: props.questionBankId ? Number(props.questionBankId) : 0,
+        questionText: '',
+        questionTypeEnum: QuestionTypeEnum.SingleChoice,
         options: ['', '', '', ''],
         correctAnswer: '',
         explanation: '',
-        difficulty: Difficulty.MEDIUM,
+        difficulty: 'medium',
         tags: []
       }
     }
   }
 )
 
+// 辅助函数：从题目中提取正确答案
+function normalizeQuestionType(type: string | undefined): QuestionType {
+  if (!type) return QuestionTypeEnum.SingleChoice
+  const map: Record<string, QuestionType> = {
+    choice: QuestionTypeEnum.SingleChoice,
+    single: QuestionTypeEnum.SingleChoice,
+    'multiple-choice': QuestionTypeEnum.MultipleChoice,
+    multiple: QuestionTypeEnum.MultipleChoice,
+    'true-false': QuestionTypeEnum.TrueFalse,
+    boolean: QuestionTypeEnum.TrueFalse,
+    fill: QuestionTypeEnum.FillBlank,
+    'fill-blank': QuestionTypeEnum.FillBlank,
+    'short-answer': QuestionTypeEnum.ShortAnswer
+  }
+  return map[type] || (type as QuestionType)
+}
+
+function extractCorrectAnswer(question: Question): string {
+  const data = (question as any).data as QuestionData | undefined
+  if (data) {
+    if ((data as ChoiceQuestionData).correctAnswers) {
+      return (data as ChoiceQuestionData).correctAnswers.join(',')
+    }
+    if ((data as BooleanQuestionData).correctAnswer !== undefined) {
+      return (data as BooleanQuestionData).correctAnswer ? 'true' : 'false'
+    }
+    if ((data as FillBlankQuestionData).acceptableAnswers) {
+      return (data as FillBlankQuestionData).acceptableAnswers.join(',')
+    }
+    if ((data as ShortAnswerQuestionData).referenceAnswer) {
+      return (data as ShortAnswerQuestionData).referenceAnswer
+    }
+  }
+  return question.correctAnswer || ''
+}
+
 // 监听题型变化,自动调整答案格式
 watch(
-  () => form.value.type,
+  () => form.value.questionTypeEnum,
   (newType, oldType) => {
     if (newType === oldType) return
 
     // 判断题
-    if (newType === QuestionType.TRUE_FALSE) {
+    if (newType === QuestionTypeEnum.TrueFalse) {
       form.value.correctAnswer = 'true'
       form.value.options = undefined
     }
     // 选择题
-    else if (newType === QuestionType.CHOICE) {
+    else if (newType === QuestionTypeEnum.SingleChoice) {
       form.value.correctAnswer = ''
       form.value.options = ['', '', '', '']
     }
     // 多选题
-    else if (newType === QuestionType.MULTIPLE_CHOICE) {
+    else if (newType === QuestionTypeEnum.MultipleChoice) {
       form.value.correctAnswer = ''
       form.value.options = ['', '', '', '']
     }
     // 填空题
-    else if (newType === QuestionType.SHORT_ANSWER) {
+    else if (newType === QuestionTypeEnum.FillBlank || newType === QuestionTypeEnum.ShortAnswer) {
       form.value.correctAnswer = ''
       form.value.options = undefined
     }
@@ -238,19 +293,27 @@ const handleSubmit = async () => {
 
     loading.value = true
     try {
+      const data = buildQuestionData()
+
       if (props.mode === 'create') {
-        const result = await questionStore.createQuestion(form.value)
+        const createData: CreateQuestionDto = {
+          questionBankId: form.value.questionBankId,
+          questionText: form.value.questionText,
+          questionTypeEnum: form.value.questionTypeEnum,
+          data,
+          explanation: form.value.explanation,
+          difficulty: form.value.difficulty
+        }
+        const result = await questionStore.createQuestion(createData)
         ElMessage.success('创建题目成功')
         emit('success', result)
       } else if (props.question) {
         const updateData: UpdateQuestionDto = {
-          content: form.value.content,
-          type: form.value.type,
-          options: form.value.options,
-          correctAnswer: form.value.correctAnswer,
+          questionText: form.value.questionText,
+          questionTypeEnum: form.value.questionTypeEnum,
+          data,
           explanation: form.value.explanation,
-          difficulty: form.value.difficulty,
-          tags: form.value.tags
+          difficulty: form.value.difficulty
         }
         const result = await questionStore.updateQuestion(props.question.id, updateData)
         ElMessage.success('更新题目成功')
@@ -266,6 +329,63 @@ const handleSubmit = async () => {
 
 const handleClose = () => {
   emit('close')
+}
+
+function buildQuestionData(): QuestionData | undefined {
+  const explanation = form.value.explanation || undefined
+  const difficulty = form.value.difficulty
+
+  if (form.value.questionTypeEnum === QuestionTypeEnum.SingleChoice ||
+      form.value.questionTypeEnum === QuestionTypeEnum.MultipleChoice) {
+    const options = (form.value.options || []).map(opt => opt.trim()).filter(Boolean)
+    const answers = Array.isArray(form.value.correctAnswer)
+      ? form.value.correctAnswer
+      : String(form.value.correctAnswer || '')
+          .split(',')
+          .map(value => value.trim())
+          .filter(Boolean)
+
+    return {
+      type: 'ChoiceQuestionData',
+      options,
+      correctAnswers: answers,
+      explanation,
+      difficulty
+    } as ChoiceQuestionData
+  }
+
+  if (form.value.questionTypeEnum === QuestionTypeEnum.TrueFalse) {
+    return {
+      type: 'BooleanQuestionData',
+      correctAnswer: String(form.value.correctAnswer) === 'true',
+      explanation,
+      difficulty
+    } as BooleanQuestionData
+  }
+
+  if (form.value.questionTypeEnum === QuestionTypeEnum.FillBlank) {
+    const answers = String(form.value.correctAnswer || '')
+      .split(/[,，\n]/)
+      .map(value => value.trim())
+      .filter(Boolean)
+    return {
+      type: 'FillBlankQuestionData',
+      acceptableAnswers: answers,
+      explanation,
+      difficulty
+    } as FillBlankQuestionData
+  }
+
+  if (form.value.questionTypeEnum === QuestionTypeEnum.ShortAnswer) {
+    return {
+      type: 'ShortAnswerQuestionData',
+      referenceAnswer: String(form.value.correctAnswer || ''),
+      explanation,
+      difficulty
+    } as ShortAnswerQuestionData
+  }
+
+  return undefined
 }
 </script>
 
@@ -285,9 +405,9 @@ const handleClose = () => {
       :disabled="loading"
     >
 
-      <el-form-item label="题型" prop="type">
+      <el-form-item label="题型" prop="questionTypeEnum">
         <el-select
-          v-model="form.type"
+          v-model="form.questionTypeEnum"
           placeholder="请选择题型"
           style="width: 100%"
         >
@@ -300,9 +420,9 @@ const handleClose = () => {
         </el-select>
       </el-form-item>
 
-      <el-form-item label="题目内容" prop="content">
+      <el-form-item label="题目内容" prop="questionText">
         <el-input
-          v-model="form.content"
+          v-model="form.questionText"
           type="textarea"
           :rows="3"
           placeholder="请输入题目内容"
@@ -366,7 +486,7 @@ const handleClose = () => {
       </template>
 
       <!-- 判断题答案 -->
-      <el-form-item label="正确答案" prop="correctAnswer" v-else-if="form.type === QuestionType.TRUE_FALSE">
+      <el-form-item label="正确答案" prop="correctAnswer" v-else-if="form.questionTypeEnum === QuestionTypeEnum.TrueFalse">
         <el-radio-group v-model="form.correctAnswer">
           <el-radio
             v-for="option in trueFalseOptions"
@@ -379,7 +499,7 @@ const handleClose = () => {
       </el-form-item>
 
       <!-- 填空题答案 -->
-      <el-form-item label="参考答案" prop="correctAnswer" v-else-if="form.type === QuestionType.SHORT_ANSWER">
+      <el-form-item label="参考答案" prop="correctAnswer" v-else-if="form.questionTypeEnum === QuestionTypeEnum.FillBlank || form.questionTypeEnum === QuestionTypeEnum.ShortAnswer">
         <el-input
           v-model="form.correctAnswer"
           type="textarea"

@@ -19,7 +19,7 @@ const formData = ref<AIGenerateRequest>({
   subject: '',
   count: 10,
   difficulty: 'medium',
-  questionTypes: ['single'],
+  questionTypes: ['SingleChoice'],
   language: 'zh-CN',
   customPrompt: '',
   questionBankId: undefined,
@@ -28,11 +28,11 @@ const formData = ref<AIGenerateRequest>({
 
 // 题型选项
 const questionTypeOptions = [
-  { label: '单选题', value: 'single' },
-  { label: '多选题', value: 'multiple' },
-  { label: '判断题', value: 'boolean' },
-  { label: '填空题', value: 'fill' },
-  { label: '简答题', value: 'essay' }
+  { label: '单选题', value: 'SingleChoice' },
+  { label: '多选题', value: 'MultipleChoice' },
+  { label: '判断题', value: 'TrueFalse' },
+  { label: '填空题', value: 'FillBlank' },
+  { label: '简答题', value: 'ShortAnswer' }
 ]
 
 // 难度选项
@@ -163,7 +163,7 @@ function handleReset() {
     subject: '',
     count: 10,
     difficulty: 'medium',
-    questionTypes: ['single'],
+    questionTypes: ['SingleChoice'],
     language: 'zh-CN',
     customPrompt: '',
     questionBankId: undefined,
@@ -246,11 +246,17 @@ function getDifficultyText(difficulty: string) {
 
 function getQuestionTypeText(type: string) {
   const textMap: Record<string, string> = {
-    single: '单选题',
-    multiple: '多选题',
-    boolean: '判断题',
-    fill: '填空题',
-    essay: '简答题'
+    'SingleChoice': '单选题',
+    'MultipleChoice': '多选题',
+    'TrueFalse': '判断题',
+    'FillBlank': '填空题',
+    'ShortAnswer': '简答题',
+    // 兼容旧格式
+    'single': '单选题',
+    'multiple': '多选题',
+    'boolean': '判断题',
+    'fill': '填空题',
+    'essay': '简答题'
   }
   return textMap[type] || type
 }
