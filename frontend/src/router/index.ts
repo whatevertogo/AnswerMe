@@ -34,6 +34,9 @@ const routes: Array<RouteRecordRaw> = [
   authRoute('/practice', 'Practice', () => import('@/views/PracticeView.vue')),
   authRoute('/ai-config', 'AIConfig', () => import('@/views/AIConfigView.vue')),
   authRoute('/generate', 'Generate', () => import('@/views/GenerateView.vue')),
+  // 新答题路由：使用固定的 'new' 路径
+  authRoute('/quiz/:bankId/new', 'QuizNew', () => import('@/views/QuizView.vue')),
+  // 已有答题会话路由
   authRoute('/quiz/:bankId/:sessionId', 'Quiz', () => import('@/views/QuizView.vue')),
   authRoute('/result/:sessionId', 'Result', () => import('@/views/ResultView.vue'))
 ]

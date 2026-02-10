@@ -150,9 +150,9 @@ export const useQuizStore = defineStore('quiz', () => {
     loading.value = true
     error.value = null
     try {
-      // 将数组答案转换为字符串（用于 API 传输）
+      // 将数组答案转换为逗号分隔字符串（后端期望格式：A,B,C）
       const answerString = Array.isArray(userAnswer)
-        ? JSON.stringify(userAnswer)
+        ? userAnswer.join(',')
         : userAnswer
 
       await quizApi.submitAnswer({

@@ -32,24 +32,31 @@ export interface QuizSubmitParams {
  */
 export interface QuizResult {
   id: number
-  userId: number
   questionBankId: number
+  questionBankName: string
+  startedAt?: string
   score: number
   totalQuestions: number
   correctCount: number
+  durationSeconds?: number
   completedAt: string
-  details: QuizDetail[]
 }
 
 /**
  * 答题详情
  */
 export interface QuizDetail {
+  id: number
+  attemptId: number
   questionId: number
-  userAnswer: string | string[]
-  correctAnswer: string | string[]
-  isCorrect: boolean
-  timeSpent: number
+  questionText: string
+  questionType: string
+  options?: string
+  userAnswer?: string | string[]
+  correctAnswer: string
+  isCorrect?: boolean
+  timeSpent?: number
+  explanation?: string
 }
 
 /**

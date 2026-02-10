@@ -112,18 +112,18 @@ export default instance
 // 响应拦截器已经自动解包 response.data
 export const request = {
   get: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.get<T>(url, config) as Promise<T>
+    return instance.get<T>(url, config).then(res => res.data)
   },
   post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.post<T>(url, data, config) as Promise<T>
+    return instance.post<T>(url, data, config).then(res => res.data)
   },
   put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.put<T>(url, data, config) as Promise<T>
+    return instance.put<T>(url, data, config).then(res => res.data)
   },
   delete: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.delete<T>(url, config) as Promise<T>
+    return instance.delete<T>(url, config).then(res => res.data)
   },
   patch: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
-    return instance.patch<T>(url, data, config) as Promise<T>
+    return instance.patch<T>(url, data, config).then(res => res.data)
   }
 }

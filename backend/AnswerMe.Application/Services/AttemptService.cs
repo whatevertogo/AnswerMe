@@ -275,21 +275,26 @@ public class AttemptService : IAttemptService
     public async Task<AttemptStatisticsDto> GetStatisticsAsync(int userId, CancellationToken cancellationToken = default)
     {
         var attempts = await _attemptRepository.GetByUserIdAsync(userId, cancellationToken);
-        var details = await _attemptDetailRepository.GetByAttemptIdWithQuestionsAsync(
-            attempts.SelectMany(a => a.AttemptDetails).Select(d => d.Id).FirstOrDefault(),
-            cancellationToken);
 
         int totalAttempts = attempts.Count;
         int completedAttempts = attempts.Count(a => a.CompletedAt != null);
         decimal? averageScore = completedAttempts > 0 ?
             (decimal)attempts.Where(a => a.CompletedAt != null).Average(a => a.Score ?? 0) : null;
 
-        // 获取所有答题详情
+        // 获取所有答题详情（优化：一次性获取所有 attemptId 对应的详情）
+        var attemptIds = attempts.Select(a => a.Id).ToList();
         var allDetails = new List<Domain.Entities.AttemptDetail>();
-        foreach (var attempt in attempts)
+
+        // 分批查询，避免一次性加载过多数据
+        const int batchSize = 100;
+        for (int i = 0; i < attemptIds.Count; i += batchSize)
         {
-            var attemptDetails = await _attemptDetailRepository.GetByAttemptIdAsync(attempt.Id, cancellationToken);
-            allDetails.AddRange(attemptDetails);
+            var batchIds = attemptIds.Skip(i).Take(batchSize).ToList();
+            foreach (var attemptId in batchIds)
+            {
+                var attemptDetails = await _attemptDetailRepository.GetByAttemptIdAsync(attemptId, cancellationToken);
+                allDetails.AddRange(attemptDetails);
+            }
         }
 
         int totalQuestionsAnswered = allDetails.Count;
@@ -354,7 +359,27 @@ public class AttemptService : IAttemptService
     {
         if (correctAnswers == null) return false;
 
-        var userAnswers = userAnswer.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        // 尝试解析用户答案（兼容 JSON 数组和逗号分隔格式）
+        List<string> userAnswers;
+        if (userAnswer.TrimStart().StartsWith('['))
+        {
+            // JSON 数组格式: ["A", "B"] 或 ["A","B"]
+            try
+            {
+                userAnswers = System.Text.Json.JsonSerializer.Deserialize<List<string>>(userAnswer) ?? new List<string>();
+            }
+            catch
+            {
+                // JSON 解析失败，回退到逗号分隔
+                userAnswers = userAnswer.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            }
+        }
+        else
+        {
+            // 逗号分隔格式: A,B 或 A, B
+            userAnswers = userAnswer.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        }
+
         var sortedCorrect = correctAnswers.Select(a => a.Trim().ToLower()).OrderBy(a => a);
         var sortedUser = userAnswers.Select(a => a.Trim().ToLower()).OrderBy(a => a);
         return sortedUser.SequenceEqual(sortedCorrect);
@@ -391,40 +416,41 @@ public class AttemptService : IAttemptService
     {
         var info = new AnswerInfo();
 
-        if (question.Data is ChoiceQuestionData choiceData)
+        switch (question.Data)
         {
-            info.CorrectAnswersList = choiceData.CorrectAnswers;
-        }
-        else if (question.Data is BooleanQuestionData booleanData)
-        {
-            info.BoolAnswer = booleanData.CorrectAnswer;
-        }
-        else if (question.Data is FillBlankQuestionData fillData)
-        {
-            info.CorrectAnswersList = fillData.AcceptableAnswers;
-        }
-        else if (question.Data is ShortAnswerQuestionData shortData)
-        {
-            info.StringAnswer = shortData.ReferenceAnswer;
-        }
+            case ChoiceQuestionData choiceData:
+                info.CorrectAnswersList = choiceData.CorrectAnswers;
+                break;
+            case BooleanQuestionData booleanData:
+                info.BoolAnswer = booleanData.CorrectAnswer;
+                break;
+            case FillBlankQuestionData fillData:
+                info.CorrectAnswersList = fillData.AcceptableAnswers;
+                break;
+            case ShortAnswerQuestionData shortData:
+                info.StringAnswer = shortData.ReferenceAnswer;
+                break;
+            default:
 #pragma warning disable CS0618 // 旧字段兼容性代码
-        else if (!string.IsNullOrWhiteSpace(question.CorrectAnswer))
-        {
-            var legacyAnswer = question.CorrectAnswer.Trim().ToLower();
-            if (question.QuestionType == "boolean" && bool.TryParse(legacyAnswer, out var legacyBool))
-            {
-                info.BoolAnswer = legacyBool;
-            }
-            else if (question.QuestionType == "multiple")
-            {
-                info.CorrectAnswersList = legacyAnswer.Split(',').Select(a => a.Trim()).ToList();
-            }
-            else
-            {
-                info.StringAnswer = legacyAnswer;
-            }
-        }
+                if (!string.IsNullOrWhiteSpace(question.CorrectAnswer))
+                {
+                    var legacyAnswer = question.CorrectAnswer.Trim().ToLower();
+                    switch (question.QuestionType)
+                    {
+                        case "boolean" when bool.TryParse(legacyAnswer, out var legacyBool):
+                            info.BoolAnswer = legacyBool;
+                            break;
+                        case "multiple":
+                            info.CorrectAnswersList = legacyAnswer.Split(',').Select(a => a.Trim()).ToList();
+                            break;
+                        default:
+                            info.StringAnswer = legacyAnswer;
+                            break;
+                    }
+                }
 #pragma warning restore CS0618
+                break;
+        }
 
         return info;
     }

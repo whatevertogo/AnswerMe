@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Question, QuestionData, ChoiceQuestionData } from '@/types/question'
-import { isChoiceQuestionData } from '@/types/question'
-import { QuestionType } from '@/types/question'
+import { InfoFilled } from '@element-plus/icons-vue'
+import type { QuizQuestion } from '@/stores/quiz'
 
 interface Props {
-  question: Question
+  question: QuizQuestion
   answer: string | string[] | undefined
   disabled?: boolean
 }
@@ -16,26 +15,11 @@ const emit = defineEmits<{
   'update:answer': [answer: string | string[]]
 }>()
 
-// 从 data 中获取选项列表
-const options = computed(() => {
-  if (isChoiceQuestionData(props.question.data)) {
-    return props.question.data.options
-  }
-  return []
-})
+// 选项列表
+const options = computed(() => props.question.options || [])
 
-// 题目类型映射
-const questionTypeMap = {
-  [QuestionType.SingleChoice]: 'single',
-  [QuestionType.MultipleChoice]: 'multiple',
-  [QuestionType.TrueFalse]: 'boolean',
-  [QuestionType.FillBlank]: 'fill',
-  [QuestionType.ShortAnswer]: 'essay'
-} as const
-
-const currentType = computed(() => {
-  return questionTypeMap[props.question.questionTypeEnum] || 'essay'
-})
+// 题目类型（由 QuizQuestion 直接提供）
+const currentType = computed(() => props.question.type || 'essay')
 
 // 计算已选答案数量
 const selectedCount = computed(() => {
@@ -43,6 +27,17 @@ const selectedCount = computed(() => {
     return props.answer.length
   }
   return props.answer ? 1 : 0
+})
+
+// 判断题：获取当前选中值（转换为布尔值）
+const booleanValue = computed(() => {
+  if (typeof props.answer === 'string') {
+    return props.answer === 'true'
+  }
+  if (typeof props.answer === 'boolean') {
+    return props.answer
+  }
+  return undefined
 })
 
 const handleSingleSelect = (option: string) => {
@@ -62,6 +57,10 @@ const handleMultipleSelect = (option: string, checked: boolean | string[]) => {
 
 const handleEssayChange = (value: string) => {
   emit('update:answer', value)
+}
+
+const handleBooleanChange = (value: boolean) => {
+  emit('update:answer', value.toString())
 }
 
 const getOptionLabel = (index: number) => {
@@ -113,6 +112,41 @@ const getOptionLabel = (index: number) => {
           </el-checkbox>
         </div>
       </div>
+    </div>
+
+    <!-- 判断题 -->
+    <div v-if="currentType === 'boolean'" class="boolean-container">
+      <el-radio-group
+        :model-value="booleanValue"
+        @update:model-value="handleBooleanChange"
+        :disabled="disabled"
+        class="boolean-options"
+      >
+        <el-radio :value="true" size="large" class="boolean-option">
+          <span class="boolean-option-text">正确</span>
+        </el-radio>
+        <el-radio :value="false" size="large" class="boolean-option">
+          <span class="boolean-option-text">错误</span>
+        </el-radio>
+      </el-radio-group>
+    </div>
+
+    <!-- 填空题 -->
+    <div v-if="currentType === 'fill'" class="fill-container">
+      <div class="fill-hint">
+        <el-icon><InfoFilled /></el-icon>
+        <span>请填写所有空白，多个答案用逗号分隔</span>
+      </div>
+      <el-input
+        :model-value="Array.isArray(answer) ? answer.join(', ') : answer"
+        @update:model-value="handleEssayChange"
+        type="textarea"
+        :rows="4"
+        placeholder="请输入答案，多个答案用逗号分隔..."
+        :disabled="disabled"
+        resize="vertical"
+        class="fill-input"
+      />
     </div>
 
     <!-- 简答题 -->
@@ -234,5 +268,81 @@ const getOptionLabel = (index: number) => {
 .selection-count {
   color: #3b82f6;
   font-weight: 600;
+}
+
+/* 判断题 */
+.boolean-container {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.boolean-options {
+  display: flex;
+  gap: 2rem;
+}
+
+.boolean-option {
+  padding: 1rem 2rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.dark .boolean-option {
+  border-color: #374151;
+}
+
+.boolean-option:hover {
+  border-color: #3b82f6;
+}
+
+.boolean-option.is-checked {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.dark .boolean-option.is-checked {
+  border-color: #3b82f6;
+  background: #1e3a8a33;
+}
+
+.boolean-option-text {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* 填空题 */
+.fill-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fill-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #0369a1;
+}
+
+.dark .fill-hint {
+  background: #0c4a6e33;
+  border-color: #075985;
+  color: #7dd3fc;
+}
+
+.fill-input {
+  width: 100%;
+}
+
+.fill-input :deep(.el-textarea__inner) {
+  font-size: 0.875rem;
+  line-height: 1.625;
 }
 </style>

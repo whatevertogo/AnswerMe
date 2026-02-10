@@ -44,12 +44,35 @@ watch(searchKeyword, () => {
   }, 300)
 })
 
-const handleStartPractice = (bank: QuestionBank) => {
+const handleStartPractice = async (bank: QuestionBank) => {
+  // 检查题目数量，如果是0则提示
   if (!bank.questionCount) {
     ElMessage.warning('题库暂无题目，无法开始练习')
     return
   }
-  router.push(`/quiz/${bank.id}/new`)
+
+  // 实时验证题库是否有题目（防止缓存数据不准确）
+  try {
+    loading.value = true
+    // 重新获取题库列表以获取最新数据
+    await questionBankStore.fetchQuestionBanks({
+      search: searchKeyword.value || undefined,
+      pageSize: 100
+    })
+
+    // 查找更新后的题库
+    const updatedBank = questionBankStore.questionBanks.find(b => b.id === bank.id)
+    if (!updatedBank || !updatedBank.questionCount) {
+      ElMessage.warning('题库暂无题目，无法开始练习')
+      return
+    }
+
+    router.push(`/quiz/${bank.id}/new`)
+  } catch {
+    ElMessage.error('验证题库失败，请重试')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleCreateBank = () => {
