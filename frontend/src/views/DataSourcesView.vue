@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDataSourceStore } from '@/stores/dataSource'
 import type { DataSource } from '@/api/datasource'
+import { getProviderLabel, getProviderTagType } from '@/constants/aiProviders'
 
 const router = useRouter()
 const dataSourceStore = useDataSourceStore()
@@ -89,25 +90,11 @@ const handleValidate = async (dataSource: DataSource) => {
 }
 
 const getTypeLabel = (type: string) => {
-  const typeMap: Record<string, string> = {
-    openai: 'OpenAI',
-    qwen: '通义千问',
-    zhipu: '智谱GLM',
-    minimax: 'Minimax',
-    custom_api: '自定义API'
-  }
-  return typeMap[type] || type
+  return getProviderLabel(type)
 }
 
 const getTypeTagType = (type: string) => {
-  const typeColorMap: Record<string, any> = {
-    openai: 'success',
-    qwen: 'primary',
-    zhipu: 'warning',
-    minimax: 'info',
-    custom_api: 'info'
-  }
-  return typeColorMap[type] || 'info'
+  return getProviderTagType(type)
 }
 </script>
 

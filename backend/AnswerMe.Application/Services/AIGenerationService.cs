@@ -187,7 +187,7 @@ public class AIGenerationService : IAIGenerationService
                 await _questionRepository.AddAsync(questionEntity, cancellationToken);
 
                 // 添加到已保存列表
-                var dto = new GeneratedQuestionDto
+                var resultDto = new GeneratedQuestionDto
                 {
                     Id = questionEntity.Id,
                     QuestionTypeEnum = questionEntity.QuestionTypeEnum,
@@ -200,8 +200,8 @@ public class AIGenerationService : IAIGenerationService
                     QuestionBankId = questionBankId,
                     CreatedAt = questionEntity.CreatedAt
                 };
-                dto.PopulateLegacyFieldsFromData();
-                savedQuestions.Add(dto);
+                resultDto.PopulateLegacyFieldsFromData();
+                savedQuestions.Add(resultDto);
             }
             catch (Exception ex)
             {

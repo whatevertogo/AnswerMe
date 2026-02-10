@@ -24,6 +24,7 @@ export interface CreateDataSourceParams {
 
 export interface UpdateDataSourceParams {
   name?: string
+  type?: string
   apiKey?: string
   endpoint?: string
   model?: string

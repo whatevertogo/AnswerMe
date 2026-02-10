@@ -59,7 +59,14 @@ var jwtSettings = new JwtSettings(
     builder.Configuration.GetValue<int>("JWT:ExpiryDays", 30)
 );
 
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+// 统一 JWT 配置来源，确保 AuthService 与验证中间件使用同一套配置
+builder.Services.Configure<JwtSettings>(options =>
+{
+    options.Issuer = jwtSettings.Issuer;
+    options.Audience = jwtSettings.Audience;
+    options.Secret = jwtSettings.Secret;
+    options.ExpiryDays = jwtSettings.ExpiryDays;
+});
 builder.Services.AddSingleton(jwtSettings);
 
 // 配置本地模式认证
@@ -215,7 +222,7 @@ if (app.Environment.IsDevelopment())
             var checkService = scope.ServiceProvider.GetRequiredService<AnswerMe.Infrastructure.Services.DataConsistencyCheckService>();
             var report = await checkService.CheckAllQuestionsAsync();
 
-            Log.LogInformation(
+            Log.Information(
                 "数据一致性检查完成: 总题数 {Total}, 不一致数 {Inconsistent}, 一致率 {Rate:F2}%",
                 report.TotalQuestions,
                 report.InconsistentQuestions,
@@ -226,14 +233,14 @@ if (app.Environment.IsDevelopment())
                 var errorCount = report.Issues.Count(i => i.Severity == "Error");
                 var warningCount = report.Issues.Count(i => i.Severity == "Warning");
 
-                Log.LogWarning(
+                Log.Warning(
                     "发现 {ErrorCount} 个错误, {WarningCount} 个警告",
                     errorCount,
                     warningCount);
 
                 foreach (var issue in report.Issues.Take(10))
                 {
-                    var logLevel = issue.Severity == "Error" ? LogLevel.Error : LogLevel.Warning;
+                    var logLevel = issue.Severity == "Error" ? Serilog.Events.LogEventLevel.Error : Serilog.Events.LogEventLevel.Warning;
                     Log.Write(logLevel,
                         "题目 {QuestionId}: {Type} - {Description}. 建议: {Recommendation}",
                         issue.QuestionId,
@@ -244,7 +251,7 @@ if (app.Environment.IsDevelopment())
 
                 if (report.Issues.Count > 10)
                 {
-                    Log.LogWarning("还有 {Remaining} 个问题未显示", report.Issues.Count - 10);
+                    Log.Warning("还有 {Remaining} 个问题未显示", report.Issues.Count - 10);
                 }
             }
 
@@ -254,11 +261,11 @@ if (app.Environment.IsDevelopment())
             }
             else if (report.ConsistencyRate >= 99.5)
             {
-                Log.LogWarning("⚠️ 数据一致性率 {Rate:F2}% 未达到 100%，但接近目标", report.ConsistencyRate);
+                Log.Warning("⚠️ 数据一致性率 {Rate:F2}% 未达到 100%，但接近目标", report.ConsistencyRate);
             }
             else
             {
-                Log.LogError("❌ 数据一致性率 {Rate:F2}% 低于目标 99.5%，请执行数据修复", report.ConsistencyRate);
+                Log.Error("❌ 数据一致性率 {Rate:F2}% 低于目标 99.5%，请执行数据修复", report.ConsistencyRate);
             }
         }
         catch (Exception ex)
