@@ -144,12 +144,12 @@ const formatDate = (dateString: string) => {
       <el-button :icon="Refresh" @click="fetchQuestionBanks(true)">刷新</el-button>
     </div>
 
-    <el-card class="table-card" shadow="never">
+    <div class="table-card">
       <el-table
         v-loading="loading"
         :data="questionBankStore.questionBanks"
         style="width: 100%"
-        stripe
+        highlight-current-row
       >
         <el-table-column prop="name" label="题库名称" min-width="200">
           <template #default="{ row }">
@@ -237,7 +237,7 @@ const formatDate = (dateString: string) => {
           加载更多
         </el-button>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -273,11 +273,10 @@ const formatDate = (dateString: string) => {
 }
 
 .table-card {
-  @apply overflow-visible;
-}
-
-.table-card :deep(.el-card__body) {
-  @apply p-0;
+  @apply overflow-hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
 }
 
 .bank-name-cell {
@@ -327,7 +326,7 @@ const formatDate = (dateString: string) => {
 }
 
 :deep(.el-table tr:hover > td) {
-  background: var(--color-bg-secondary) !important;
+  background: var(--table-row-hover-bg) !important;
 }
 
 @media (max-width: 1024px) {

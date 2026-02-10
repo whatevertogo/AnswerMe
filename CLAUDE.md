@@ -1,8 +1,13 @@
 # CLAUDE.md
 
-## 项目梗概
-
 **AnswerMe** - 自托管智能题库系统，支持 AI 生成题目、多题库管理、练习/测验模式。
+
+## 技术栈
+
+- **后端**: .NET 8, EF Core, SQLite/PostgreSQL, Redis
+- **前端**: Vue 3, TypeScript, Element Plus, Pinia, Tailwind CSS
+
+## 架构
 
 ### 后端架构 (backend/)
 ```
@@ -25,27 +30,37 @@ router/        # 路由配置
 utils/         # 工具函数（request.ts 统一 HTTP）
 ```
 
+**前端** (frontend/src/): `api/`、`stores/`、`types/`、`views/`、`components/`、`composables/`、`router/`、`utils/`
+
 ## 快速启动
 
 ```bash
-# 启动依赖服务（Redis 用于 AI 异步生成）
-docker-compose up -d redis
-
-# 后端（Redis 必须先启动）
+docker-compose up -d redis    # AI 异步生成依赖，必先启动
 cd backend && dotnet run --project AnswerMe.API
-
-# 前端
 cd frontend && npm run dev
 ```
 
-**注意**: AI 异步生成需要 Redis。若 Redis 未启动，后端将拒绝启动。
+## 环境变量
 
-## Question 数据模型（迁移中）
+- **必需**: `JWT_SECRET` (≥32字符)
+- **可选**: `DB_TYPE` (Sqlite/PostgreSQL), `ConnectionStrings__Redis`
 
-**已废弃:** `Options`, `CorrectAnswer`
-**当前:** `QuestionTypeEnum`, `QuestionDataJson`, `Data` (运行时)
+## 代码规范
 
-**映射规则:**
+**后端**:
+- 仓储计数: `CountByXxxYyyAsync`
+- 统计功能: DTO → Interface → Service → Controller
+- Application 层不直接引用 EFCore
+
+**前端**:
+- 常量: `types/question.ts`
+- API: `api/xxx.ts`，使用命名导入 `import { request }`
+- Element Plus v3+: `el-radio`/`el-checkbox` 用 `value` 非 `label`
+- **深色模式**: 禁止硬编码颜色，用 `styles/theme.css` 中的 CSS 变量
+
+## 数据模型
+
+Question 迁移中：废弃 `Options`/`CorrectAnswer`，改用 `QuestionTypeEnum`/`QuestionDataJson`/`Data`
 - Entity → DTO: 只映射 `QuestionTypeEnum`, `Data`
 - DTO → Entity: 只写入 `QuestionDataJson`
 
@@ -55,25 +70,7 @@ cd frontend && npm run dev
 - `Domain/Common/LegacyFieldParser.cs` - 旧字段解析统一入口
 - `Infrastructure/Data/AnswerMeDbContext.cs` - DbContext
 
-## 环境变量
-
-**必需:** `JWT_SECRET` (≥32字符)
-**可选:** `DB_TYPE` (Sqlite/PostgreSQL), `ConnectionStrings__Redis`
-
-## 前端规范
-
-- 常量: `types/question.ts`
-- API: `api/xxx.ts`，使用 **命名导入** `import { request }`
-- Element Plus v3+: `el-radio`/`el-checkbox` 用 `value` 非 `label`
-
-## 后端规范
-
-- 仓储计数: `CountByXxxYyyAsync`
-- 统计功能: DTO → Interface → Service → Controller
-- Application 层不直接引用 EFCore
-
-## 常见坑点
+## 坑点
 
 - 迁移前停止 API（SQLite 锁定）
 - EF 工具失效: `dotnet tool install --global dotnet-ef`
-- AI 异步生成需 Redis：`docker-compose up -d redis`，否则后端拒绝启动
