@@ -51,6 +51,12 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true, layout: 'app' }
   },
   {
+    path: '/practice',
+    name: 'Practice',
+    component: () => import('@/views/PracticeView.vue'),
+    meta: { requiresAuth: true, layout: 'app' }
+  },
+  {
     path: '/ai-config',
     name: 'AIConfig',
     component: () => import('@/views/AIConfigView.vue'),

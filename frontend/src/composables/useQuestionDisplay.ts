@@ -1,5 +1,11 @@
 import { computed } from 'vue'
 import type { GeneratedQuestion } from '@/api/aiGeneration'
+import {
+  isChoiceQuestionData,
+  isBooleanQuestionData,
+  isFillBlankQuestionData,
+  isShortAnswerQuestionData
+} from '@/types/question'
 
 /**
  * 题目显示相关的composable
@@ -36,13 +42,33 @@ export function useQuestionDisplay() {
 
   /**
    * 格式化题目文本用于复制
+   * 使用新格式 data 属性
    */
   const formatQuestionForCopy = (question: GeneratedQuestion): string => {
-    const options = question.options && question.options.length > 0
-      ? question.options.map((opt, idx) => `${String.fromCharCode(65 + idx)}. ${opt}`).join('\n') + '\n'
-      : ''
+    // 选项文本
+    let optionsText = ''
+    if (isChoiceQuestionData(question.data)) {
+      optionsText = question.data.options
+        .map((opt, idx) => `${String.fromCharCode(65 + idx)}. ${opt}`)
+        .join('\n') + '\n'
+    }
 
-    return `【${question.questionType}】${question.questionText}\n${options}答案: ${question.correctAnswer}${
+    // 答案文本
+    let answerText = ''
+    if (isChoiceQuestionData(question.data)) {
+      answerText = question.data.correctAnswers.join(', ')
+    } else if (isBooleanQuestionData(question.data)) {
+      answerText = question.data.correctAnswer ? '正确' : '错误'
+    } else if (isFillBlankQuestionData(question.data)) {
+      answerText = question.data.acceptableAnswers.join(', ')
+    } else if (isShortAnswerQuestionData(question.data)) {
+      answerText = question.data.referenceAnswer
+    } else {
+      // Fallback for generated questions that might use old format
+      answerText = String(question.correctAnswer || '')
+    }
+
+    return `【${question.questionType}】${question.questionText}\n${optionsText}答案: ${answerText}${
       question.explanation ? `\n解析: ${question.explanation}` : ''
     }`
   }

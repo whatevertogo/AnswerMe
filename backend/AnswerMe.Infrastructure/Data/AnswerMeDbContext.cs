@@ -80,7 +80,9 @@ public class AnswerMeDbContext : DbContext
             entity.HasIndex(e => e.QuestionType);
             entity.Property(e => e.QuestionText).IsRequired();
             entity.Property(e => e.QuestionType).HasMaxLength(20).IsRequired();
+#pragma warning disable CS0618 // 旧字段兼容性代码：数据库配置
             entity.Property(e => e.CorrectAnswer).IsRequired();
+#pragma warning restore CS0618
             entity.Property(e => e.Difficulty).HasMaxLength(10).HasDefaultValue("medium");
             entity.Property(e => e.OrderIndex).IsRequired();
 

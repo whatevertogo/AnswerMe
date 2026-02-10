@@ -62,19 +62,74 @@ public static class AIResponseParser
                 var options = GetStringArray(q, "options", "choices", "选项");
                 var correctAnswer = GetString(q, "correctAnswer", "answer", "correct", "正确答案", "答案");
 
+                // 解析题型
+                QuestionType? questionTypeEnum = null;
+                if (!string.IsNullOrWhiteSpace(questionTypeText))
+                {
+                    questionTypeEnum = QuestionTypeExtensions.ParseFromString(questionTypeText);
+                }
+
+                // 构建题目数据（新格式）
+                QuestionData? data = null;
+                if (options.Count > 0)
+                {
+                    // 选择题
+                    var correctAnswers = ParseCorrectAnswers(correctAnswer);
+                    data = new ChoiceQuestionData
+                    {
+                        Options = options,
+                        CorrectAnswers = correctAnswers,
+                        Explanation = explanation,
+                        Difficulty = difficulty
+                    };
+                }
+                else if (questionTypeEnum == QuestionType.TrueFalse)
+                {
+                    // 判断题
+                    if (bool.TryParse(correctAnswer, out var boolAnswer))
+                    {
+                        data = new BooleanQuestionData
+                        {
+                            CorrectAnswer = boolAnswer,
+                            Explanation = explanation,
+                            Difficulty = difficulty
+                        };
+                    }
+                }
+                else if (questionTypeEnum == QuestionType.FillBlank)
+                {
+                    // 填空题
+                    data = new FillBlankQuestionData
+                    {
+                        AcceptableAnswers = ParseCorrectAnswers(correctAnswer),
+                        Explanation = explanation,
+                        Difficulty = difficulty
+                    };
+                }
+                else if (questionTypeEnum == QuestionType.ShortAnswer)
+                {
+                    // 简答题
+                    data = new ShortAnswerQuestionData
+                    {
+                        ReferenceAnswer = correctAnswer ?? string.Empty,
+                        Explanation = explanation,
+                        Difficulty = difficulty
+                    };
+                }
+
                 var generated = new GeneratedQuestion
                 {
                     QuestionText = questionText ?? string.Empty,
                     Explanation = explanation,
                     Difficulty = difficulty,
+                    Data = data,
+#pragma warning disable CS0618 // 旧字段兼容性代码：填充旧字段供后续代码使用
                     Options = options,
                     CorrectAnswer = correctAnswer ?? string.Empty
+#pragma warning restore CS0618
                 };
 
-                if (!string.IsNullOrWhiteSpace(questionTypeText))
-                {
-                    generated.QuestionTypeEnum = QuestionTypeExtensions.ParseFromString(questionTypeText);
-                }
+                generated.QuestionTypeEnum = questionTypeEnum;
 
                 questions.Add(generated);
             }
@@ -97,6 +152,33 @@ public static class AIResponseParser
             error = $"解析失败: {ex.Message}";
             return false;
         }
+    }
+
+    private static List<string> ParseCorrectAnswers(string? correctAnswer)
+    {
+        if (string.IsNullOrWhiteSpace(correctAnswer))
+        {
+            return new List<string>();
+        }
+
+        // 尝试解析 JSON 数组
+        if (correctAnswer.TrimStart().StartsWith('['))
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<List<string>>(correctAnswer) ?? new List<string>();
+            }
+            catch
+            {
+                // JSON 解析失败，继续尝试其他方式
+            }
+        }
+
+        // 按分隔符分割
+        return correctAnswer
+            .Split(new[] { ',', ';', '、', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .ToList();
     }
 
     private static string? GetString(JsonElement element, params string[] names)

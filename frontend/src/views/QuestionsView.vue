@@ -290,8 +290,8 @@ const formatCorrectAnswer = (question: Question) => {
                 <div v-for="(opt, idx) in getQuestionOptions(row as any).slice(0, 2)" :key="idx" class="option-line">
                   {{ String.fromCharCode(65 + (idx as number)) }}. {{ opt }}
                 </div>
-                <span v-if="(row as any).options && (row as any).options.length > 2" class="more-hint">
-                  +{{ (row as any).options.length - 2 }} 个选项
+                <span v-if="getQuestionOptions(row as any).length > 2" class="more-hint">
+                  +{{ getQuestionOptions(row as any).length - 2 }} 个选项
                 </span>
               </div>
               <div v-else class="answer-preview">

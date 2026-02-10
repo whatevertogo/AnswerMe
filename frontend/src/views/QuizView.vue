@@ -10,6 +10,7 @@ import QuizResultModal from '@/components/quiz/QuizResultModal.vue'
 import { useQuizStore } from '@/stores/quiz'
 import { getQuestionDetail } from '@/api/question'
 import type { QuizQuestion } from '@/stores/quiz'
+import { isChoiceQuestionData } from '@/types/question'
 
 const router = useRouter()
 const route = useRoute()
@@ -160,11 +161,11 @@ async function loadQuestionsDetails(questionIds: number[]) {
     questions.value = questionDetails.map((q: any) => ({
       id: q.id,
       content: q.questionText,
-      type: convertQuestionType(q.questionType),
-      options: parseOptions(q.options),
+      type: convertQuestionType(q.questionTypeEnum),
+      options: extractOptions(q),
       difficulty: q.difficulty || 'medium',
-      tags: [],
-      correctAnswer: q.correctAnswer,
+      tags: q.tags || [],
+      correctAnswer: extractCorrectAnswer(q),
       explanation: q.explanation
     }))
 
@@ -176,23 +177,40 @@ async function loadQuestionsDetails(questionIds: number[]) {
   }
 }
 
+// 从新格式 data 中提取选项
+function extractOptions(question: any): string[] {
+  // 使用类型守卫检查是否为选择题数据
+  if (isChoiceQuestionData(question.data)) {
+    return question.data.options
+  }
+  return []
+}
+
+// 从新格式 data 中提取答案
+function extractCorrectAnswer(question: any): string | undefined {
+  if (question.data && question.data.correctAnswers) {
+    // 单选题返回第一个答案
+    if (Array.isArray(question.data.correctAnswers) && question.data.correctAnswers.length > 0) {
+      return question.data.correctAnswers[0]
+    }
+  }
+  return undefined
+}
+
 function convertQuestionType(type: string): QuizQuestion['type'] {
   const typeMap: Record<string, QuizQuestion['type']> = {
+    'SingleChoice': 'single',
+    'MultipleChoice': 'multiple',
+    'TrueFalse': 'boolean',
+    'FillBlank': 'fill',
+    'ShortAnswer': 'essay',
+    // 兼容旧格式
     'choice': 'single',
     'multiple-choice': 'multiple',
     'true-false': 'boolean',
     'short-answer': 'essay'
   }
   return typeMap[type] || 'single'
-}
-
-function parseOptions(optionsStr?: string): string[] {
-  if (!optionsStr) return []
-  try {
-    return JSON.parse(optionsStr)
-  } catch {
-    return []
-  }
 }
 
 function startTimer() {

@@ -178,11 +178,13 @@ public class GeneratedQuestionDto
         Explanation = Data.Explanation ?? Explanation;
         Difficulty = Data.Difficulty ?? Difficulty;
 
+#pragma warning disable CS0618 // 旧字段兼容性代码
         if (Data is ChoiceQuestionData choiceData)
         {
             Options = choiceData.Options;
             CorrectAnswer = string.Join(",", choiceData.CorrectAnswers);
         }
+#pragma warning restore CS0618
     }
 }
 

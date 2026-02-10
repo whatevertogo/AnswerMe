@@ -28,7 +28,7 @@ namespace AnswerMe.Infrastructure.Migrations
             migrationBuilder.Sql(@"
                 UPDATE Questions
                 SET QuestionDataJson = json_object(
-                    '$type', 'ChoiceQuestionData',
+                    'type', 'choice',
                     'Options', json_extract(Options, '$'),
                     'CorrectAnswers', json_array(CorrectAnswer),
                     'Explanation', coalesce(Explanation, ''),
@@ -43,7 +43,7 @@ namespace AnswerMe.Infrastructure.Migrations
             migrationBuilder.Sql(@"
                 UPDATE Questions
                 SET QuestionDataJson = json_object(
-                    '$type', 'BooleanQuestionData',
+                    'type', 'boolean',
                     'CorrectAnswer', CASE
                         WHEN lower(CorrectAnswer) IN ('true', 't', '对', '正确', 'yes', 'y') THEN 'true'
                         ELSE 'false'
@@ -59,7 +59,7 @@ namespace AnswerMe.Infrastructure.Migrations
             migrationBuilder.Sql(@"
                 UPDATE Questions
                 SET QuestionDataJson = json_object(
-                    '$type', 'FillBlankQuestionData',
+                    'type', 'fillBlank',
                     'AcceptableAnswers', json_array(CorrectAnswer),
                     'Explanation', coalesce(Explanation, ''),
                     'Difficulty', Difficulty
@@ -72,7 +72,7 @@ namespace AnswerMe.Infrastructure.Migrations
             migrationBuilder.Sql(@"
                 UPDATE Questions
                 SET QuestionDataJson = json_object(
-                    '$type', 'ShortAnswerQuestionData',
+                    'type', 'shortAnswer',
                     'ReferenceAnswer', CorrectAnswer,
                     'Explanation', coalesce(Explanation, ''),
                     'Difficulty', Difficulty

@@ -61,7 +61,7 @@ const quickActions = ref([
     description: '选择题库开始练习',
     icon: '📝',
     color: '#e6a23c',
-    action: () => router.push('/question-banks')
+    action: () => router.push('/practice')
   },
   {
     title: '配置AI',

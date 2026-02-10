@@ -6,6 +6,7 @@ using AnswerMe.Domain.Entities;
 using AnswerMe.Domain.Enums;
 using AnswerMe.Domain.Models;
 using AnswerMe.Domain.Interfaces;
+using AnswerMe.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
@@ -343,7 +344,9 @@ public class AIGenerationService : IAIGenerationService
             {
                 try
                 {
+#pragma warning disable CS0618 // 旧字段兼容性代码：从 GeneratedQuestion 读取
                     var resolvedType = ResolveQuestionType(question.QuestionTypeEnum, question.Data, question.QuestionType);
+#pragma warning restore CS0618
                     if (resolvedType == null && dto.QuestionTypes.Count == 1)
                     {
                         resolvedType = dto.QuestionTypes[0];
@@ -357,6 +360,7 @@ public class AIGenerationService : IAIGenerationService
                         continue;
                     }
 
+#pragma warning disable CS0618 // 旧字段兼容性代码：从 GeneratedQuestion 读取
                     var data = NormalizeQuestionData(
                         question.Data,
                         resolvedType,
@@ -364,6 +368,7 @@ public class AIGenerationService : IAIGenerationService
                         question.CorrectAnswer,
                         question.Explanation,
                         question.Difficulty);
+#pragma warning restore CS0618
 
                     if (data == null)
                     {
@@ -393,8 +398,10 @@ public class AIGenerationService : IAIGenerationService
                         QuestionTypeEnum = questionEntity.QuestionTypeEnum,
                         QuestionText = question.QuestionText,
                         Data = questionEntity.Data,
+#pragma warning disable CS0618 // 旧字段兼容性代码：填充 DTO 旧字段
                         Options = question.Options,
                         CorrectAnswer = question.CorrectAnswer,
+#pragma warning restore CS0618
                         Explanation = question.Explanation,
                         Difficulty = question.Difficulty,
                         QuestionBankId = questionBankId,
@@ -563,6 +570,7 @@ public class AIGenerationService : IAIGenerationService
     /// </summary>
     private static GeneratedQuestionDto MapToGeneratedQuestionDto(Question question)
     {
+#pragma warning disable CS0618 // 旧字段兼容性代码：读取旧字段
         var options = new List<string>();
         if (!string.IsNullOrEmpty(question.Options))
         {
@@ -575,6 +583,7 @@ public class AIGenerationService : IAIGenerationService
                 options = new List<string>();
             }
         }
+#pragma warning restore CS0618
 
         var dto = new GeneratedQuestionDto
         {
@@ -582,8 +591,10 @@ public class AIGenerationService : IAIGenerationService
             QuestionTypeEnum = question.QuestionTypeEnum,
             QuestionText = question.QuestionText,
             Data = question.Data,
+#pragma warning disable CS0618 // 旧字段兼容性代码：填充 DTO 旧字段
             Options = options,
             CorrectAnswer = question.CorrectAnswer,
+#pragma warning restore CS0618
             Explanation = question.Explanation,
             Difficulty = question.Difficulty,
             QuestionBankId = question.QuestionBankId,
@@ -593,7 +604,12 @@ public class AIGenerationService : IAIGenerationService
         return dto;
     }
 
-    private static QuestionType? ResolveQuestionType(QuestionType? requestedType, QuestionData? data, string? legacyType)
+    private static QuestionType? ResolveQuestionType(
+        QuestionType? requestedType,
+        QuestionData? data,
+#pragma warning disable CS0618 // 旧字段兼容性代码：legacyType 参数
+        string? legacyType)
+#pragma warning restore CS0618
     {
         if (requestedType.HasValue)
         {
@@ -624,14 +640,18 @@ public class AIGenerationService : IAIGenerationService
     private static QuestionData? NormalizeQuestionData(
         QuestionData? data,
         QuestionType? questionType,
+#pragma warning disable CS0618 // 旧字段兼容性代码：legacyOptions/legacyCorrectAnswer 参数
         List<string>? legacyOptions,
         string? legacyCorrectAnswer,
+#pragma warning restore CS0618
         string? explanation,
         string? difficulty)
     {
         if (data == null)
         {
+#pragma warning disable CS0618 // 旧字段兼容性代码：从旧字段构建数据
             data = BuildDataFromLegacy(questionType, legacyOptions, legacyCorrectAnswer, explanation, difficulty);
+#pragma warning restore CS0618
         }
 
         if (data == null)
@@ -659,6 +679,7 @@ public class AIGenerationService : IAIGenerationService
             return;
         }
 
+        // 只更新新字段，与 QuestionService 保持一致
         question.Data = data;
 
         if (!string.IsNullOrWhiteSpace(data.Explanation))
@@ -671,31 +692,16 @@ public class AIGenerationService : IAIGenerationService
             question.Difficulty = data.Difficulty;
         }
 
-        switch (data)
-        {
-            case ChoiceQuestionData choiceData:
-                question.Options = JsonSerializer.Serialize(choiceData.Options);
-                question.CorrectAnswer = string.Join(",", choiceData.CorrectAnswers);
-                break;
-            case BooleanQuestionData booleanData:
-                question.Options = null;
-                question.CorrectAnswer = booleanData.CorrectAnswer ? "true" : "false";
-                break;
-            case FillBlankQuestionData fillBlankData:
-                question.Options = null;
-                question.CorrectAnswer = string.Join(",", fillBlankData.AcceptableAnswers);
-                break;
-            case ShortAnswerQuestionData shortAnswerData:
-                question.Options = null;
-                question.CorrectAnswer = shortAnswerData.ReferenceAnswer;
-                break;
-        }
+        // 不再同步更新旧字段
+        // 历史数据的旧字段保留用于读取兼容（通过 Question.Data getter 的 fallback 机制）
     }
 
     private static QuestionData? BuildDataFromLegacy(
         QuestionType? questionType,
+#pragma warning disable CS0618 // 旧字段兼容性代码：legacyOptions/legacyCorrectAnswer 参数
         List<string>? legacyOptions,
         string? legacyCorrectAnswer,
+#pragma warning restore CS0618
         string? explanation,
         string? difficulty)
     {
@@ -709,8 +715,10 @@ public class AIGenerationService : IAIGenerationService
             case QuestionType.SingleChoice:
             case QuestionType.MultipleChoice:
             {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                 var options = legacyOptions ?? new List<string>();
                 var correctAnswers = ParseLegacyAnswers(legacyCorrectAnswer);
+#pragma warning restore CS0618
                 if (options.Count == 0 && correctAnswers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
                 {
                     return null;
@@ -725,7 +733,9 @@ public class AIGenerationService : IAIGenerationService
             }
             case QuestionType.TrueFalse:
             {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                 if (!bool.TryParse(legacyCorrectAnswer, out var booleanAnswer))
+#pragma warning restore CS0618
                 {
                     return null;
                 }
@@ -738,7 +748,9 @@ public class AIGenerationService : IAIGenerationService
             }
             case QuestionType.FillBlank:
             {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                 var answers = ParseLegacyAnswers(legacyCorrectAnswer);
+#pragma warning restore CS0618
                 if (answers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
                 {
                     return null;
@@ -752,13 +764,17 @@ public class AIGenerationService : IAIGenerationService
             }
             case QuestionType.ShortAnswer:
             {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                 if (string.IsNullOrWhiteSpace(legacyCorrectAnswer) && string.IsNullOrWhiteSpace(explanation))
+#pragma warning restore CS0618
                 {
                     return null;
                 }
                 return new ShortAnswerQuestionData
                 {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                     ReferenceAnswer = legacyCorrectAnswer ?? string.Empty,
+#pragma warning restore CS0618
                     Explanation = explanation,
                     Difficulty = difficulty ?? "medium"
                 };
@@ -768,7 +784,10 @@ public class AIGenerationService : IAIGenerationService
         }
     }
 
-    private static List<string> ParseLegacyAnswers(string? legacyAnswers)
+    private static List<string> ParseLegacyAnswers(
+#pragma warning disable CS0618 // 旧字段兼容性代码
+        string? legacyAnswers)
+#pragma warning restore CS0618
     {
         if (string.IsNullOrWhiteSpace(legacyAnswers))
         {
@@ -818,8 +837,10 @@ public class AIGenerationService : IAIGenerationService
             QuestionTypeEnum = question.QuestionTypeEnum,
             QuestionText = question.QuestionText,
             Data = question.Data,
+#pragma warning disable CS0618 // 旧字段兼容性代码：克隆 DTO 旧字段
             Options = question.Options != null ? new List<string>(question.Options) : new List<string>(),
             CorrectAnswer = question.CorrectAnswer,
+#pragma warning restore CS0618
             Explanation = question.Explanation,
             Difficulty = question.Difficulty,
             QuestionBankId = question.QuestionBankId,

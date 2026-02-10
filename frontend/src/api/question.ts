@@ -72,7 +72,7 @@ export function deleteQuestions(ids: number[]): Promise<AxiosResponse<{ message:
 /**
  * 搜索题目
  */
-export function searchQuestions(searchTerm: string, questionBankId?: number): Promise<AxiosResponse<Question[]>> {
+export function searchQuestions(searchTerm: string, questionBankId: number): Promise<AxiosResponse<Question[]>> {
   return request.get<Question[]>('/questions/search', {
     params: { searchTerm, questionBankId }
   })

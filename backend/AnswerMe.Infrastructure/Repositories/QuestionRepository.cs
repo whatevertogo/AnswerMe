@@ -59,8 +59,10 @@ public class QuestionRepository : IQuestionRepository
         return await _context.Questions
             .Where(q =>
                 q.QuestionBankId == questionBankId &&
+#pragma warning disable CS0618 // 旧字段兼容性代码：搜索时也检查旧字段
                 (EF.Functions.Like(q.QuestionText, $"%{searchTerm}%") ||
                  EF.Functions.Like(q.CorrectAnswer, $"%{searchTerm}%") ||
+#pragma warning restore CS0618
                  EF.Functions.Like(q.Explanation ?? "", $"%{searchTerm}%")))
             .OrderBy(q => q.OrderIndex)
             .ToListAsync(cancellationToken);

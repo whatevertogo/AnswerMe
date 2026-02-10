@@ -29,6 +29,7 @@ public class DataConsistencyCheckService
     {
         var report = new DataConsistencyReport();
 
+#pragma warning disable CS0618 // 旧字段兼容性代码：检查数据一致性时读取旧字段
         var questions = await _context.Questions
             .Select(q => new
             {
@@ -39,6 +40,7 @@ public class DataConsistencyCheckService
                 q.CorrectAnswer
             })
             .ToListAsync(cancellationToken);
+#pragma warning restore CS0618
 
         report.TotalQuestions = questions.Count;
 
@@ -117,7 +119,9 @@ public class DataConsistencyCheckService
             var dataType = typeProperty.GetString();
 
             // 检查 type 字段与 QuestionType 是否一致
-            var expectedType = GetExpectedQuestionType(dataType);
+            var expectedType = dataType == "choice"
+                ? GetExpectedChoiceQuestionType(root)
+                : GetExpectedQuestionType(dataType);
             if (!string.Equals(expectedType, questionType, StringComparison.OrdinalIgnoreCase))
             {
                 return new DataConsistencyIssue
@@ -152,12 +156,38 @@ public class DataConsistencyCheckService
     {
         return dataType switch
         {
-            "ChoiceQuestionData" => "MultipleChoice", // 需要根据 CorrectAnswers 数量判断
+            // 新格式（小写 discriminator，与 JsonDerivedType 一致）
+            "choice" => "SingleChoice",
+            "boolean" => "TrueFalse",
+            "fillBlank" => "FillBlank",
+            "shortAnswer" => "ShortAnswer",
+            // 兼容旧格式（已迁移的历史数据）
+            "ChoiceQuestionData" => "MultipleChoice",
             "BooleanQuestionData" => "TrueFalse",
             "FillBlankQuestionData" => "FillBlank",
             "ShortAnswerQuestionData" => "ShortAnswer",
             _ => string.Empty
         };
+    }
+
+    private static string GetExpectedChoiceQuestionType(JsonElement root)
+    {
+        if (root.TryGetProperty("correctAnswers", out var correctAnswers) &&
+            correctAnswers.ValueKind == JsonValueKind.Array)
+        {
+            var count = 0;
+            foreach (var _ in correctAnswers.EnumerateArray())
+            {
+                count++;
+                if (count > 1)
+                {
+                    return "MultipleChoice";
+                }
+            }
+            return "SingleChoice";
+        }
+
+        return "SingleChoice";
     }
 }
 

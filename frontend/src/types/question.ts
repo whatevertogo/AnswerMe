@@ -72,8 +72,8 @@ export interface ChoiceQuestionData extends BaseQuestionData {
   options: string[]
   /** 正确答案列表，单选时只有一个元素，多选时有多个 */
   correctAnswers: string[]
-  /** 类型标识 */
-  type: 'ChoiceQuestionData'
+  /** 类型标识（由多态序列化自动添加） */
+  type: 'choice'
 }
 
 /**
@@ -84,8 +84,8 @@ export interface ChoiceQuestionData extends BaseQuestionData {
 export interface BooleanQuestionData extends BaseQuestionData {
   /** 正确答案 */
   correctAnswer: boolean
-  /** 类型标识 */
-  type: 'BooleanQuestionData'
+  /** 类型标识（由多态序列化自动添加） */
+  type: 'boolean'
 }
 
 /**
@@ -96,8 +96,8 @@ export interface BooleanQuestionData extends BaseQuestionData {
 export interface FillBlankQuestionData extends BaseQuestionData {
   /** 可接受的答案列表（支持多种表达方式） */
   acceptableAnswers: string[]
-  /** 类型标识 */
-  type: 'FillBlankQuestionData'
+  /** 类型标识（由多态序列化自动添加） */
+  type: 'fillBlank'
 }
 
 /**
@@ -108,8 +108,8 @@ export interface FillBlankQuestionData extends BaseQuestionData {
 export interface ShortAnswerQuestionData extends BaseQuestionData {
   /** 参考答案 */
   referenceAnswer: string
-  /** 类型标识 */
-  type: 'ShortAnswerQuestionData'
+  /** 类型标识（由多态序列化自动添加） */
+  type: 'shortAnswer'
 }
 
 /**
@@ -136,6 +136,12 @@ export interface Question {
   questionTypeEnum: QuestionType
   /** 题目数据（新格式） */
   data?: QuestionData
+  /** 选项列表（旧字段，已废弃，仅用于后端兼容性） */
+  /** @deprecated 请使用 data 属性（ChoiceQuestionData.options） */
+  options?: string[] | string
+  /** 正确答案（旧字段，已废弃，仅用于后端兼容性） */
+  /** @deprecated 请使用 data 属性（各题型的正确答案字段） */
+  correctAnswer?: string | string[] | boolean
   /** 题目解析 */
   explanation?: string
   /** 难度等级 */
@@ -177,33 +183,34 @@ export interface UpdateQuestionDto {
  * 类型守卫：判断是否为选择题数据
  */
 export function isChoiceQuestionData(data: QuestionData | undefined): data is ChoiceQuestionData {
-  return data?.type === 'ChoiceQuestionData'
+  return data?.type === 'choice'
 }
 
 /**
  * 类型守卫：判断是否为判断题数据
  */
 export function isBooleanQuestionData(data: QuestionData | undefined): data is BooleanQuestionData {
-  return data?.type === 'BooleanQuestionData'
+  return data?.type === 'boolean'
 }
 
 /**
  * 类型守卫：判断是否为填空题数据
  */
 export function isFillBlankQuestionData(data: QuestionData | undefined): data is FillBlankQuestionData {
-  return data?.type === 'FillBlankQuestionData'
+  return data?.type === 'fillBlank'
 }
 
 /**
  * 类型守卫：判断是否为简答题数据
  */
 export function isShortAnswerQuestionData(data: QuestionData | undefined): data is ShortAnswerQuestionData {
-  return data?.type === 'ShortAnswerQuestionData'
+  return data?.type === 'shortAnswer'
 }
 
 /**
  * 从题目数据中提取选项列表
  * 只使用新格式 data 属性
+ * 注意：历史数据通过后端 Question.Data getter 的 fallback 机制自动转换
  */
 export function getQuestionOptions(question: Question): string[] {
   if (isChoiceQuestionData(question.data)) {
@@ -215,6 +222,7 @@ export function getQuestionOptions(question: Question): string[] {
 /**
  * 从题目数据中提取正确答案
  * 只使用新格式 data 属性
+ * 注意：历史数据通过后端 Question.Data getter 的 fallback 机制自动转换
  */
 export function getQuestionCorrectAnswers(question: Question): string[] | boolean | string {
   if (isChoiceQuestionData(question.data)) {
@@ -236,33 +244,33 @@ export function getQuestionCorrectAnswers(question: Question): string[] | boolea
  * 判断题目是否为多选题
  */
 export function isMultipleChoiceQuestion(question: Question): boolean {
-  return question.questionType === QuestionType.MultipleChoice
+  return question.questionTypeEnum === QuestionType.MultipleChoice
 }
 
 /**
  * 判断题目是否为单选题
  */
 export function isSingleChoiceQuestion(question: Question): boolean {
-  return question.questionType === QuestionType.SingleChoice
+  return question.questionTypeEnum === QuestionType.SingleChoice
 }
 
 /**
  * 判断题目是否为判断题
  */
 export function isBooleanQuestion(question: Question): boolean {
-  return question.questionType === QuestionType.TrueFalse
+  return question.questionTypeEnum === QuestionType.TrueFalse
 }
 
 /**
  * 判断题目是否为填空题
  */
 export function isFillBlankQuestion(question: Question): boolean {
-  return question.questionType === QuestionType.FillBlank
+  return question.questionTypeEnum === QuestionType.FillBlank
 }
 
 /**
  * 判断题目是否为简答题
  */
 export function isShortAnswerQuestion(question: Question): boolean {
-  return question.questionType === QuestionType.ShortAnswer
+  return question.questionTypeEnum === QuestionType.ShortAnswer
 }

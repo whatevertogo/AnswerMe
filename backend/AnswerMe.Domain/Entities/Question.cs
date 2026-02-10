@@ -50,8 +50,11 @@ public class Question : BaseEntity
 
             try
             {
+                using var jsonDocument = JsonDocument.Parse(QuestionDataJson);
+                var root = jsonDocument.RootElement;
+
                 // 根据题型选择正确的类型进行反序列化
-                return QuestionTypeEnum switch
+                QuestionData? parsed = QuestionTypeEnum switch
                 {
                     Domain.Enums.QuestionType.SingleChoice => JsonSerializer.Deserialize<ChoiceQuestionData>(QuestionDataJson, QuestionDataJsonOptions.Default),
                     Domain.Enums.QuestionType.MultipleChoice => JsonSerializer.Deserialize<ChoiceQuestionData>(QuestionDataJson, QuestionDataJsonOptions.Default),
@@ -60,6 +63,54 @@ public class Question : BaseEntity
                     Domain.Enums.QuestionType.ShortAnswer => JsonSerializer.Deserialize<ShortAnswerQuestionData>(QuestionDataJson, QuestionDataJsonOptions.Default),
                     _ => null
                 };
+
+                if (parsed == null)
+                {
+                    return BuildDataFromLegacy();
+                }
+
+                switch (parsed)
+                {
+                    case ChoiceQuestionData choiceData:
+                    {
+                        var hasOptions = root.TryGetProperty("options", out _);
+                        var hasCorrectAnswers = root.TryGetProperty("correctAnswers", out _);
+                        if (!hasOptions || !hasCorrectAnswers || choiceData.Options.Count == 0 || choiceData.CorrectAnswers.Count == 0)
+                        {
+                            return BuildDataFromLegacy() ?? parsed;
+                        }
+                        return parsed;
+                    }
+                    case BooleanQuestionData:
+                    {
+                        var hasCorrectAnswer = root.TryGetProperty("correctAnswer", out _);
+                        if (!hasCorrectAnswer)
+                        {
+                            return BuildDataFromLegacy() ?? parsed;
+                        }
+                        return parsed;
+                    }
+                    case FillBlankQuestionData fillData:
+                    {
+                        var hasAcceptableAnswers = root.TryGetProperty("acceptableAnswers", out _);
+                        if (!hasAcceptableAnswers || fillData.AcceptableAnswers.Count == 0)
+                        {
+                            return BuildDataFromLegacy() ?? parsed;
+                        }
+                        return parsed;
+                    }
+                    case ShortAnswerQuestionData shortAnswerData:
+                    {
+                        var hasReferenceAnswer = root.TryGetProperty("referenceAnswer", out _);
+                        if (!hasReferenceAnswer || string.IsNullOrWhiteSpace(shortAnswerData.ReferenceAnswer))
+                        {
+                            return BuildDataFromLegacy() ?? parsed;
+                        }
+                        return parsed;
+                    }
+                    default:
+                        return parsed;
+                }
             }
             catch (JsonException)
             {
@@ -102,6 +153,7 @@ public class Question : BaseEntity
     public QuestionBank QuestionBank { get; set; } = null!;
     public ICollection<AttemptDetail> AttemptDetails { get; set; } = new List<AttemptDetail>();
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "CS0618:旧字段兼容性代码", Justification = "BuildDataFromLegacy 用于从旧字段迁移数据到新格式")]
     private QuestionData? BuildDataFromLegacy()
     {
         var questionType = QuestionTypeEnum;
@@ -118,8 +170,10 @@ public class Question : BaseEntity
             case Domain.Enums.QuestionType.SingleChoice:
             case Domain.Enums.QuestionType.MultipleChoice:
             {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                 var options = ParseOptions(Options);
                 var correctAnswers = ParseAnswers(CorrectAnswer);
+#pragma warning restore CS0618
                 if (options.Count == 0 && correctAnswers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
                 {
                     return null;
@@ -134,7 +188,9 @@ public class Question : BaseEntity
             }
             case Domain.Enums.QuestionType.TrueFalse:
             {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                 if (!bool.TryParse(CorrectAnswer, out var booleanAnswer))
+#pragma warning restore CS0618
                 {
                     return null;
                 }
@@ -147,7 +203,9 @@ public class Question : BaseEntity
             }
             case Domain.Enums.QuestionType.FillBlank:
             {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                 var answers = ParseAnswers(CorrectAnswer);
+#pragma warning restore CS0618
                 if (answers.Count == 0 && string.IsNullOrWhiteSpace(explanation))
                 {
                     return null;
@@ -161,13 +219,17 @@ public class Question : BaseEntity
             }
             case Domain.Enums.QuestionType.ShortAnswer:
             {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                 if (string.IsNullOrWhiteSpace(CorrectAnswer) && string.IsNullOrWhiteSpace(explanation))
+#pragma warning restore CS0618
                 {
                     return null;
                 }
                 return new ShortAnswerQuestionData
                 {
+#pragma warning disable CS0618 // 旧字段兼容性代码
                     ReferenceAnswer = CorrectAnswer,
+#pragma warning restore CS0618
                     Explanation = explanation,
                     Difficulty = difficulty
                 };
@@ -179,53 +241,11 @@ public class Question : BaseEntity
 
     private static List<string> ParseOptions(string? options)
     {
-        if (string.IsNullOrWhiteSpace(options))
-        {
-            return new List<string>();
-        }
-
-        var trimmed = options.Trim();
-        if (trimmed.StartsWith("["))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<List<string>>(options) ?? new List<string>();
-            }
-            catch
-            {
-                return new List<string>();
-            }
-        }
-
-        return trimmed
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .ToList();
+        return LegacyFieldParser.ParseDelimitedList(options);
     }
 
     private static List<string> ParseAnswers(string? answers)
     {
-        if (string.IsNullOrWhiteSpace(answers))
-        {
-            return new List<string>();
-        }
-
-        var trimmed = answers.Trim();
-        if (trimmed.StartsWith("["))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<List<string>>(answers) ?? new List<string>();
-            }
-            catch
-            {
-                return new List<string>();
-            }
-        }
-
-        return trimmed
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .ToList();
+        return LegacyFieldParser.ParseDelimitedList(answers);
     }
 }

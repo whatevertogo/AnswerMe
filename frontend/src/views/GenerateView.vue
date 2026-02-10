@@ -9,6 +9,15 @@ import type { DataSource } from '@/api/datasource'
 import type { AIGenerateRequest } from '@/api/aiGeneration'
 import { getQuestionBanks } from '@/api/questionBank'
 import type { QuestionBank } from '@/types'
+import {
+  isChoiceQuestionData,
+  isBooleanQuestionData,
+  isFillBlankQuestionData,
+  isShortAnswerQuestionData,
+  DifficultyLabels,
+  getQuestionTypeLabel
+} from '@/types/question'
+import { formatQuestionForCopy } from '@/composables/useQuestionDisplay'
 
 const router = useRouter()
 const aiGenerationStore = useAIGenerationStore()
@@ -173,12 +182,7 @@ function handleReset() {
 
 // 复制题目文本
 function copyQuestionText(question: any) {
-  const text = `【${question.questionType}】${question.questionText}\n` +
-    (question.options && question.options.length > 0 ? question.options.map((opt: string, idx: number) =>
-      `${String.fromCharCode(65 + idx)}. ${opt}`).join('\n') + '\n' : '') +
-    `答案: ${question.correctAnswer}\n` +
-    (question.explanation ? `解析: ${question.explanation}` : '')
-
+  const text = formatQuestionForCopy(question)
   navigator.clipboard.writeText(text).then(() => {
     ElMessage.success('已复制到剪贴板')
   }).catch(() => {
@@ -242,32 +246,6 @@ function getDifficultyType(difficulty: string) {
     hard: 'danger'
   }
   return typeMap[difficulty] || 'info'
-}
-
-function getDifficultyText(difficulty: string) {
-  const textMap: Record<string, string> = {
-    easy: '简单',
-    medium: '中等',
-    hard: '困难'
-  }
-  return textMap[difficulty] || difficulty
-}
-
-function getQuestionTypeText(type: string) {
-  const textMap: Record<string, string> = {
-    'SingleChoice': '单选题',
-    'MultipleChoice': '多选题',
-    'TrueFalse': '判断题',
-    'FillBlank': '填空题',
-    'ShortAnswer': '简答题',
-    // 兼容旧格式
-    'single': '单选题',
-    'multiple': '多选题',
-    'boolean': '判断题',
-    'fill': '填空题',
-    'essay': '简答题'
-  }
-  return textMap[type] || type
 }
 </script>
 
@@ -545,19 +523,20 @@ function getQuestionTypeText(type: string) {
                 <span class="question-number">第 {{ index + 1 }} 题</span>
                 <div class="question-tags">
                   <el-tag size="small" :type="getDifficultyType(question.difficulty)">
-                    {{ getDifficultyText(question.difficulty) }}
+                    {{ DifficultyLabels[question.difficulty as keyof typeof DifficultyLabels] || question.difficulty }}
                   </el-tag>
                   <el-tag size="small" type="info">
-                    {{ getQuestionTypeText(question.questionType) }}
+                    {{ getQuestionTypeLabel(question.questionType) }}
                   </el-tag>
                 </div>
               </div>
 
               <div class="question-content">{{ question.questionText }}</div>
 
-              <div v-if="question.options && question.options.length > 0" class="question-options">
+              <!-- 选择题选项显示 -->
+              <div v-if="isChoiceQuestionData(question.data)" class="question-options">
                 <div
-                  v-for="(option, optIndex) in question.options"
+                  v-for="(option, optIndex) in question.data.options"
                   :key="optIndex"
                   class="option-item"
                 >
@@ -568,7 +547,23 @@ function getQuestionTypeText(type: string) {
               <div class="question-meta">
                 <div class="answer-section">
                   <span class="label">正确答案:</span>
-                  <span class="answer">{{ question.correctAnswer }}</span>
+                  <!-- 选择题答案 -->
+                  <span v-if="isChoiceQuestionData(question.data)" class="answer">
+                    {{ question.data.correctAnswers.join(', ') }}
+                  </span>
+                  <!-- 判断题答案 -->
+                  <span v-else-if="isBooleanQuestionData(question.data)" class="answer">
+                    {{ question.data.correctAnswer ? '正确' : '错误' }}
+                  </span>
+                  <!-- 填空题答案 -->
+                  <span v-else-if="isFillBlankQuestionData(question.data)" class="answer">
+                    {{ question.data.acceptableAnswers.join(', ') }}
+                  </span>
+                  <!-- 简答题答案 -->
+                  <span v-else-if="isShortAnswerQuestionData(question.data)" class="answer">
+                    {{ question.data.referenceAnswer }}
+                  </span>
+                  <span v-else class="answer">{{ question.correctAnswer || '(未知)' }}</span>
                 </div>
 
                 <div v-if="question.explanation" class="explanation-section">

@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import {
   HomeFilled,
   Notebook,
+  Reading,
   Setting,
   User,
   SwitchButton,
@@ -26,6 +27,11 @@ const menuItems = [
     path: '/question-banks',
     icon: Notebook,
     title: '题库管理'
+  },
+  {
+    path: '/practice',
+    icon: Reading,
+    title: '开始练习'
   },
   {
     path: '/ai-config',

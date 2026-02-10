@@ -347,8 +347,10 @@ public class QuestionService : IQuestionService
     private static QuestionData? NormalizeQuestionData(
         QuestionData? data,
         QuestionType? questionType,
+#pragma warning disable CS0618 // 旧字段兼容性代码：DTO 中的 Options/CorrectAnswer 用于向后兼容
         string? legacyOptions,
         string? legacyCorrectAnswer,
+#pragma warning restore CS0618
         string? explanation,
         string? difficulty)
     {
@@ -483,43 +485,27 @@ public class QuestionService : IQuestionService
 
     private static List<string> ParseLegacyOptions(string? legacyOptions)
     {
-        if (string.IsNullOrWhiteSpace(legacyOptions))
-        {
-            return new List<string>();
-        }
-
-        var trimmed = legacyOptions.Trim();
-        if (trimmed.StartsWith("["))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<List<string>>(legacyOptions) ?? new List<string>();
-            }
-            catch
-            {
-                return new List<string>();
-            }
-        }
-
-        return trimmed
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .ToList();
+        return ParseDelimitedList(legacyOptions);
     }
 
     private static List<string> ParseLegacyAnswers(string? legacyAnswers)
     {
-        if (string.IsNullOrWhiteSpace(legacyAnswers))
+        return ParseDelimitedList(legacyAnswers);
+    }
+
+    private static List<string> ParseDelimitedList(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
         {
             return new List<string>();
         }
 
-        var trimmed = legacyAnswers.Trim();
+        var trimmed = input.Trim();
         if (trimmed.StartsWith("["))
         {
             try
             {
-                return JsonSerializer.Deserialize<List<string>>(legacyAnswers) ?? new List<string>();
+                return JsonSerializer.Deserialize<List<string>>(input) ?? new List<string>();
             }
             catch
             {

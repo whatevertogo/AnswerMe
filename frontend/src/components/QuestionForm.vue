@@ -346,7 +346,7 @@ function buildQuestionData(): QuestionData | undefined {
           .filter(Boolean)
 
     return {
-      type: 'ChoiceQuestionData',
+      type: 'choice',
       options,
       correctAnswers: answers,
       explanation,
@@ -356,7 +356,7 @@ function buildQuestionData(): QuestionData | undefined {
 
   if (form.value.questionTypeEnum === QuestionTypeEnum.TrueFalse) {
     return {
-      type: 'BooleanQuestionData',
+      type: 'boolean',
       correctAnswer: String(form.value.correctAnswer) === 'true',
       explanation,
       difficulty
@@ -369,7 +369,7 @@ function buildQuestionData(): QuestionData | undefined {
       .map(value => value.trim())
       .filter(Boolean)
     return {
-      type: 'FillBlankQuestionData',
+      type: 'fillBlank',
       acceptableAnswers: answers,
       explanation,
       difficulty
@@ -378,7 +378,7 @@ function buildQuestionData(): QuestionData | undefined {
 
   if (form.value.questionTypeEnum === QuestionTypeEnum.ShortAnswer) {
     return {
-      type: 'ShortAnswerQuestionData',
+      type: 'shortAnswer',
       referenceAnswer: String(form.value.correctAnswer || ''),
       explanation,
       difficulty

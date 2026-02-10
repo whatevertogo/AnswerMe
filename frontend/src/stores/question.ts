@@ -130,7 +130,7 @@ export const useQuestionStore = defineStore('question', () => {
     }
   }
 
-  async function searchQuestions(searchTerm: string, questionBankId?: number): Promise<Question[]> {
+  async function searchQuestions(searchTerm: string, questionBankId: number): Promise<Question[]> {
     loading.value = true
     error.value = null
     try {

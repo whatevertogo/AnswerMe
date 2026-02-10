@@ -13,7 +13,7 @@ SET QuestionDataJson = json_object(
     'CorrectAnswers', json_array(CorrectAnswer),
     'Explanation', coalesce(Explanation, ''),
     'Difficulty', Difficulty,
-    '$type', 'ChoiceQuestionData'
+    'type', 'choice'
 )
 WHERE QuestionType IN ('choice', 'single', 'multiple', 'multiple-choice')
   AND QuestionDataJson IS NULL;
@@ -29,7 +29,7 @@ SET QuestionDataJson = json_object(
     END,
     'Explanation', coalesce(Explanation, ''),
     'Difficulty', Difficulty,
-    '$type', 'BooleanQuestionData'
+    'type', 'boolean'
 )
 WHERE QuestionType IN ('true-false', 'boolean', 'bool')
   AND QuestionDataJson IS NULL;
@@ -40,7 +40,7 @@ SET QuestionDataJson = json_object(
     'AcceptableAnswers', json_array(CorrectAnswer),
     'Explanation', coalesce(Explanation, ''),
     'Difficulty', Difficulty,
-    '$type', 'FillBlankQuestionData'
+    'type', 'fillBlank'
 )
 WHERE QuestionType IN ('fill', 'fill-blank', 'fillblank')
   AND QuestionDataJson IS NULL;
@@ -51,7 +51,7 @@ SET QuestionDataJson = json_object(
     'ReferenceAnswer', CorrectAnswer,
     'Explanation', coalesce(Explanation, ''),
     'Difficulty', Difficulty,
-    '$type', 'ShortAnswerQuestionData'
+    'type', 'shortAnswer'
 )
 WHERE QuestionType IN ('essay', 'short-answer', 'shortanswer')
   AND QuestionDataJson IS NULL;
