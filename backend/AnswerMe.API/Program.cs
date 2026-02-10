@@ -203,6 +203,69 @@ if (app.Environment.IsDevelopment())
     {
         Log.Error(ex, "数据库迁移失败");
     }
+
+    // 数据一致性检查（开发环境默认启用）
+    var enableConsistencyCheck = builder.Configuration.GetValue<bool>("DataConsistency:EnableCheck", true);
+    if (enableConsistencyCheck)
+    {
+        Log.Information("数据一致性检查已启用，开始执行...");
+
+        try
+        {
+            var checkService = scope.ServiceProvider.GetRequiredService<AnswerMe.Infrastructure.Services.DataConsistencyCheckService>();
+            var report = await checkService.CheckAllQuestionsAsync();
+
+            Log.LogInformation(
+                "数据一致性检查完成: 总题数 {Total}, 不一致数 {Inconsistent}, 一致率 {Rate:F2}%",
+                report.TotalQuestions,
+                report.InconsistentQuestions,
+                report.ConsistencyRate);
+
+            if (report.Issues.Count > 0)
+            {
+                var errorCount = report.Issues.Count(i => i.Severity == "Error");
+                var warningCount = report.Issues.Count(i => i.Severity == "Warning");
+
+                Log.LogWarning(
+                    "发现 {ErrorCount} 个错误, {WarningCount} 个警告",
+                    errorCount,
+                    warningCount);
+
+                foreach (var issue in report.Issues.Take(10))
+                {
+                    var logLevel = issue.Severity == "Error" ? LogLevel.Error : LogLevel.Warning;
+                    Log.Write(logLevel,
+                        "题目 {QuestionId}: {Type} - {Description}. 建议: {Recommendation}",
+                        issue.QuestionId,
+                        issue.IssueType,
+                        issue.Description,
+                        issue.Recommendation);
+                }
+
+                if (report.Issues.Count > 10)
+                {
+                    Log.LogWarning("还有 {Remaining} 个问题未显示", report.Issues.Count - 10);
+                }
+            }
+
+            if (report.IsHealthy)
+            {
+                Log.Information("✅ 所有题目数据一致性检查通过");
+            }
+            else if (report.ConsistencyRate >= 99.5)
+            {
+                Log.LogWarning("⚠️ 数据一致性率 {Rate:F2}% 未达到 100%，但接近目标", report.ConsistencyRate);
+            }
+            else
+            {
+                Log.LogError("❌ 数据一致性率 {Rate:F2}% 低于目标 99.5%，请执行数据修复", report.ConsistencyRate);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "数据一致性检查失败");
+        }
+    }
 }
 
 // 健康检查端点

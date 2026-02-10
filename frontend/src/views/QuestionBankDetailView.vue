@@ -14,6 +14,8 @@ import {
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionBankForm from '@/components/QuestionBankForm.vue'
 import type { QuestionBank } from '@/stores/questionBank'
+import { QuestionType, getQuestionTypeLabel, getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
+import { isChoiceQuestionData } from '@/types/question'
 
 const route = useRoute()
 const router = useRouter()
@@ -140,12 +142,8 @@ const handleFormClose = () => {
 }
 
 // 题目类型标签颜色
-const getQuestionTypeTagType = (type: any): string => {
+const getQuestionTypeTagType = (type: string): string => {
   const typeMap: Record<string, string> = {
-    'choice': 'success',
-    'multiple-choice': 'warning',
-    'true-false': 'info',
-    'short-answer': '',
     'SingleChoice': 'success',
     'MultipleChoice': 'warning',
     'TrueFalse': 'info',
@@ -156,7 +154,7 @@ const getQuestionTypeTagType = (type: any): string => {
 }
 
 // 题目难度标签颜色
-const getDifficultyTagType = (difficulty: any): string => {
+const getDifficultyTagType = (difficulty: string): string => {
   const typeMap: Record<string, string> = {
     'easy': 'success',
     'medium': 'warning',
@@ -165,42 +163,31 @@ const getDifficultyTagType = (difficulty: any): string => {
   return typeMap[difficulty] || ''
 }
 
-// 获取题目显示文本（兼容新旧格式）
+// 获取题目显示文本
 const getQuestionDisplayText = (question: any) => {
-  return question.questionText || question.content || ''
+  return question.questionText || ''
 }
 
 // 获取题型显示文本
 const getQuestionTypeDisplay = (question: any) => {
-  const type = question.questionType || question.type
-  const typeMap: Record<string, string> = {
-    'choice': '单选',
-    'multiple-choice': '多选',
-    'true-false': '判断',
-    'short-answer': '问答',
-    'SingleChoice': '单选',
-    'MultipleChoice': '多选',
-    'TrueFalse': '判断',
-    'FillBlank': '填空',
-    'ShortAnswer': '简答'
-  }
-  return typeMap[type] || '未知'
+  return getQuestionTypeLabel(question.questionTypeEnum)
 }
 
-// 获取选项列表（兼容新旧格式）
-const getQuestionOptions = (question: any): string[] => {
-  if (question.data?.options) {
-    return question.data.options
+// 获取正确答案显示文本
+const getCorrectAnswerDisplay = (question: any): string => {
+  const answer = getQuestionCorrectAnswers(question)
+  if (Array.isArray(answer)) {
+    return answer.join(', ')
   }
-  return question.options || []
+  if (typeof answer === 'boolean') {
+    return answer ? '正确' : '错误'
+  }
+  return String(answer)
 }
 
 // 获取题目索引（用于选项字母）
 const getOptionIndex = (index: number) => {
-  if (typeof index === 'number') {
-    return String.fromCharCode(65 + index)
-  }
-  return index
+  return String.fromCharCode(65 + index)
 }
 </script>
 
@@ -271,7 +258,7 @@ const getOptionIndex = (index: number) => {
         >
           <div class="question-header">
             <span class="question-number">#{{ index + 1 }}</span>
-            <el-tag size="small" :type="getQuestionTypeTagType((question as any).questionType || (question as any).type)">
+            <el-tag size="small" :type="getQuestionTypeTagType(question.questionTypeEnum)">
               {{ getQuestionTypeDisplay(question) }}
             </el-tag>
             <el-tag size="small" :type="getDifficultyTagType(question.difficulty)">
@@ -298,7 +285,7 @@ const getOptionIndex = (index: number) => {
 
           <div class="question-answer">
             <span class="answer-label">答案：</span>
-            <span>{{ question.correctAnswer }}</span>
+            <span>{{ getCorrectAnswerDisplay(question) }}</span>
           </div>
 
           <div v-if="question.explanation" class="question-explanation">

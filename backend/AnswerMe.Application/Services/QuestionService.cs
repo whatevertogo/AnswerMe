@@ -375,6 +375,11 @@ public class QuestionService : IQuestionService
         return data;
     }
 
+    /// <summary>
+    /// 应用题目数据到实体
+    /// 只更新新字段（QuestionDataJson），不再同步更新旧字段
+    /// 旧字段仅用于历史数据兼容
+    /// </summary>
     private static void ApplyQuestionData(Domain.Entities.Question question, QuestionData? data)
     {
         if (data == null)
@@ -382,8 +387,10 @@ public class QuestionService : IQuestionService
             return;
         }
 
+        // 只更新新字段
         question.Data = data;
 
+        // 将 Explanation 和 Difficulty 提取到顶层字段（便于数据库查询）
         if (!string.IsNullOrWhiteSpace(data.Explanation))
         {
             question.Explanation = data.Explanation;
@@ -394,25 +401,8 @@ public class QuestionService : IQuestionService
             question.Difficulty = data.Difficulty;
         }
 
-        switch (data)
-        {
-            case ChoiceQuestionData choiceData:
-                question.Options = JsonSerializer.Serialize(choiceData.Options);
-                question.CorrectAnswer = string.Join(",", choiceData.CorrectAnswers);
-                break;
-            case BooleanQuestionData booleanData:
-                question.Options = null;
-                question.CorrectAnswer = booleanData.CorrectAnswer ? "true" : "false";
-                break;
-            case FillBlankQuestionData fillBlankData:
-                question.Options = null;
-                question.CorrectAnswer = string.Join(",", fillBlankData.AcceptableAnswers);
-                break;
-            case ShortAnswerQuestionData shortAnswerData:
-                question.Options = null;
-                question.CorrectAnswer = shortAnswerData.ReferenceAnswer;
-                break;
-        }
+        // 不再更新旧字段（Options、CorrectAnswer）
+        // 历史数据的旧字段保留用于读取兼容，新数据不写入旧字段
     }
 
     private static QuestionData? BuildDataFromLegacy(

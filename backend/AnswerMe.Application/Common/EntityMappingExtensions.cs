@@ -42,10 +42,11 @@ public static class EntityMappingExtensions
 
     /// <summary>
     /// 将 Question 实体映射为 DTO
+    /// 只映射新字段，旧字段由 Data 属性提供
     /// </summary>
     public static QuestionDto ToDto(this Question entity)
     {
-        var dto = new QuestionDto
+        return new QuestionDto
         {
             Id = entity.Id,
             QuestionBankId = entity.QuestionBankId,
@@ -53,17 +54,12 @@ public static class EntityMappingExtensions
             QuestionText = entity.QuestionText,
             QuestionTypeEnum = entity.QuestionTypeEnum,
             Data = entity.Data,
-            Options = entity.Options,
-            CorrectAnswer = entity.CorrectAnswer,
             Explanation = entity.Explanation,
             Difficulty = entity.Difficulty,
             OrderIndex = entity.OrderIndex,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
-
-        dto.PopulateLegacyFieldsFromData();
-        return dto;
     }
 
     /// <summary>

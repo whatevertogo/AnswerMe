@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-
-interface Question {
-  id: number
-  type: 'single' | 'multiple' | 'boolean' | 'fill' | 'essay'
-  options: string[]
-}
+import type { Question, QuestionData, ChoiceQuestionData } from '@/types/question'
+import { isChoiceQuestionData } from '@/types/question'
+import { QuestionType } from '@/types/question'
 
 interface Props {
   question: Question
@@ -18,6 +15,27 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:answer': [answer: string | string[]]
 }>()
+
+// 从 data 中获取选项列表
+const options = computed(() => {
+  if (isChoiceQuestionData(props.question.data)) {
+    return props.question.data.options
+  }
+  return []
+})
+
+// 题目类型映射
+const questionTypeMap = {
+  [QuestionType.SingleChoice]: 'single',
+  [QuestionType.MultipleChoice]: 'multiple',
+  [QuestionType.TrueFalse]: 'boolean',
+  [QuestionType.FillBlank]: 'fill',
+  [QuestionType.ShortAnswer]: 'essay'
+} as const
+
+const currentType = computed(() => {
+  return questionTypeMap[props.question.questionTypeEnum] || 'essay'
+})
 
 // 计算已选答案数量
 const selectedCount = computed(() => {
@@ -55,13 +73,13 @@ const getOptionLabel = (index: number) => {
   <div class="answer-panel">
     <!-- 单选题 -->
     <el-radio-group
-      v-if="question.type === 'single'"
+      v-if="currentType === 'single'"
       :model-value="answer"
       @update:model-value="handleSingleSelect"
     >
       <div class="options-list">
         <div
-          v-for="(option, index) in question.options"
+          v-for="(option, index) in options"
           :key="index"
           :class="['option-item', { 'is-selected': answer === option }]"
         >
@@ -74,14 +92,14 @@ const getOptionLabel = (index: number) => {
     </el-radio-group>
 
     <!-- 多选题 -->
-    <div v-if="question.type === 'multiple'" class="multiple-choice-container">
+    <div v-if="currentType === 'multiple'" class="multiple-choice-container">
       <div class="selection-info">
         <span class="selection-hint">请选择所有正确答案</span>
         <span class="selection-count">已选: {{ selectedCount }} 项</span>
       </div>
       <div class="options-list">
         <div
-          v-for="(option, index) in question.options"
+          v-for="(option, index) in options"
           :key="index"
           :class="['option-item', { 'is-selected': (answer as string[])?.includes(option) }]"
         >
@@ -99,7 +117,7 @@ const getOptionLabel = (index: number) => {
 
     <!-- 简答题 -->
     <el-input
-      v-if="question.type === 'essay'"
+      v-if="currentType === 'essay'"
       :model-value="answer"
       @update:model-value="handleEssayChange"
       type="textarea"

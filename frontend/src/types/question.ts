@@ -125,20 +125,17 @@ export type QuestionData =
  * 题目实体
  *
  * 与后端 Question 实体对应
+ * 只使用新字段，旧字段已废弃
  */
 export interface Question {
   /** 题目ID */
   id: number
   /** 题目内容 */
   questionText: string
-  /** 题型 */
-  questionType: QuestionType
+  /** 题型枚举 */
+  questionTypeEnum: QuestionType
   /** 题目数据（新格式） */
   data?: QuestionData
-  /** 题目数据 JSON（旧格式，向后兼容） */
-  options?: string[]
-  /** 正确答案（旧格式，向后兼容） */
-  correctAnswer?: string
   /** 题目解析 */
   explanation?: string
   /** 难度等级 */
@@ -206,40 +203,20 @@ export function isShortAnswerQuestionData(data: QuestionData | undefined): data 
 
 /**
  * 从题目数据中提取选项列表
+ * 只使用新格式 data 属性
  */
 export function getQuestionOptions(question: Question): string[] {
-  // 优先使用新格式
   if (isChoiceQuestionData(question.data)) {
     return question.data.options
-  }
-  // 回退到旧格式
-  const legacyOptions = (question as any).options
-  if (Array.isArray(legacyOptions)) {
-    return legacyOptions
-  }
-  if (typeof legacyOptions === 'string') {
-    const trimmed = legacyOptions.trim()
-    if (trimmed.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(trimmed)
-        return Array.isArray(parsed) ? parsed : []
-      } catch {
-        return []
-      }
-    }
-    return trimmed
-      .split(',')
-      .map(value => value.trim())
-      .filter(Boolean)
   }
   return []
 }
 
 /**
  * 从题目数据中提取正确答案
+ * 只使用新格式 data 属性
  */
 export function getQuestionCorrectAnswers(question: Question): string[] | boolean | string {
-  // 优先使用新格式
   if (isChoiceQuestionData(question.data)) {
     return question.data.correctAnswers
   }
@@ -252,8 +229,7 @@ export function getQuestionCorrectAnswers(question: Question): string[] | boolea
   if (isShortAnswerQuestionData(question.data)) {
     return question.data.referenceAnswer
   }
-  // 回退到旧格式
-  return question.correctAnswer || ''
+  return ''
 }
 
 /**

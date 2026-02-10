@@ -128,8 +128,7 @@ export const useQuizStore = defineStore('quiz', () => {
     try {
       const response = await quizApi.startQuiz({ questionBankId, mode })
       currentAttemptId.value = response.data.attemptId
-      // 注意：API响应中无questionIds，需要后续获取
-      questionIds.value = []
+      questionIds.value = response.data.questionIds || []
       currentQuestionIndex.value = 0
       answers.value = {}
       timeSpents.value = {}

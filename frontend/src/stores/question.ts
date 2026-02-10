@@ -17,29 +17,35 @@ export const useQuestionStore = defineStore('question', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const pagination = ref({
-    total: 0,
-    page: 1,
-    pageSize: 20
+    totalCount: 0,
+    pageSize: 20,
+    hasMore: false,
+    nextCursor: null as number | null
   })
 
-  async function fetchQuestions(params: QuestionQueryParams) {
+  async function fetchQuestions(params: QuestionQueryParams, options?: { append?: boolean }) {
     loading.value = true
     error.value = null
     try {
       const queryParams: QuestionQueryParams = {
-        page: params.page || 1,
         pageSize: params.pageSize || 20,
+        lastId: params.lastId,
         questionBankId: params.questionBankId,
         questionTypeEnum: params.questionTypeEnum,
         difficulty: params.difficulty,
         search: params.search
       }
       const response = await questionApi.getQuestions(queryParams)
-      questions.value = response.data.items
+      if (options?.append) {
+        questions.value = [...questions.value, ...response.data.data]
+      } else {
+        questions.value = response.data.data
+      }
       pagination.value = {
-        total: response.data.total,
-        page: response.data.page,
-        pageSize: response.data.pageSize
+        totalCount: response.data.totalCount,
+        pageSize: queryParams.pageSize,
+        hasMore: response.data.hasMore,
+        nextCursor: response.data.nextCursor ?? null
       }
     } catch (err) {
       error.value = extractErrorMessage(err, '获取题目列表失败')
@@ -147,9 +153,10 @@ export const useQuestionStore = defineStore('question', () => {
     questions.value = []
     currentQuestion.value = null
     pagination.value = {
-      total: 0,
-      page: 1,
-      pageSize: 20
+      totalCount: 0,
+      pageSize: 20,
+      hasMore: false,
+      nextCursor: null
     }
   }
 

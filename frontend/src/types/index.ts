@@ -65,6 +65,11 @@ export interface PaginationParams {
   pageSize: number
 }
 
+export interface CursorPaginationParams {
+  pageSize: number
+  lastId?: number
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
   total: number
@@ -164,7 +169,7 @@ export interface QuestionLegacy {
 }
 
 /** 题目查询参数 */
-export interface QuestionQueryParams extends PaginationParams {
+export interface QuestionQueryParams extends CursorPaginationParams {
   questionBankId?: number
   questionTypeEnum?: NewQuestionType
   difficulty?: string

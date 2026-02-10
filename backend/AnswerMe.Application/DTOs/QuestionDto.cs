@@ -101,6 +101,7 @@ public class UpdateQuestionDto
 
 /// <summary>
 /// 题目响应DTO
+/// 只输出新字段，旧字段仅用于输入兼容
 /// </summary>
 public class QuestionDto
 {
@@ -115,58 +116,15 @@ public class QuestionDto
     public QuestionType? QuestionTypeEnum { get; set; }
 
     /// <summary>
-    /// 题型（旧格式：字符串，向后兼容）
-    /// TODO: 标记为 Obsolete，计划 30 天后移除
-    /// </summary>
-    [Obsolete("请使用 QuestionTypeEnum")]
-    public string QuestionType
-    {
-        get => QuestionTypeEnum?.ToString() ?? string.Empty;
-        set => QuestionTypeEnum = QuestionTypeExtensions.ParseFromString(value);
-    }
-
-    /// <summary>
     /// 题目数据（新格式：JSON，支持多选题）
     /// </summary>
     public QuestionData? Data { get; set; }
-
-    /// <summary>
-    /// 选项（旧格式，向后兼容）
-    /// TODO: 标记为 Obsolete，计划 30 天后移除
-    /// </summary>
-    [Obsolete("请使用 Data.ChoiceQuestionData.Options")]
-    public string? Options { get; set; }
-
-    /// <summary>
-    /// 正确答案（旧格式，向后兼容）
-    /// TODO: 标记为 Obsolete，计划 30 天后移除
-    /// </summary>
-    [Obsolete("请使用 Data.ChoiceQuestionData.CorrectAnswers")]
-    public string? CorrectAnswer { get; set; }
 
     public string? Explanation { get; set; }
     public string Difficulty { get; set; } = "medium";
     public int OrderIndex { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-
-    /// <summary>
-    /// 向后兼容映射：自动从 Data 填充旧字段
-    /// TODO: 移除此方法，由前端直接使用 Data
-    /// </summary>
-    public void PopulateLegacyFieldsFromData()
-    {
-        if (Data == null) return;
-
-        Explanation = Data.Explanation ?? Explanation;
-        Difficulty = Data.Difficulty ?? Difficulty;
-
-        if (Data is ChoiceQuestionData choiceData)
-        {
-            Options = choiceData.Options != null ? string.Join(",", choiceData.Options) : null;
-            CorrectAnswer = string.Join(",", choiceData.CorrectAnswers);
-        }
-    }
 }
 
 /// <summary>

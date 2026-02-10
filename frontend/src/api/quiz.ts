@@ -14,9 +14,7 @@ export interface QuizStartParams {
  */
 export interface QuizStartResponse {
   attemptId: number
-  questionBankId: number
-  startedAt: string
-  totalQuestions: number
+  questionIds: number[]
 }
 
 /**

@@ -11,11 +11,10 @@ import type {
  * 题目列表响应
  */
 export interface QuestionListResponse {
-  items: Question[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
+  data: Question[]
+  hasMore: boolean
+  nextCursor?: number
+  totalCount: number
 }
 
 /**

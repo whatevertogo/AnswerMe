@@ -35,17 +35,18 @@ onMounted(async () => {
   await fetchQuestions()
 })
 
-const fetchQuestions = async (page = 1) => {
+const fetchQuestions = async (options?: { append?: boolean }) => {
   loading.value = true
   try {
+    const lastId = options?.append ? questionStore.pagination.nextCursor ?? undefined : undefined
     await questionStore.fetchQuestions({
-      page,
       pageSize: 20,
+      lastId,
       questionBankId: Number(currentBankId.value) || undefined,
       questionTypeEnum: selectedType.value || undefined,
       difficulty: selectedDifficulty.value || undefined,
       search: searchKeyword.value || undefined
-    })
+    }, { append: options?.append })
   } catch {
     ElMessage.error('获取题目列表失败')
   } finally {
@@ -59,7 +60,7 @@ watch([searchKeyword, selectedType, selectedDifficulty], () => {
     clearTimeout(searchTimer.value)
   }
   searchTimer.value = window.setTimeout(() => {
-    fetchQuestions(1)
+    fetchQuestions()
   }, 300)
 })
 
@@ -118,10 +119,6 @@ const handleFormSuccess = (_question: Question) => {
 const handleFormClose = () => {
   formDialogVisible.value = false
   currentQuestion.value = null
-}
-
-const handlePageChange = (page: number) => {
-  fetchQuestions(page)
 }
 
 const handleBackToBank = () => {
@@ -228,7 +225,7 @@ const formatCorrectAnswer = (question: Question) => {
         :prefix-icon="Search"
         clearable
         class="search-input"
-        @clear="fetchQuestions(1)"
+        @clear="fetchQuestions()"
       />
       <el-select
         v-model="selectedType"
@@ -252,7 +249,7 @@ const formatCorrectAnswer = (question: Question) => {
         <el-option label="中等" value="medium" />
         <el-option label="困难" value="hard" />
       </el-select>
-      <el-button :icon="Refresh" @click="fetchQuestions(1)">刷新</el-button>
+      <el-button :icon="Refresh" @click="fetchQuestions()">刷新</el-button>
     </div>
 
     <!-- 题目表格 -->
@@ -353,14 +350,17 @@ const formatCorrectAnswer = (question: Question) => {
       </el-table>
 
       <!-- 分页 -->
-      <div v-if="questionStore.pagination.total > 0" class="pagination-wrapper">
-        <el-pagination
-          :current-page="questionStore.pagination.page"
-          :page-size="questionStore.pagination.pageSize"
-          :total="questionStore.pagination.total"
-          layout="total, prev, pager, next, jumper"
-          @current-change="handlePageChange"
-        />
+      <div v-if="questionStore.questions.length > 0" class="pagination-wrapper">
+        <div class="pagination-summary">
+          已加载 {{ questionStore.questions.length }} / {{ questionStore.pagination.totalCount }} 题
+        </div>
+        <el-button
+          v-if="questionStore.pagination.hasMore"
+          :loading="loading"
+          @click="fetchQuestions({ append: true })"
+        >
+          加载更多
+        </el-button>
       </div>
     </el-card>
 
