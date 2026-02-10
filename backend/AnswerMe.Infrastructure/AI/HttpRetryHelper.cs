@@ -101,6 +101,17 @@ public static class HttpRetryHelper
                 logger.LogWarning(ex, "HTTP 请求失败，{Delay}秒后重试...", BaseDelay.TotalSeconds);
                 await Task.Delay(BaseDelay, cancellationToken);
             }
+            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                if (attempt == MaxRetries)
+                {
+                    logger.LogError(ex, "HTTP 请求超时，已达到最大重试次数");
+                    throw;
+                }
+
+                logger.LogWarning(ex, "HTTP 请求超时，{Delay}秒后重试...", BaseDelay.TotalSeconds);
+                await Task.Delay(BaseDelay, cancellationToken);
+            }
         }
 
         // 理论上不应该到达这里

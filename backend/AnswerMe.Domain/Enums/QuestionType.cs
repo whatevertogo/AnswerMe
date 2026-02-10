@@ -79,7 +79,7 @@ public static class QuestionTypeExtensions
         // 旧格式映射
         return value.ToLowerInvariant() switch
         {
-            "choice" or "single" or "single-choice" => QuestionType.SingleChoice,
+            "choice" or "single" or "single-choice" or "单选题" or "单选" or "选择题" => QuestionType.SingleChoice,
             "multiple" or "multiple-choice" or "多选题" => QuestionType.MultipleChoice,
             "true-false" or "boolean" or "bool" or "判断题" => QuestionType.TrueFalse,
             "fill" or "fill-blank" or "填空题" => QuestionType.FillBlank,

@@ -47,9 +47,9 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
     generatedQuestions.value = []
 
     try {
-      // 根据题目数量选择同步或异步
-      // ≥20题使用异步，<20题使用同步（与后端逻辑一致）
-      const useAsync = params.count >= 20
+      // 根据题目数量/耗时选择同步或异步
+      // ≥10题或自定义API默认使用异步，避免长时间阻塞
+      const useAsync = params.count >= 10 || params.providerName === 'custom_api'
 
       if (useAsync) {
         // 异步生成

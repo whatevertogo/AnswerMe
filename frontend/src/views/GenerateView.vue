@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Delete, MagicStick, DocumentCopy, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -69,7 +69,7 @@ const isFormValid = computed(() => {
          selectedDataSource.value !== null
 })
 
-const willUseAsync = computed(() => formData.value.count > 20)
+const willUseAsync = computed(() => formData.value.count >= 10 || formData.value.providerName === 'custom_api')
 
 const canGenerate = computed(() => isFormValid.value && !aiGenerationStore.loading)
 
@@ -200,6 +200,15 @@ onUnmounted(() => {
   aiGenerationStore.stopProgressPolling()
 })
 
+watch(
+  () => aiGenerationStore.taskStatus,
+  (status) => {
+    if (status === 'failed' && aiGenerationStore.progress?.errorMessage) {
+      ElMessage.error(aiGenerationStore.progress.errorMessage)
+    }
+  }
+)
+
 // 辅助函数
 function progressStatusType(status: string) {
   const typeMap: Record<string, any> = {
@@ -303,7 +312,7 @@ function getQuestionTypeText(type: string) {
                 :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
               />
               <span class="form-hint">
-                {{ willUseAsync ? '> 20题将使用异步生成' : '≤ 20题使用同步生成' }}
+                {{ willUseAsync ? '≥ 10题将使用异步生成' : '< 10题使用同步生成' }}
               </span>
             </el-form-item>
 
@@ -485,6 +494,13 @@ function getQuestionTypeText(type: string) {
 
             <div v-if="aiGenerationStore.progress" class="progress-details">
               <span>{{ aiGenerationStore.progress.generatedCount }} / {{ aiGenerationStore.progress.totalCount }} 题</span>
+            </div>
+
+            <div
+              v-if="aiGenerationStore.taskStatus === 'failed' && aiGenerationStore.progress?.errorMessage"
+              class="progress-error"
+            >
+              {{ aiGenerationStore.progress.errorMessage }}
             </div>
 
             <div v-if="aiGenerationStore.currentTaskId" class="task-id">
@@ -697,6 +713,21 @@ function getQuestionTypeText(type: string) {
 
 .dark .progress-details {
   color: #9ca3af;
+}
+
+.progress-error {
+  font-size: 0.8125rem;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+}
+
+.dark .progress-error {
+  color: #fca5a5;
+  background: #7f1d1d33;
+  border-color: #7f1d1d;
 }
 
 .task-id {

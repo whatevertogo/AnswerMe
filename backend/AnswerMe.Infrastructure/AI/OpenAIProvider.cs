@@ -15,9 +15,9 @@ public class OpenAIProvider : IAIProvider
 
     public string ProviderName => "OpenAI";
 
-    public OpenAIProvider(HttpClient httpClient, ILogger<OpenAIProvider> logger)
+    public OpenAIProvider(IHttpClientFactory httpClientFactory, ILogger<OpenAIProvider> logger)
     {
-        _httpClient = httpClient;
+        _httpClient = httpClientFactory.CreateClient("AI");
         _logger = logger;
     }
 
@@ -37,7 +37,7 @@ public class OpenAIProvider : IAIProvider
 
             // ✅ 根据题目数量动态计算max_tokens
             var estimatedTokensPerQuestion = 250;
-            var maxTokens = Math.Max(8000, request.Count * estimatedTokensPerQuestion + 1000);
+            var maxTokens = Math.Clamp(request.Count * estimatedTokensPerQuestion + 1000, 1000, 8000);
 
             _logger.LogInformation("OpenAI配置: Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
                 modelToUse, request.Count, maxTokens);
@@ -98,7 +98,22 @@ public class OpenAIProvider : IAIProvider
             var jsonDoc = JsonDocument.Parse(responseBody);
             var content = jsonDoc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString()!;
 
-            return ParseResponse(content);
+            if (!AIResponseParser.TryParseQuestions(content, out var questions, out var error))
+            {
+                return new AIQuestionGenerateResponse
+                {
+                    Success = false,
+                    ErrorMessage = error ?? "AI响应解析失败",
+                    ErrorCode = "PARSE_ERROR"
+                };
+            }
+
+            return new AIQuestionGenerateResponse
+            {
+                Success = true,
+                Questions = questions,
+                TokensUsed = content.Length
+            };
         }
         catch (Exception ex)
         {
@@ -112,7 +127,11 @@ public class OpenAIProvider : IAIProvider
         }
     }
 
-    public async Task<bool> ValidateApiKeyAsync(string apiKey, CancellationToken cancellationToken = default)
+    public async Task<bool> ValidateApiKeyAsync(
+        string apiKey,
+        string? endpoint = null,
+        string? model = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -167,85 +186,23 @@ public class OpenAIProvider : IAIProvider
 }}";
     }
 
-        private AIQuestionGenerateResponse ParseResponse(string content)
+    private AIQuestionGenerateResponse ParseResponse(string content)
     {
-        try
+        if (!AIResponseParser.TryParseQuestions(content, out var questions, out var error))
         {
-            // ✅ 支持多种JSON格式：
-            // 1. 对象格式: {"questions": [...]}
-            // 2. 数组格式: [{...}, {...}]
-
-            var jsonDoc = JsonDocument.Parse(content);
-            var questions = new List<GeneratedQuestion>();
-            JsonElement questionsElement;
-
-            // 尝试解析为对象格式 {"questions": [...]}
-            if (jsonDoc.RootElement.ValueKind == JsonValueKind.Object &&
-                jsonDoc.RootElement.TryGetProperty("questions", out questionsElement))
-            {
-                // 对象格式
-            }
-            // 尝试解析为数组格式 [{...}, {...}]
-            else if (jsonDoc.RootElement.ValueKind == JsonValueKind.Array)
-            {
-                questionsElement = jsonDoc.RootElement;
-            }
-            else
-            {
-                return new AIQuestionGenerateResponse
-                {
-                    Success = false,
-                    ErrorMessage = "无法识别的响应格式，期望 {\"questions\": [...]} 或 [...]",
-                    ErrorCode = "INVALID_FORMAT"
-                };
-            }
-
-            foreach (var q in questionsElement.EnumerateArray())
-            {
-                try
-                {
-                    questions.Add(new GeneratedQuestion
-                    {
-                        QuestionType = q.GetProperty("questionType").GetString() ?? "",
-                        QuestionText = q.GetProperty("questionText").GetString() ?? "",
-                        Options = q.GetProperty("options").EnumerateArray().Select(x => x.GetString() ?? "").ToList(),
-                        CorrectAnswer = q.GetProperty("correctAnswer").GetString() ?? "",
-                        Explanation = q.GetProperty("explanation").GetString() ?? "",
-                        Difficulty = q.GetProperty("difficulty").GetString() ?? "medium"
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "解析单个题目失败，跳过");
-                }
-            }
-
-            return new AIQuestionGenerateResponse
-            {
-                Success = questions.Count > 0,
-                Questions = questions,
-                TokensUsed = content.Length
-            };
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "解析AI响应JSON失败");
             return new AIQuestionGenerateResponse
             {
                 Success = false,
-                ErrorMessage = $"JSON解析失败: {ex.Message}",
-                ErrorCode = "JSON_PARSE_ERROR"
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "解析AI响应失败");
-            return new AIQuestionGenerateResponse
-            {
-                Success = false,
-                ErrorMessage = $"解析响应失败: {ex.Message}",
+                ErrorMessage = error ?? "AI响应解析失败",
                 ErrorCode = "PARSE_ERROR"
             };
         }
+
+        return new AIQuestionGenerateResponse
+        {
+            Success = true,
+            Questions = questions,
+            TokensUsed = content.Length
+        };
     }
 }

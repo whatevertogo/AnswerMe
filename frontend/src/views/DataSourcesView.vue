@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Search, Connection, CircleCheck, Star, Edit, Delete } from '@element-plus/icons-vue'
 import { useDataSourceStore } from '@/stores/dataSource'
 import type { DataSource } from '@/api/datasource'
 import { getProviderLabel, getProviderTagType } from '@/constants/aiProviders'
@@ -102,7 +103,7 @@ const getTypeTagType = (type: string) => {
   <div class="datasources-view">
     <div class="header">
       <h1>AI配置管理</h1>
-      <el-button type="primary" :icon="'Plus'" @click="handleAdd">
+      <el-button type="primary" :icon="Plus" @click="handleAdd">
         添加配置
       </el-button>
     </div>
@@ -111,7 +112,7 @@ const getTypeTagType = (type: string) => {
       <el-input
         v-model="searchQuery"
         placeholder="搜索数据源名称或类型..."
-        :prefix-icon="'Search'"
+        :prefix-icon="Search"
         clearable
       />
     </el-card>

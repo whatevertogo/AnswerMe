@@ -50,7 +50,7 @@ public class DataSourceService : IDataSourceService
         {
             UserId = userId,
             Name = dto.Name,
-            Type = dto.Type,
+            Type = dto.Type.Trim().ToLowerInvariant(),
             Config = configJson,
             IsDefault = dto.IsDefault,
             CreatedAt = DateTime.UtcNow,
@@ -260,7 +260,11 @@ public class DataSourceService : IDataSourceService
             }
 
             // 发送真实的 API 验证请求
-            var isValid = await provider.ValidateApiKeyAsync(config.ApiKey, cancellationToken);
+            var isValid = await provider.ValidateApiKeyAsync(
+                config.ApiKey,
+                config.Endpoint,
+                config.Model,
+                cancellationToken);
             return isValid;
         }
         catch

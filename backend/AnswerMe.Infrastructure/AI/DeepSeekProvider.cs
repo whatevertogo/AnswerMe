@@ -1,21 +1,25 @@
 using System.Text.Json;
 using AnswerMe.Application.AI;
 using Microsoft.Extensions.Logging;
-using System.Net.Http.Json;
 
 namespace AnswerMe.Infrastructure.AI;
 
 /// <summary>
-/// 智谱 AI (Zhipu AI/ChatGLM) Provider实现
+/// DeepSeek Provider实现
+/// API文档: https://api-docs.deepseek.com/
+///
+/// 支持的模型:
+/// - deepseek-chat: DeepSeek-V3.2 (非思考模式), 128K context, 最大 8K 输出
+/// - deepseek-reasoner: DeepSeek-V3.2 (思考模式), 最大 64K 输出
 /// </summary>
-public class ZhipuProvider : IAIProvider
+public class DeepSeekProvider : IAIProvider
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<ZhipuProvider> _logger;
+    private readonly ILogger<DeepSeekProvider> _logger;
 
-    public string ProviderName => "Zhipu";
+    public string ProviderName => "DeepSeek";
 
-    public ZhipuProvider(IHttpClientFactory httpClientFactory, ILogger<ZhipuProvider> logger)
+    public DeepSeekProvider(IHttpClientFactory httpClientFactory, ILogger<DeepSeekProvider> logger)
     {
         _httpClient = httpClientFactory.CreateClient("AI");
         _logger = logger;
@@ -25,39 +29,28 @@ public class ZhipuProvider : IAIProvider
         string apiKey,
         AIQuestionGenerateRequest request,
         string? model = null,
-        string? endpoint = null,  // 忽略用户配置的 endpoint，使用智谱官方固定端点
+        string? endpoint = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var prompt = BuildPrompt(request);
 
-            // 使用配置的模型，如果为空则使用默认模型 glm-4
-            var modelToUse = string.IsNullOrEmpty(model) ? "glm-4" : model;
+            // 使用配置的模型，如果为空则使用默认模型 deepseek-chat
+            var modelToUse = string.IsNullOrEmpty(model) ? "deepseek-chat" : model;
 
-            // ✅ 根据题目数量动态计算max_tokens
+            // 根据题目数量动态计算max_tokens
+            // DeepSeek deepseek-chat 模型最大支持 8K 输出
             var estimatedTokensPerQuestion = 250;
-            var maxTokens = Math.Clamp(request.Count * estimatedTokensPerQuestion + 1000, 1000, 8000);
+            var maxTokens = Math.Clamp(request.Count * estimatedTokensPerQuestion + 1000, 1000, 8192);
 
-            _logger.LogInformation("智谱AI配置: Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
+            _logger.LogInformation("DeepSeek配置: Model={Model}, QuestionCount={Count}, MaxTokens={MaxTokens}",
                 modelToUse, request.Count, maxTokens);
 
-            // ✅ 智谱 codingplan API 使用 OpenAI 协议，需要 /chat/completions 路径
+            // DeepSeek API 端点
             var actualEndpoint = string.IsNullOrEmpty(endpoint)
-                ? "https://open.bigmodel.cn/api/paas/v4/chat/completions"  // 默认 chat 端点
-                : NormalizeEndpoint(endpoint);
-
-            string NormalizeEndpoint(string ep)
-            {
-                // 智谱 API 需要完整路径（OpenAI 协议兼容）
-                if ((ep.Contains("api/coding/paas/v4") || ep.Contains("api/paas/v4")) &&
-                    !ep.EndsWith("/chat/completions"))
-                {
-                    var normalized = ep.TrimEnd('/');
-                    return normalized + "/chat/completions";
-                }
-                return ep;
-            }
+                ? "https://api.deepseek.com/chat/completions"
+                : endpoint;
 
             var requestBody = new
             {
@@ -90,18 +83,18 @@ public class ZhipuProvider : IAIProvider
                 Content = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json")
             };
 
-            // 使用重试机制发送请求（支持指数退避）
+            // 使用重试机制发送请求
             var response = await HttpRetryHelper.SendWithRetryAsync(_httpClient, httpRequest, _logger, cancellationToken);
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Zhipu API错误: {StatusCode}, {Body}", response.StatusCode, responseBody);
+                _logger.LogError("DeepSeek API错误: {StatusCode}, {Body}", response.StatusCode, responseBody);
 
                 return new AIQuestionGenerateResponse
                 {
                     Success = false,
-                    ErrorMessage = $"Zhipu API调用失败: {response.StatusCode}",
+                    ErrorMessage = $"DeepSeek API调用失败: {response.StatusCode}",
                     ErrorCode = ((int)response.StatusCode).ToString()
                 };
             }
@@ -132,9 +125,9 @@ public class ZhipuProvider : IAIProvider
         try
         {
             var actualEndpoint = string.IsNullOrEmpty(endpoint)
-                ? "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+                ? "https://api.deepseek.com/chat/completions"
                 : endpoint;
-            var modelToUse = string.IsNullOrEmpty(model) ? "glm-4" : model;
+            var modelToUse = string.IsNullOrEmpty(model) ? "deepseek-chat" : model;
 
             var httpRequest = new HttpRequestMessage
             {
@@ -193,7 +186,7 @@ public class ZhipuProvider : IAIProvider
       ""difficulty"": ""easy""
     }}
   ]
-  }}";
+}}";
     }
 
     private AIQuestionGenerateResponse ParseResponse(string content)

@@ -4,6 +4,7 @@ export interface AIProviderOption {
   defaultEndpoint?: string
   defaultModel?: string
   tagType?: 'success' | 'primary' | 'warning' | 'info' | 'danger'
+  description?: string
 }
 
 export const aiProviders: AIProviderOption[] = [
@@ -13,6 +14,14 @@ export const aiProviders: AIProviderOption[] = [
     defaultModel: 'gpt-3.5-turbo',
     defaultEndpoint: 'https://api.openai.com/v1/chat/completions',
     tagType: 'success'
+  },
+  {
+    label: 'DeepSeek',
+    value: 'deepseek',
+    defaultModel: 'deepseek-chat',
+    defaultEndpoint: 'https://api.deepseek.com/chat/completions',
+    tagType: 'success',
+    description: 'V3.2 (128K context, 8K max output)'
   },
   {
     label: '通义千问',

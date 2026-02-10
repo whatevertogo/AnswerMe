@@ -4,8 +4,7 @@ import type {
   QuestionBankListResponse,
   QuestionBankQueryParams,
   CreateQuestionBankDto,
-  UpdateQuestionBankDto,
-  Question
+  UpdateQuestionBankDto
 } from '@/types'
 
 /**
@@ -18,8 +17,8 @@ export function getQuestionBanks(params: QuestionBankQueryParams): Promise<Quest
 /**
  * 获取题库详情
  */
-export function getQuestionBankDetail(id: number): Promise<QuestionBank & { questions: Question[] }> {
-  return request.get<QuestionBank & { questions: Question[] }>(`/questionbanks/${id}`).then(response => response.data)
+export function getQuestionBankDetail(id: number): Promise<QuestionBank> {
+  return request.get<QuestionBank>(`/questionbanks/${id}`).then(response => response.data)
 }
 
 /**

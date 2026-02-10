@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using AnswerMe.Application.DTOs;
 using AnswerMe.Application.Interfaces;
 using System.Security.Claims;
+using System.Linq;
 
 namespace AnswerMe.API.Controllers;
 
@@ -140,14 +141,18 @@ public class QuestionBanksController : BaseApiController
         };
         var questionsResult = await _questionService.GetListAsync(userId, questionsQuery, cancellationToken);
 
+        var validQuestions = questionsResult.Data
+            .Where(q => !string.IsNullOrWhiteSpace(q.QuestionText) && q.QuestionTypeEnum != null && q.Data != null)
+            .ToList();
+
         // 构建导出数据
         var exportData = new
         {
             name = questionBank.Name,
             description = questionBank.Description,
             tags = questionBank.Tags,
-            questionCount = questionsResult.TotalCount,
-            questions = questionsResult.Data,
+            questionCount = validQuestions.Count,
+            questions = validQuestions,
             exportedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
             version = "0.1.0-alpha"
         };
