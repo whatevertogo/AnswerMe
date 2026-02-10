@@ -10,6 +10,7 @@ using AnswerMe.Infrastructure;
 using AnswerMe.Infrastructure.Data;
 using AnswerMe.API.BackgroundServices;
 using Serilog;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,12 +37,39 @@ builder.Services.AddApplication();
 // 配置 AI 生成选项
 builder.Services.Configure<AIGenerationOptions>(builder.Configuration.GetSection(AIGenerationOptions.SectionName));
 
-// 注册 AI 生成后台服务（需要先检查 Redis 是否配置）
+// 注册 AI 生成后台服务（需要先检查 Redis 是否配置且可连接）
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 if (!string.IsNullOrEmpty(redisConnectionString))
 {
-    builder.Services.AddHostedService<AIGenerationWorker>();
-    Log.Information("AI 生成后台服务已注册");
+    try
+    {
+        // 验证 Redis 连接
+        var redis = ConnectionMultiplexer.Connect(redisConnectionString);
+        if (!redis.IsConnected)
+        {
+            throw new InvalidOperationException("Redis 连接失败");
+        }
+        redis.Dispose();
+
+        builder.Services.AddHostedService<AIGenerationWorker>();
+        Log.Information("AI 生成后台服务已注册，Redis 连接成功");
+    }
+    catch (Exception ex)
+    {
+        // 开发环境只警告，生产环境阻止启动
+        if (builder.Environment.IsDevelopment())
+        {
+            Log.Warning(ex, "无法连接到 Redis ({ConnectionString})，AI 异步生成功能将不可用", redisConnectionString);
+            Log.Warning("开发模式：后端将继续启动，但 AI 异步生成功能禁用");
+            Log.Warning("要启用 AI 异步生成，请运行: docker-compose up -d redis");
+        }
+        else
+        {
+            Log.Fatal(ex, "无法连接到 Redis ({ConnectionString})，请先启动 Redis 服务", redisConnectionString);
+            Log.Fatal("后端启动中止。AI 异步生成功能需要 Redis 支持。");
+            throw new InvalidOperationException("Redis 连接失败，后端无法启动。请确保 Redis 服务已启动。", ex);
+        }
+    }
 }
 else
 {

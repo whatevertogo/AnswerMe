@@ -28,15 +28,17 @@ utils/         # 工具函数（request.ts 统一 HTTP）
 ## 快速启动
 
 ```bash
-# 后端
+# 启动依赖服务（Redis 用于 AI 异步生成）
+docker-compose up -d redis
+
+# 后端（Redis 必须先启动）
 cd backend && dotnet run --project AnswerMe.API
 
 # 前端
 cd frontend && npm run dev
-
-# 完整服务（含 Redis）
-docker-compose up -d
 ```
+
+**注意**: AI 异步生成需要 Redis。若 Redis 未启动，后端将拒绝启动。
 
 ## Question 数据模型（迁移中）
 
@@ -74,4 +76,4 @@ docker-compose up -d
 
 - 迁移前停止 API（SQLite 锁定）
 - EF 工具失效: `dotnet tool install --global dotnet-ef`
-- AI 异步生成需 Redis（`docker-compose up -d redis`）
+- AI 异步生成需 Redis：`docker-compose up -d redis`，否则后端拒绝启动

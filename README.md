@@ -58,9 +58,9 @@ cd AnswerMe
 cp .env.example .env
 # 编辑 .env 文件，设置必要的环境变量
 
-# 3. 启动依赖服务（PostgreSQL + Redis）- 可选
-# 如果不启动，将使用 SQLite（开发默认）和禁用 AI 异步生成功能
-docker-compose up -d db redis
+# 3. 启动依赖服务（Redis 必需）
+docker-compose up -d redis
+# AI 异步生成功能依赖 Redis，后端启动会检查 Redis 连接
 
 # 4. 启动后端服务器（终端1）
 cd backend
@@ -327,24 +327,21 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 
 ### Redis 配置（AI 异步生成）
 
-AI 生成题目支持两种模式：
+**AI 生成题目支持两种模式：**
 - **同步模式**：题目数量 ≤ 20，直接返回结果
 - **异步模式**：题目数量 > 20，后台生成，通过 Redis 队列处理
 
-要启用异步模式，需要启动 Redis：
+**Redis 是必需的** - 后端启动时会检查 Redis 连接，如果连接失败将拒绝启动。
 
-**方式一：使用 Docker（推荐）**
+**启动 Redis（Docker 推荐）：**
 ```bash
-# 确保 Docker Desktop 已启动
 docker-compose up -d redis
 ```
 
-**方式二：本地安装 Redis**
+**本地安装 Redis：**
 - Windows: 下载 [Redis for Windows](https://github.com/microsoftarchive/redis/releases) 或使用 WSL
 - macOS: `brew install redis && brew services start redis`
 - Linux: `sudo systemctl start redis`
-
-如果 Redis 未配置，异步生成功能将不可用，但不影响同步生成（小批量题目）。
 
 ### 安全建议
 
