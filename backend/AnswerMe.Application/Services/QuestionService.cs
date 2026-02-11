@@ -440,13 +440,14 @@ public class QuestionService : IQuestionService
             }
             case QuestionType.TrueFalse:
             {
-                if (!bool.TryParse(legacyCorrectAnswer, out var booleanAnswer))
+                var booleanAnswer = LegacyFieldParser.ParseBooleanAnswer(legacyCorrectAnswer);
+                if (!booleanAnswer.HasValue)
                 {
                     return null;
                 }
                 return new BooleanQuestionData
                 {
-                    CorrectAnswer = booleanAnswer,
+                    CorrectAnswer = booleanAnswer.Value,
                     Explanation = explanation,
                     Difficulty = difficulty ?? "medium"
                 };

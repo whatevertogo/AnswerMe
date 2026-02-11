@@ -430,8 +430,13 @@ public class AttemptService : IAttemptService
                     var legacyAnswer = question.CorrectAnswer.Trim().ToLower();
                     switch (question.QuestionType)
                     {
-                        case "boolean" when bool.TryParse(legacyAnswer, out var legacyBool):
-                            info.BoolAnswer = legacyBool;
+                        case "boolean":
+                            info.BoolAnswer = LegacyFieldParser.ParseBooleanAnswer(legacyAnswer);
+                            if (info.BoolAnswer.HasValue)
+                            {
+                                break;
+                            }
+                            info.StringAnswer = legacyAnswer;
                             break;
                         case "multiple":
                             info.CorrectAnswersList = legacyAnswer.Split(',').Select(a => a.Trim()).ToList();

@@ -118,6 +118,22 @@ public class DataConsistencyCheckService
 
             var dataType = typeProperty.GetString();
 
+            if (dataType == "boolean")
+            {
+                if (!root.TryGetProperty("correctAnswer", out var boolAnswer) ||
+                    (boolAnswer.ValueKind != JsonValueKind.True && boolAnswer.ValueKind != JsonValueKind.False))
+                {
+                    return new DataConsistencyIssue
+                    {
+                        QuestionId = question.Id,
+                        IssueType = "InvalidBooleanAnswerType",
+                        Description = "判断题 correctAnswer 不是 JSON 布尔值（true/false）",
+                        Severity = "Error",
+                        Recommendation = "运行布尔答案规范化迁移，将 correctAnswer 修正为 JSON bool"
+                    };
+                }
+            }
+
             // 检查 type 字段与 QuestionType 是否一致
             var expectedType = dataType == "choice"
                 ? GetExpectedChoiceQuestionType(root)

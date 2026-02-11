@@ -202,14 +202,15 @@ public class Question : BaseEntity
             case Domain.Enums.QuestionType.TrueFalse:
             {
 #pragma warning disable CS0618 // 旧字段兼容性代码
-                if (!bool.TryParse(CorrectAnswer, out var booleanAnswer))
+                var booleanAnswer = LegacyFieldParser.ParseBooleanAnswer(CorrectAnswer);
 #pragma warning restore CS0618
+                if (!booleanAnswer.HasValue)
                 {
                     return null;
                 }
                 return new BooleanQuestionData
                 {
-                    CorrectAnswer = booleanAnswer,
+                    CorrectAnswer = booleanAnswer.Value,
                     Explanation = explanation,
                     Difficulty = difficulty
                 };

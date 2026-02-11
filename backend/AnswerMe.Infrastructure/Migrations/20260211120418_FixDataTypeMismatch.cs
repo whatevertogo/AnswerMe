@@ -17,8 +17,8 @@ namespace AnswerMe.Infrastructure.Migrations
                 SET QuestionDataJson = json_object(
                     'type', 'boolean',
                     'correctAnswer', CASE
-                        WHEN lower(CorrectAnswer) IN ('true', 't', '1', '对', '正确', 'yes', 'y') THEN 'true'
-                        ELSE 'false'
+                        WHEN lower(CorrectAnswer) IN ('true', 't', '1', '对', '正确', 'yes', 'y') THEN json('true')
+                        ELSE json('false')
                     END,
                     'explanation', COALESCE(
                         json_extract(QuestionDataJson, '$.explanation'),
