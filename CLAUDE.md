@@ -63,14 +63,19 @@ cd frontend && npm run dev
 Question 迁移中：废弃 `Options`/`CorrectAnswer`，改用 `QuestionTypeEnum`/`QuestionDataJson`/`Data`
 - Entity → DTO: 只映射 `QuestionTypeEnum`, `Data`
 - DTO → Entity: 只写入 `QuestionDataJson`
+- `QuestionDataJson.type` 使用小写 discriminator: `choice`, `boolean`, `fillBlank`, `shortAnswer`
+- 与 `QuestionType` 枚举值对应: `SingleChoice`, `TrueFalse`, `FillBlank`, `ShortAnswer`
 
 ## 关键文件
 
 - `Program.cs` - DI、中间件、Serilog
 - `Domain/Common/LegacyFieldParser.cs` - 旧字段解析统一入口
 - `Infrastructure/Data/AnswerMeDbContext.cs` - DbContext
+- `Infrastructure/Services/DataConsistencyCheckService.cs` - 数据一致性检查（启动时自动运行）
 
 ## 坑点
 
 - 迁移前停止 API（SQLite 锁定）
 - EF 工具失效: `dotnet tool install --global dotnet-ef`
+- Windows 下 DLL 锁定: `taskkill /F /PID <pid>` 或 `Stop-Process -Force`
+- 数据迁移前备份: `cp answerme.db answerme.db.backup`

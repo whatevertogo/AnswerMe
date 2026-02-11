@@ -475,7 +475,7 @@ function getTypeTagType(type: string) {
 }
 
 .datasource-item:hover {
-  border-color: #409eff;
+  border-color: var(--color-primary);
 }
 
 .datasource-info {
@@ -570,6 +570,35 @@ function getTypeTagType(type: string) {
 .form-tip {
   @apply mt-1 text-xs leading-[1.5];
   color: var(--color-text-muted);
+}
+
+.dark .ai-config-view :deep(.el-card) {
+  background-color: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+.dark .ai-config-view :deep(.el-tag) {
+  background-color: rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: var(--color-text-secondary);
+}
+
+.dark .ai-config-view :deep(.el-tag.el-tag--success) {
+  background-color: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #6ee7b7;
+}
+
+.dark .ai-config-view :deep(.el-tag.el-tag--warning) {
+  background-color: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fcd34d;
+}
+
+.dark .ai-config-view :deep(.el-tag.el-tag--danger) {
+  background-color: rgba(220, 38, 38, 0.2);
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #fca5a5;
 }
 
 </style>

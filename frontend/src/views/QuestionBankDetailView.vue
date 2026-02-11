@@ -435,23 +435,41 @@ export default {
 }
 
 .question-answer {
-  @apply mb-2 px-3 py-2 bg-[#DBF0E8] rounded-md border border-[#2AA198];
+  @apply mb-2 px-3 py-2 rounded-md;
+  background-color: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: var(--color-text-primary);
 }
 
 .answer-label {
-  @apply font-medium text-[#2AA198] text-xs;
+  @apply font-medium text-xs;
+  color: var(--color-success);
 }
 
 .question-explanation {
-  @apply mb-3 px-3 py-2 bg-[#FDF6E3] rounded-md border border-[#EEE8D5];
+  @apply mb-3 px-3 py-2 rounded-md;
+  background-color: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: var(--color-text-primary);
 }
 
 .explanation-label {
-  @apply font-medium text-[#B58900] text-xs;
+  @apply font-medium text-xs;
+  color: var(--color-warning);
 }
 
 .question-tags {
   @apply flex gap-2 flex-wrap;
+}
+
+.dark .question-answer {
+  background-color: rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.dark .question-explanation {
+  background-color: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.55);
 }
 
 /* 响应式 */
