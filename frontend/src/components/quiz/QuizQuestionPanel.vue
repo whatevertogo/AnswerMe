@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DifficultyLabels } from '@/types/question'
+import { DifficultyLabels, DifficultyColors } from '@/types/question'
 import type { QuizQuestion } from '@/stores/quiz'
 
 interface Props {
@@ -11,12 +11,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const getDifficultyClass = (difficulty: string): 'success' | 'warning' | 'danger' | 'info' => {
-  const colorMap: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
-    easy: 'success',
-    medium: 'warning',
-    hard: 'danger'
-  }
-  return colorMap[difficulty] || 'info'
+  return DifficultyColors[difficulty as keyof typeof DifficultyColors] || 'info'
 }
 
 const getDifficultyLabel = (difficulty: string): string => {

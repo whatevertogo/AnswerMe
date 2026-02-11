@@ -37,8 +37,10 @@ export interface AIGenerateRequest {
  */
 export interface GeneratedQuestion {
   id: number
-  /** 题型枚举（对应后端 QuestionTypeEnum） */
-  questionType: QuestionType
+  /** 题型枚举（新格式，对应后端 QuestionTypeEnum） */
+  questionTypeEnum?: QuestionType
+  /** 题型（旧格式，向后兼容） */
+  questionType?: QuestionType
   questionText: string
   /** 选项（旧格式，向后兼容） */
   options?: string[]
@@ -51,6 +53,20 @@ export interface GeneratedQuestion {
   createdAt: string
   /** 题目数据（新格式） */
   data?: QuestionData
+}
+
+/**
+ * 归一化生成的题目（兼容新旧格式）
+ * 优先使用 questionTypeEnum，fallback 到 questionType
+ */
+export function normalizeGeneratedQuestion(raw: any): GeneratedQuestion {
+  return {
+    ...raw,
+    // 优先使用 questionTypeEnum，fallback 到 questionType
+    questionTypeEnum: raw.questionTypeEnum ?? raw.questionType,
+    // 兼容层：确保两个字段都有值
+    questionType: raw.questionType ?? raw.questionTypeEnum
+  }
 }
 
 /**

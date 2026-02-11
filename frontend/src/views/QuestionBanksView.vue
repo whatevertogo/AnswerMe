@@ -6,7 +6,7 @@ import { Plus, View, Edit, Delete, Search, Refresh } from '@element-plus/icons-v
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionBankForm from '@/components/QuestionBankForm.vue'
 import type { QuestionBank } from '@/stores/questionBank'
-import { DifficultyLabels } from '@/types/question'
+import { DifficultyLabels, DifficultyColors } from '@/types/question'
 
 const router = useRouter()
 const questionBankStore = useQuestionBankStore()
@@ -112,12 +112,7 @@ const formatDate = (dateString: string) => {
 }
 
 const getDifficultyColor = (difficulty: string): 'success' | 'warning' | 'danger' | 'info' => {
-  const colorMap: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
-    easy: 'success',
-    medium: 'warning',
-    hard: 'danger'
-  }
-  return colorMap[difficulty] || 'info'
+  return DifficultyColors[difficulty as keyof typeof DifficultyColors] || 'info'
 }
 
 const getDifficultyLabel = (difficulty: string): string => {

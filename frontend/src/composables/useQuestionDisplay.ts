@@ -34,7 +34,7 @@ export function formatQuestionForCopy(question: GeneratedQuestion): string {
     answerText = String(question.correctAnswer || '')
   }
 
-  return `【${question.questionType}】${question.questionText}\n${optionsText}答案: ${answerText}${
+  return `【${question.questionTypeEnum || question.questionType || '未知'}】${question.questionText}\n${optionsText}答案: ${answerText}${
     question.explanation ? `\n解析: ${question.explanation}` : ''
   }`
 }

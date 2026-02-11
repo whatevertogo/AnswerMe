@@ -49,14 +49,14 @@ const router = createRouter({
 // 路由守卫 - 使用 authStore 进行认证检查
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
+  const requiresAuth = to.meta.requiresAuth !== false
 
-  // 等待初始化完成（如果有 token）
-  if (!authStore.isInitialized) {
+  // 只要本地存在 token，就应初始化一次，避免公开路由出现过期 token 回环跳转
+  if (!authStore.isInitialized && authStore.token) {
     await authStore.initialize()
   }
 
   const isLoggedIn = authStore.isAuthenticated
-  const requiresAuth = to.meta.requiresAuth !== false
 
   if (requiresAuth && !isLoggedIn) {
     // 需要认证但未登录，跳转到登录页

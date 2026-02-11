@@ -362,7 +362,7 @@ function taskStatusText(status: string) {
                   :value="qb"
                 >
                   <span>{{ qb.name }}</span>
-                  <span style="color: #8492a6; font-size: 12px; margin-left: 8px">
+                  <span style="color: var(--color-text-muted); font-size: 12px; margin-left: 8px">
                     {{ qb.questionCount }} 题
                   </span>
                 </el-option>
@@ -518,7 +518,7 @@ function taskStatusText(status: string) {
                     {{ DifficultyLabels[question.difficulty as keyof typeof DifficultyLabels] || question.difficulty }}
                   </el-tag>
                   <el-tag size="small" type="info">
-                    {{ getQuestionTypeLabel(question.questionType) }}
+                    {{ getQuestionTypeLabel(question.questionTypeEnum || question.questionType || 'SingleChoice') }}
                   </el-tag>
                 </div>
               </div>
@@ -584,7 +584,7 @@ function taskStatusText(status: string) {
 <style scoped>
 .generate-container {
   @apply min-h-screen p-6;
-  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+  background: linear-gradient(to bottom right, var(--color-bg-secondary), var(--color-bg-tertiary));
 }
 
 .dark .generate-container {

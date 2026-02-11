@@ -20,7 +20,7 @@ const emit = defineEmits<{
   questionClick: [index: number]
 }>()
 
-const getDifficultyClass = (difficulty: string): Difficulty => {
+const getDifficultyClass = (difficulty: string): 'easy' | 'medium' | 'hard' => {
   const validDifficulties: Difficulty[] = ['easy', 'medium', 'hard']
   return validDifficulties.includes(difficulty as Difficulty) ? (difficulty as Difficulty) : 'medium'
 }

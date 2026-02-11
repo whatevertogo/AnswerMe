@@ -6,7 +6,6 @@ import type {
   CreateQuestionBankDto,
   UpdateQuestionBankDto
 } from '@/types'
-import { useAuthStore } from '@/stores/auth'
 
 /**
  * 获取题库列表（游标分页）
@@ -53,30 +52,18 @@ export function deleteQuestionBank(id: number): Promise<{ message: string }> {
   return request.delete(`/questionbanks/${id}`)
 }
 
-/**
- * 导出题库（返回文件URL）
- */
-export function exportQuestionBank(id: number): string {
-  return `/api/questionbanks/${id}/export`
+function getQuestionBankExportPath(id: number): string {
+  return `/questionbanks/${id}/export`
 }
 
 /**
  * 导出题库并下载文件
+ * 使用 request 工具以复用统一鉴权拦截器
  */
 export async function exportQuestionBankFile(id: number): Promise<void> {
-  const url = exportQuestionBank(id)
-  const authStore = useAuthStore()
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${authStore.token}`
-    }
+  const blob = await request.get<Blob>(getQuestionBankExportPath(id), {
+    responseType: 'blob'
   })
-
-  if (!response.ok) {
-    throw new Error('导出失败')
-  }
-
-  const blob = await response.blob()
   const downloadUrl = window.URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = downloadUrl

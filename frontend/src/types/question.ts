@@ -289,3 +289,36 @@ export function isFillBlankQuestion(question: Question): boolean {
 export function isShortAnswerQuestion(question: Question): boolean {
   return question.questionTypeEnum === QuestionType.ShortAnswer
 }
+
+/**
+ * Quiz 题型简短值（用于 Quiz 模块）
+ */
+export type QuizQuestionType = 'single' | 'multiple' | 'boolean' | 'fill' | 'essay'
+
+/**
+ * 后端枚举值 -> Quiz 简短值
+ */
+export function toQuizType(questionType: QuestionType): QuizQuestionType {
+  const typeMap: Record<QuestionType, QuizQuestionType> = {
+    SingleChoice: 'single',
+    MultipleChoice: 'multiple',
+    TrueFalse: 'boolean',
+    FillBlank: 'fill',
+    ShortAnswer: 'essay'
+  }
+  return typeMap[questionType] ?? 'essay'
+}
+
+/**
+ * Quiz 简短值 -> 后端枚举值
+ */
+export function fromQuizType(quizType: QuizQuestionType): QuestionType {
+  const reverseMap: Record<QuizQuestionType, QuestionType> = {
+    single: QuestionType.SingleChoice,
+    multiple: QuestionType.MultipleChoice,
+    boolean: QuestionType.TrueFalse,
+    fill: QuestionType.FillBlank,
+    essay: QuestionType.ShortAnswer
+  }
+  return reverseMap[quizType] ?? QuestionType.ShortAnswer
+}

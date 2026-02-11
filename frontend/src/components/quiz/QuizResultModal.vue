@@ -79,10 +79,10 @@ const getScoreLabel = (score: number) => {
 
 const getDifficultyColor = (difficulty: string) => {
   switch (difficulty) {
-    case 'easy': return '#10b981'
-    case 'medium': return '#f59e0b'
-    case 'hard': return '#ef4444'
-    default: return '#6b7280'
+    case 'easy': return 'var(--color-success)'
+    case 'medium': return 'var(--color-warning)'
+    case 'hard': return 'var(--color-danger)'
+    default: return 'var(--color-text-muted)'
   }
 }
 </script>

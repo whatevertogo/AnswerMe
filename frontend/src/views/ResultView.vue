@@ -296,7 +296,8 @@ onMounted(() => {
 
 /* 分数卡片 */
 .score-card {
-  @apply flex items-center gap-8 bg-primary rounded-xl p-8 mb-8 text-white shadow-md;
+  @apply flex items-center gap-8 rounded-xl p-8 mb-8 text-white shadow-md;
+  background: var(--color-primary);
 }
 
 .score-circle {

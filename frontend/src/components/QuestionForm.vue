@@ -577,7 +577,7 @@ function buildQuestionData(): QuestionData | undefined {
 }
 
 .option-label {
-  @apply font-semibold text-[#606266] min-w-[24px];
+  @apply font-semibold text-text-secondary min-w-[24px];
 }
 
 .tags-container {

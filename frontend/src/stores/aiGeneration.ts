@@ -4,6 +4,7 @@ import {
   generateQuestionsApi,
   generateQuestionsAsyncApi,
   getGenerationProgressApi,
+  normalizeGeneratedQuestion,
   type AIGenerateRequest,
   type AIGenerateResponse,
   type AIGenerateProgress,
@@ -68,15 +69,16 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
         currentResponse.value = response
 
         if (response.success) {
-          generatedQuestions.value = response.questions
+          generatedQuestions.value = response.questions.map(normalizeGeneratedQuestion)
         } else {
           error.value = response.errorMessage || '生成失败'
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // 改进错误提示，特别是 API Key 相关错误
-      const errorMessage = err.response?.data?.message || err.message || '生成题目时发生错误'
-      const errorCode = err.response?.data?.errorCode || ''
+      const errObj = err as { response?: { data?: { message?: string; errorCode?: string } }; message?: string }
+      const errorMessage = errObj.response?.data?.message || errObj.message || '生成题目时发生错误'
+      const errorCode = errObj.response?.data?.errorCode || ''
 
       // 如果是 API Key 无效错误，提供更友好的提示
       if (errorMessage.includes('Incorrect API key') ||
@@ -121,7 +123,7 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
 
         // 如果有生成的题目，保存到结果中
         if (response.questions && response.questions.length > 0) {
-          generatedQuestions.value = response.questions
+          generatedQuestions.value = response.questions.map(normalizeGeneratedQuestion)
         }
 
         // 如果失败，设置错误信息
@@ -129,7 +131,7 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
           error.value = response.errorMessage
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('查询进度失败:', err)
       // 不中断轮询，可能是网络临时问题
     }
