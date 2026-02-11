@@ -46,7 +46,6 @@ public class QuestionDataTests
         json.Should().Contain("\"correctAnswers\"");
         json.Should().Contain("\"explanation\"");
         json.Should().Contain("\"difficulty\"");
-        json.Should().Contain("\"$type\":\"ChoiceQuestionData\"");
     }
 
     [Fact]
@@ -116,7 +115,12 @@ public class QuestionDataTests
         var json = JsonSerializer.Serialize(data, _options);
 
         // Assert
-        json.Should().Contain("\"correctAnswers\":[\"A\",\"C\",\"D\"]");
+        using var doc = JsonDocument.Parse(json);
+        var correctAnswers = doc.RootElement.GetProperty("correctAnswers")
+            .EnumerateArray()
+            .Select(x => x.GetString())
+            .ToList();
+        correctAnswers.Should().BeEquivalentTo(new[] { "A", "C", "D" });
     }
 
     [Fact]
@@ -183,8 +187,7 @@ public class QuestionDataTests
         var json = JsonSerializer.Serialize(data, _options);
 
         // Assert
-        json.Should().Contain("\"correctAnswer\":true");
-        json.Should().Contain("\"$type\":\"BooleanQuestionData\"");
+        json.Should().Contain("\"correctAnswer\": true");
     }
 
     [Fact]
@@ -202,7 +205,7 @@ public class QuestionDataTests
         var json = JsonSerializer.Serialize(data, _options);
 
         // Assert
-        json.Should().Contain("\"correctAnswer\":false");
+        json.Should().Contain("\"correctAnswer\": false");
     }
 
     [Fact]
@@ -268,7 +271,6 @@ public class QuestionDataTests
         // Assert
         json.Should().Contain("\"acceptableAnswers\"");
         json.Should().Contain("JavaScript");
-        json.Should().Contain("\"$type\":\"FillBlankQuestionData\"");
     }
 
     [Fact]
@@ -352,8 +354,9 @@ public class QuestionDataTests
 
         // Assert
         json.Should().Contain("\"referenceAnswer\"");
-        json.Should().Contain("这是参考答案");
-        json.Should().Contain("\"$type\":\"ShortAnswerQuestionData\"");
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("referenceAnswer").GetString()
+            .Should().StartWith("这是参考答案");
     }
 
     [Fact]
@@ -427,7 +430,7 @@ public class QuestionDataTests
         // Arrange
         var json = """
             {
-                "$type": "ChoiceQuestionData",
+                "type": "choice",
                 "options": ["A. 1", "B. 2"],
                 "correctAnswers": ["A"],
                 "difficulty": "easy"
@@ -449,7 +452,7 @@ public class QuestionDataTests
         // Arrange
         var json = """
             {
-                "$type": "BooleanQuestionData",
+                "type": "boolean",
                 "correctAnswer": true,
                 "difficulty": "easy"
             }
@@ -470,7 +473,7 @@ public class QuestionDataTests
         // Arrange
         var json = """
             {
-                "$type": "FillBlankQuestionData",
+                "type": "fillBlank",
                 "acceptableAnswers": ["答案1"],
                 "difficulty": "medium"
             }
@@ -491,7 +494,7 @@ public class QuestionDataTests
         // Arrange
         var json = """
             {
-                "$type": "ShortAnswerQuestionData",
+                "type": "shortAnswer",
                 "referenceAnswer": "参考答案",
                 "difficulty": "hard"
             }

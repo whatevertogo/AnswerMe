@@ -1,5 +1,8 @@
 using System.Text;
 using AspNetCoreRateLimit;
+using AnswerMe.Application.Validators;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +36,8 @@ builder.Host.UseSerilog();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
+builder.Services.AddFluentValidationAutoValidation();
 
 // 配置 AI 生成选项
 builder.Services.Configure<AIGenerationOptions>(builder.Configuration.GetSection(AIGenerationOptions.SectionName));

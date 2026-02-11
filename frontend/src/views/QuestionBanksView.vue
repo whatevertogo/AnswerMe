@@ -6,6 +6,7 @@ import { Plus, View, Edit, Delete, Search, Refresh } from '@element-plus/icons-v
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionBankForm from '@/components/QuestionBankForm.vue'
 import type { QuestionBank } from '@/stores/questionBank'
+import { DifficultyLabels } from '@/types/question'
 
 const router = useRouter()
 const questionBankStore = useQuestionBankStore()
@@ -110,22 +111,17 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const getDifficultyColor = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return 'success'
-    case 'medium': return 'warning'
-    case 'hard': return 'danger'
-    default: return 'info'
+const getDifficultyColor = (difficulty: string): 'success' | 'warning' | 'danger' | 'info' => {
+  const colorMap: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
+    easy: 'success',
+    medium: 'warning',
+    hard: 'danger'
   }
+  return colorMap[difficulty] || 'info'
 }
 
-const getDifficultyLabel = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return '简单'
-    case 'medium': return '中等'
-    case 'hard': return '困难'
-    default: return '未知'
-  }
+const getDifficultyLabel = (difficulty: string): string => {
+  return DifficultyLabels[difficulty as keyof typeof DifficultyLabels] || '未知'
 }
 </script>
 
@@ -310,7 +306,7 @@ const getDifficultyLabel = (difficulty: string) => {
 
 .text-muted {
   @apply text-sm;
-  color: #9ca3af;
+  color: var(--color-text-secondary);
 }
 
 .table-actions {

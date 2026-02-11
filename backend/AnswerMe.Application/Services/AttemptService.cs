@@ -96,6 +96,10 @@ public class AttemptService : IAttemptService
         {
             throw new InvalidOperationException("题目不存在");
         }
+        if (question.QuestionBankId != attempt.QuestionBankId)
+        {
+            throw new InvalidOperationException("题目不属于本次答题");
+        }
 
         // 检查是否已提交过答案(防止重复)
         var existingDetail = await _attemptDetailRepository.GetByAttemptAndQuestionAsync(dto.AttemptId, dto.QuestionId, cancellationToken);
@@ -154,7 +158,8 @@ public class AttemptService : IAttemptService
 
         // 更新答题记录
         attempt.CompletedAt = DateTime.UtcNow;
-        attempt.Score = details.Count > 0 ? (decimal)correctCount / details.Count * 100 : 0;
+        // 使用本次答题总题数作为分母，避免通过只提交部分题目抬高得分。
+        attempt.Score = attempt.TotalQuestions > 0 ? (decimal)correctCount / attempt.TotalQuestions * 100 : 0;
 
         await _attemptRepository.UpdateAsync(attempt, cancellationToken);
         await _attemptRepository.SaveChangesAsync(cancellationToken);

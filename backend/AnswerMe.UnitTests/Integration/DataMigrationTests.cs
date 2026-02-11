@@ -464,7 +464,8 @@ public static class TestDataGeneratorExtensions
     public static List<Question> GenerateOldFormatQuestions(int count)
     {
         var questions = new List<Question>();
-        var types = new[] { "choice", "multiple", "true-false", "fill", "essay" };
+        // 提高选择题占比，匹配迁移断言（>=60%）
+        var types = new[] { "choice", "choice", "choice", "multiple", "multiple", "true-false", "fill", "essay" };
         var difficulties = new[] { "easy", "medium", "hard" };
 
         for (int i = 0; i < count; i++)

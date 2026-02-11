@@ -70,7 +70,7 @@ public class Question : BaseEntity
                     else
                         result = IsValidQuestionData(root, parsed) ? parsed : BuildDataFromLegacy() ?? parsed;
                 }
-                catch (JsonException)
+                catch (Exception ex) when (ex is JsonException or InvalidOperationException)
                 {
                     result = BuildDataFromLegacy();
                 }
@@ -99,7 +99,14 @@ public class Question : BaseEntity
 
     private QuestionData? DeserializeQuestionData()
     {
-        var json = QuestionDataJson!;
+        var json = QuestionDataJson ?? throw new InvalidOperationException("QuestionDataJson cannot be null when DeserializeQuestionData is called.");
+
+        if (QuestionTypeEnum == null)
+        {
+            // 兼容只存 QuestionDataJson、未同步 QuestionType 的数据。
+            return JsonSerializer.Deserialize<QuestionData>(json, QuestionDataJsonOptions.Default);
+        }
+
         return QuestionTypeEnum switch
         {
             Domain.Enums.QuestionType.SingleChoice => JsonSerializer.Deserialize<ChoiceQuestionData>(json, QuestionDataJsonOptions.Default),
@@ -107,7 +114,7 @@ public class Question : BaseEntity
             Domain.Enums.QuestionType.TrueFalse => JsonSerializer.Deserialize<BooleanQuestionData>(json, QuestionDataJsonOptions.Default),
             Domain.Enums.QuestionType.FillBlank => JsonSerializer.Deserialize<FillBlankQuestionData>(json, QuestionDataJsonOptions.Default),
             Domain.Enums.QuestionType.ShortAnswer => JsonSerializer.Deserialize<ShortAnswerQuestionData>(json, QuestionDataJsonOptions.Default),
-            _ => null
+            _ => JsonSerializer.Deserialize<QuestionData>(json, QuestionDataJsonOptions.Default)
         };
     }
 
@@ -156,7 +163,7 @@ public class Question : BaseEntity
     public int OrderIndex { get; set; }
 
     // 导航属性
-    public QuestionBank QuestionBank { get; set; } = null!;
+    public QuestionBank? QuestionBank { get; set; }
     public ICollection<AttemptDetail> AttemptDetails { get; set; } = new List<AttemptDetail>();
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "CS0618:旧字段兼容性代码", Justification = "BuildDataFromLegacy 用于从旧字段迁移数据到新格式")]

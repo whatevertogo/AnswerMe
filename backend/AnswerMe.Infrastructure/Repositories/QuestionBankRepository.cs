@@ -37,17 +37,17 @@ public class QuestionBankRepository : IQuestionBankRepository
     {
         var query = _context.QuestionBanks
             .Include(qb => qb.DataSource)
-            .Where(qb => qb.UserId == userId)
-            .OrderByDescending(qb => qb.Id)
-            .Take(pageSize + 1); // 多取一个判断是否有更多
+            .Where(qb => qb.UserId == userId);
 
         if (lastId.HasValue)
         {
             query = query.Where(qb => qb.Id < lastId.Value);
         }
 
-        var results = await query.ToListAsync(cancellationToken);
-        return results.Take(pageSize).ToList();
+        return await query
+            .OrderByDescending(qb => qb.Id)
+            .Take(pageSize + 1) // 多取一个判断是否有更多
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<List<QuestionBank>> SearchAsync(int userId, string searchTerm, CancellationToken cancellationToken = default)

@@ -1,45 +1,37 @@
 <script setup lang="ts">
-interface Question {
-  id: number
-  content: string
-  type: 'single' | 'multiple' | 'boolean' | 'fill' | 'essay'
-  difficulty: string
-  tags: string[]
-}
+import { DifficultyLabels } from '@/types/question'
+import type { QuizQuestion } from '@/stores/quiz'
 
 interface Props {
-  question: Question
+  question: QuizQuestion
   questionNumber: number
   totalQuestions: number
 }
 
 const props = defineProps<Props>()
 
-const getDifficultyClass = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return 'success'
-    case 'medium': return 'warning'
-    case 'hard': return 'danger'
-    default: return 'info'
+const getDifficultyClass = (difficulty: string): 'success' | 'warning' | 'danger' | 'info' => {
+  const colorMap: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
+    easy: 'success',
+    medium: 'warning',
+    hard: 'danger'
   }
+  return colorMap[difficulty] || 'info'
 }
 
-const getDifficultyLabel = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return '简单'
-    case 'medium': return '中等'
-    case 'hard': return '困难'
-    default: return '未知'
-  }
+const getDifficultyLabel = (difficulty: string): string => {
+  return DifficultyLabels[difficulty as keyof typeof DifficultyLabels] || '未知'
 }
 
-const getTypeLabel = (type: string) => {
-  switch (type) {
-    case 'single': return '单选题'
-    case 'multiple': return '多选题'
-    case 'essay': return '简答题'
-    default: return '未知'
+const getTypeLabel = (type: string): string => {
+  const typeLabels: Record<string, string> = {
+    single: '单选题',
+    multiple: '多选题',
+    boolean: '判断题',
+    fill: '填空题',
+    essay: '简答题'
   }
+  return typeLabels[type] || '未知'
 }
 </script>
 

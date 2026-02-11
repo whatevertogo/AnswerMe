@@ -56,11 +56,12 @@ public class QuestionBankService : IQuestionBankService
             query.LastId,
             cancellationToken);
 
-        var result = await questionBanks.ToDtoListAsync(_questionRepository, cancellationToken);
+        var hasMore = questionBanks.Count > query.PageSize;
+        var pageItems = hasMore ? questionBanks.Take(query.PageSize).ToList() : questionBanks;
+        var result = await pageItems.ToDtoListAsync(_questionRepository, cancellationToken);
 
         // 判断是否有更多数据
-        var hasMore = questionBanks.Count == query.PageSize;
-        int? nextCursor = hasMore ? questionBanks.LastOrDefault()?.Id : (int?)null;
+        int? nextCursor = hasMore ? pageItems.LastOrDefault()?.Id : (int?)null;
 
         return new QuestionBankListDto
         {

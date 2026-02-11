@@ -109,8 +109,9 @@ export const useQuizStore = defineStore('quiz', () => {
       timeSpents.value = {}
       startedAt.value = new Date()
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.message || '开始答题失败'
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '开始答题失败'
+      error.value = message
       throw error.value
     } finally {
       loading.value = false
@@ -142,8 +143,9 @@ export const useQuizStore = defineStore('quiz', () => {
       }
 
       return true
-    } catch (err: any) {
-      error.value = err.response?.data?.message || '提交答案失败'
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '提交答案失败'
+      error.value = message
       throw error.value
     } finally {
       loading.value = false
@@ -168,8 +170,9 @@ export const useQuizStore = defineStore('quiz', () => {
         details: []
       }
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.message || '完成答题失败'
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '完成答题失败'
+      error.value = message
       throw error.value
     } finally {
       loading.value = false
@@ -188,8 +191,9 @@ export const useQuizStore = defineStore('quiz', () => {
         details: []
       }
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.message || '获取答题结果失败'
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '获取答题结果失败'
+      error.value = message
       throw error.value
     } finally {
       loading.value = false
@@ -203,8 +207,9 @@ export const useQuizStore = defineStore('quiz', () => {
       const response = await quizApi.getQuizDetails(attemptId)
       details.value = response
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.message || '获取答题详情失败'
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '获取答题详情失败'
+      error.value = message
       throw error.value
     } finally {
       loading.value = false
@@ -217,8 +222,9 @@ export const useQuizStore = defineStore('quiz', () => {
     try {
       const response = await quizApi.getQuizStatistics()
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.message || '获取答题统计失败'
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '获取答题统计失败'
+      error.value = message
       throw error.value
     } finally {
       loading.value = false

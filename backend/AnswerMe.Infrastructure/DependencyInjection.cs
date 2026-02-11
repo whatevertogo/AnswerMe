@@ -5,6 +5,7 @@ using AnswerMe.Domain.Interfaces;
 using AnswerMe.Infrastructure.AI;
 using AnswerMe.Infrastructure.Data;
 using AnswerMe.Infrastructure.Repositories;
+using AnswerMe.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IQuestionRepository, QuestionRepository>();
         services.AddScoped<IAttemptRepository, AttemptRepository>();
         services.AddScoped<IAttemptDetailRepository, AttemptDetailRepository>();
+        services.AddScoped<DataConsistencyCheckService>();
 
         services.AddHttpClient("AI", client => { client.Timeout = TimeSpan.FromSeconds(180); });
         services.AddSingleton<IAIProvider, OpenAIProvider>();

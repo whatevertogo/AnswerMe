@@ -73,7 +73,8 @@ public static class QuestionTypeExtensions
             return null;
 
         // 标准枚举名称
-        if (Enum.TryParse<QuestionType>(value, ignoreCase: true, out var result))
+        if (Enum.TryParse<QuestionType>(value, ignoreCase: true, out var result)
+            && Enum.IsDefined(typeof(QuestionType), result))
             return result;
 
         // 旧格式映射

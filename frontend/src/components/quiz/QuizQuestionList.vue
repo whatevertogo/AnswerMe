@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { CircleCheck, Flag } from '@element-plus/icons-vue'
+import type { Difficulty } from '@/types/question'
 
 interface Question {
   id: number
@@ -19,13 +20,9 @@ const emit = defineEmits<{
   questionClick: [index: number]
 }>()
 
-const getDifficultyColor = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return '#10b981'
-    case 'medium': return '#f59e0b'
-    case 'hard': return '#ef4444'
-    default: return '#6b7280'
-  }
+const getDifficultyClass = (difficulty: string): Difficulty => {
+  const validDifficulties: Difficulty[] = ['easy', 'medium', 'hard']
+  return validDifficulties.includes(difficulty as Difficulty) ? (difficulty as Difficulty) : 'medium'
 }
 
 const getStatusClass = (index: number) => {
@@ -65,10 +62,7 @@ const getStatusClass = (index: number) => {
           <span class="question-number">{{ index + 1 }}</span>
 
           <!-- 难度指示器 -->
-          <div
-            class="difficulty-dot"
-            :style="{ backgroundColor: getDifficultyColor(question.difficulty) }"
-          />
+          <div :class="['difficulty-dot', getDifficultyClass(question.difficulty)]" />
 
           <!-- 已答标记 -->
           <el-icon v-if="answers[question.id] !== undefined" class="status-icon answered">
@@ -95,9 +89,9 @@ const getStatusClass = (index: number) => {
       </div>
       <div class="legend-item">
         <div class="legend-dots">
-          <div class="legend-dot" style="background: #10b981" />
-          <div class="legend-dot" style="background: #f59e0b" />
-          <div class="legend-dot" style="background: #ef4444" />
+          <div class="legend-dot easy" />
+          <div class="legend-dot medium" />
+          <div class="legend-dot hard" />
         </div>
         <span class="legend-text">难度</span>
       </div>
@@ -189,6 +183,18 @@ const getStatusClass = (index: number) => {
   @apply absolute top-1 left-1 w-1.5 h-1.5 rounded-full;
 }
 
+.difficulty-dot.easy {
+  background-color: var(--color-success);
+}
+
+.difficulty-dot.medium {
+  background-color: var(--color-warning);
+}
+
+.difficulty-dot.hard {
+  background-color: var(--color-danger);
+}
+
 .status-icon {
   @apply absolute text-xs;
 }
@@ -240,6 +246,18 @@ const getStatusClass = (index: number) => {
 
 .legend-dot {
   @apply w-1 h-1 rounded-full;
+}
+
+.legend-dot.easy {
+  background-color: var(--color-success);
+}
+
+.legend-dot.medium {
+  background-color: var(--color-warning);
+}
+
+.legend-dot.hard {
+  background-color: var(--color-danger);
 }
 
 .legend-text {

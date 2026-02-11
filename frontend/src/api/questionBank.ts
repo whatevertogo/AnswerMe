@@ -6,6 +6,7 @@ import type {
   CreateQuestionBankDto,
   UpdateQuestionBankDto
 } from '@/types'
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * 获取题库列表（游标分页）
@@ -64,9 +65,10 @@ export function exportQuestionBank(id: number): string {
  */
 export async function exportQuestionBankFile(id: number): Promise<void> {
   const url = exportQuestionBank(id)
+  const authStore = useAuthStore()
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
+      'Authorization': `Bearer ${authStore.token}`
     }
   })
 

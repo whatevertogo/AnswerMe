@@ -31,11 +31,11 @@ const selectedCount = computed(() => {
 
 // 判断题：获取当前选中值（转换为布尔值）
 const booleanValue = computed(() => {
+  if (props.answer === undefined) {
+    return undefined
+  }
   if (typeof props.answer === 'string') {
     return props.answer === 'true'
-  }
-  if (typeof props.answer === 'boolean') {
-    return props.answer
   }
   return undefined
 })

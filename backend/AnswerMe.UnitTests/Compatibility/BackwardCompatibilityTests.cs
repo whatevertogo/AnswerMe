@@ -201,9 +201,12 @@ public class BackwardCompatibilityTests
 
         // Assert
         json.Should().NotBeNull();
-        json.Should().Contain("\"$type\":\"ChoiceQuestionData\"");
-        json.Should().Contain("\"options\":[\"A. 选项1\",\"B. 选项2\"]");
-        json.Should().Contain("\"correctAnswers\":[\"A\"]");
+        json.Should().Contain("\"type\":\"choice\"");
+        using var doc = JsonDocument.Parse(json);
+        var options = doc.RootElement.GetProperty("options").EnumerateArray().Select(x => x.GetString()).ToList();
+        options.Should().BeEquivalentTo(new[] { "A. 选项1", "B. 选项2" });
+        var answers = doc.RootElement.GetProperty("correctAnswers").EnumerateArray().Select(x => x.GetString()).ToList();
+        answers.Should().BeEquivalentTo(new[] { "A" });
     }
 
     [Fact]
@@ -212,7 +215,7 @@ public class BackwardCompatibilityTests
         // Arrange
         var json = """
             {
-              "$type": "ChoiceQuestionData",
+              "type": "choice",
               "options": ["A. 选项1", "B. 选项2", "C. 选项3"],
               "correctAnswers": ["A", "C"],
               "explanation": "多选题解析",
@@ -321,7 +324,7 @@ public class BackwardCompatibilityTests
         // Arrange
         var json = """
             {
-              "$type": "ChoiceQuestionData",
+              "type": "choice",
               "options": null,
               "correctAnswers": null,
               "difficulty": "easy"

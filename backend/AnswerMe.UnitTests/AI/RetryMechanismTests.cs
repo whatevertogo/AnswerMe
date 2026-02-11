@@ -643,6 +643,9 @@ public class RetryTestHelper
 
                     continue;
                 }
+
+                response.Dispose();
+                throw new HttpRequestException("重试次数已用尽");
             }
 
             return response;

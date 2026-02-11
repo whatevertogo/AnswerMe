@@ -35,22 +35,11 @@ public class AuthController : BaseApiController
             return false;
         }
 
-        // 检查是否为本地回环地址
-        if (System.Net.IPAddress.IsLoopback(remoteIp))
+        // 仅信任连接层源地址，避免通过伪造 X-Forwarded-For 绕过。
+        var normalizedIp = remoteIp.IsIPv4MappedToIPv6 ? remoteIp.MapToIPv4() : remoteIp;
+        if (System.Net.IPAddress.IsLoopback(normalizedIp))
         {
             return true;
-        }
-
-        // 检查 X-Forwarded-For 头（代理场景）
-        if (HttpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
-        {
-            var forwardedIp = forwardedFor.FirstOrDefault();
-            if (!string.IsNullOrEmpty(forwardedIp) &&
-                System.Net.IPAddress.TryParse(forwardedIp, out var parsedIp) &&
-                System.Net.IPAddress.IsLoopback(parsedIp))
-            {
-                return true;
-            }
         }
 
         _logger.LogWarning("本地登录请求被拒绝，远程IP: {RemoteIp}", remoteIp);

@@ -298,6 +298,7 @@ public class AIGenerationService : IAIGenerationService
             }
 
             var savedBeforeBatch = savedQuestions.Count;
+            var pendingEntities = new List<Question>();
 
             foreach (var question in aiResponse.Questions)
             {
@@ -350,29 +351,25 @@ public class AIGenerationService : IAIGenerationService
 
                     ApplyQuestionData(questionEntity, data);
                     await _questionRepository.AddAsync(questionEntity, cancellationToken);
-
-                    var resultDto = new GeneratedQuestionDto
-                    {
-                        Id = questionEntity.Id,
-                        QuestionTypeEnum = questionEntity.QuestionTypeEnum,
-                        QuestionText = question.QuestionText,
-                        Data = questionEntity.Data,
-#pragma warning disable CS0618 // 旧字段兼容性代码：填充 DTO 旧字段
-                        Options = question.Options,
-                        CorrectAnswer = question.CorrectAnswer,
-#pragma warning restore CS0618
-                        Explanation = question.Explanation,
-                        Difficulty = question.Difficulty,
-                        QuestionBankId = questionBankId,
-                        CreatedAt = questionEntity.CreatedAt
-                    };
-                    resultDto.PopulateLegacyFieldsFromData();
-                    savedQuestions.Add(resultDto);
+                    pendingEntities.Add(questionEntity);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "保存题目失败: {QuestionText}", question.QuestionText);
                 }
+            }
+
+            if (pendingEntities.Count == 0)
+            {
+                return new AIGenerateResponseDto
+                {
+                    Success = savedQuestions.Count > 0,
+                    Questions = savedQuestions,
+                    ErrorMessage = "AI响应格式不正确或题目内容为空，请调整提示词或模型",
+                    ErrorCode = "INVALID_AI_RESPONSE",
+                    PartialSuccessCount = savedQuestions.Count > 0 ? savedQuestions.Count : null,
+                    TokensUsed = hasTokens ? tokensUsedTotal : null
+                };
             }
 
             try
@@ -382,6 +379,32 @@ public class AIGenerationService : IAIGenerationService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "提交保存题目事务失败");
+                return new AIGenerateResponseDto
+                {
+                    Success = savedQuestions.Count > 0,
+                    Questions = savedQuestions,
+                    ErrorMessage = "保存题目失败，请稍后重试",
+                    ErrorCode = "PERSIST_FAILED",
+                    PartialSuccessCount = savedQuestions.Count > 0 ? savedQuestions.Count : null,
+                    TokensUsed = hasTokens ? tokensUsedTotal : null
+                };
+            }
+
+            foreach (var entity in pendingEntities)
+            {
+                var resultDto = new GeneratedQuestionDto
+                {
+                    Id = entity.Id,
+                    QuestionTypeEnum = entity.QuestionTypeEnum,
+                    QuestionText = entity.QuestionText,
+                    Data = entity.Data,
+                    Explanation = entity.Explanation,
+                    Difficulty = entity.Difficulty,
+                    QuestionBankId = entity.QuestionBankId,
+                    CreatedAt = entity.CreatedAt
+                };
+                resultDto.PopulateLegacyFieldsFromData();
+                savedQuestions.Add(resultDto);
             }
 
             if (savedQuestions.Count == savedBeforeBatch)

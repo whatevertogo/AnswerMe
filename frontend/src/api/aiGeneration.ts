@@ -1,5 +1,5 @@
 import { request } from '@/utils/request'
-import type { QuestionType } from '@/types/question'
+import type { QuestionType, QuestionData } from '@/types/question'
 
 // 难度枚举（复用 question.ts 中的定义）
 export type Difficulty = 'easy' | 'medium' | 'hard'
@@ -50,7 +50,7 @@ export interface GeneratedQuestion {
   questionBankId: number
   createdAt: string
   /** 题目数据（新格式） */
-  data?: any
+  data?: QuestionData
 }
 
 /**
