@@ -1,3 +1,4 @@
+using AnswerMe.Domain.Entities;
 using AnswerMe.Domain.Enums;
 
 namespace AnswerMe.UnitTests.Helpers;
@@ -132,6 +133,147 @@ public static class TestDataGenerator
     public static string RandomDifficulty()
     {
         return DifficultyLevels[_random.Next(DifficultyLevels.Length)];
+    }
+
+    #endregion
+
+    #region Performance Test Data Generation
+
+    /// <summary>
+    /// 生成指定数量的旧格式题目（性能测试用）
+    /// </summary>
+    public static List<Question> GenerateOldFormatQuestions(int count)
+    {
+        var questions = new List<Question>();
+        // 提高选择题占比，匹配迁移断言（>=60%）
+        var types = new[] { "choice", "choice", "choice", "multiple", "multiple", "true-false", "fill", "essay" };
+        var difficulties = new[] { "easy", "medium", "hard" };
+
+        for (int i = 0; i < count; i++)
+        {
+            var type = types[_random.Next(types.Length)];
+            var difficulty = difficulties[_random.Next(difficulties.Length)];
+
+            var question = new Question
+            {
+                Id = i + 1,
+                QuestionBankId = 1,
+                QuestionText = $"性能测试题目 {i + 1}",
+                QuestionType = type,
+                Options = type is "choice" or "single" or "multiple"
+                    ? "[\"A. 选项1\", \"B. 选项2\", \"C. 选项3\", \"D. 选项4\"]"
+                    : null,
+                CorrectAnswer = GetRandomCorrectAnswer(type),
+                Explanation = $"测试解析 {i + 1}",
+                Difficulty = difficulty,
+                OrderIndex = i,
+                CreatedAt = DateTime.UtcNow.AddDays(-_random.Next(365)),
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            questions.Add(question);
+        }
+
+        return questions;
+    }
+
+    private static string GetRandomCorrectAnswer(string type)
+    {
+        return type switch
+        {
+            "choice" or "single" => "A",
+            "multiple" => "A,B",
+            "true-false" => "true",
+            "fill" => "答案",
+            "essay" => "参考答案",
+            _ => "A"
+        };
+    }
+
+    /// <summary>
+    /// 生成指定数量的新格式题目（性能测试用）
+    /// </summary>
+    public static List<Question> GenerateNewFormatQuestions(int count)
+    {
+        var questions = new List<Question>();
+        var types = new[] { QuestionType.SingleChoice, QuestionType.MultipleChoice, QuestionType.TrueFalse, QuestionType.FillBlank, QuestionType.ShortAnswer };
+        var difficulties = new[] { "easy", "medium", "hard" };
+
+        for (int i = 0; i < count; i++)
+        {
+            var type = types[i % types.Length];
+            var difficulty = difficulties[i % difficulties.Length];
+
+            questions.Add(new Question
+            {
+                Id = i + 1,
+                QuestionBankId = 1,
+                QuestionText = $"性能测试题目 {i + 1}",
+                QuestionType = type.ToString(),
+                QuestionTypeEnum = type,
+                QuestionDataJson = GenerateQuestionDataJson(type, difficulty),
+                Difficulty = difficulty,
+                OrderIndex = i,
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        return questions;
+    }
+
+    private static string GenerateQuestionDataJson(QuestionType type, string difficulty)
+    {
+        return type switch
+        {
+            QuestionType.SingleChoice or QuestionType.MultipleChoice => System.Text.Json.JsonSerializer.Serialize(new
+            {
+                type = "choice",
+                options = new[] { "A. 选项1", "B. 选项2", "C. 选项3", "D. 选项4" },
+                correctAnswers = new[] { "A" },
+                explanation = "测试解析",
+                difficulty
+            }),
+            QuestionType.TrueFalse => System.Text.Json.JsonSerializer.Serialize(new
+            {
+                type = "boolean",
+                correctAnswer = true,
+                explanation = "测试解析",
+                difficulty
+            }),
+            QuestionType.FillBlank => System.Text.Json.JsonSerializer.Serialize(new
+            {
+                type = "fillBlank",
+                correctAnswer = "答案",
+                explanation = "测试解析",
+                difficulty
+            }),
+            _ => System.Text.Json.JsonSerializer.Serialize(new
+            {
+                type = "shortAnswer",
+                correctAnswer = "参考答案",
+                explanation = "测试解析",
+                difficulty
+            })
+        };
+    }
+
+    /// <summary>
+    /// 生成混合格式的题目（性能测试用）
+    /// </summary>
+    /// <param name="count">总题目数量</param>
+    /// <param name="oldFormatRatio">旧格式题目比例（0-1）</param>
+    public static List<Question> GenerateMixedFormatQuestions(int count, double oldFormatRatio)
+    {
+        var questions = new List<Question>();
+        var oldCount = (int)(count * oldFormatRatio);
+        var newCount = count - oldCount;
+
+        questions.AddRange(GenerateOldFormatQuestions(oldCount));
+        questions.AddRange(GenerateNewFormatQuestions(newCount));
+
+        // 打乱顺序以模拟真实环境
+        return questions.OrderBy(_ => _random.Next()).ToList();
     }
 
     #endregion

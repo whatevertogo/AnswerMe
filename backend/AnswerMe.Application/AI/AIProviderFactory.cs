@@ -24,8 +24,21 @@ public class AIProviderFactory
     /// </summary>
     public IAIProvider? GetProvider(string providerName)
     {
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            return null;
+        }
+
+        var normalized = providerName.Trim().ToLowerInvariant();
+        normalized = normalized switch
+        {
+            "antropic" => "anthropic", // 兼容常见拼写错误
+            "anthropic_compatible" => "anthropic", // 兼容 Anthropic Messages API 格式
+            _ => normalized
+        };
+
         return _providers.FirstOrDefault(p =>
-            p.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+            p.ProviderName.Equals(normalized, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

@@ -181,7 +181,7 @@ function formatRelativeTime(input: string): string {
         @click="router.push(stat.path)"
       >
         <div class="stat-icon" :style="{ background: stat.color }">
-          <el-icon :size="28" color="#FFFFFF">
+          <el-icon :size="28" color="var(--color-white)">
             <component :is="stat.icon" />
           </el-icon>
         </div>

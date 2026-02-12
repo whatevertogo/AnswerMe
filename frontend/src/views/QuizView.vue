@@ -53,6 +53,7 @@ const initializing = ref(true)
 
 // localStorage key 用于保存标记状态
 const STORAGE_KEY_MARKED = 'quiz_marked_questions'
+const QUESTION_DETAIL_CONCURRENCY = 8
 
 // 计时器
 let timer: number | null = null
@@ -198,13 +199,56 @@ async function loadExistingQuiz() {
 }
 
 async function loadQuestionsDetails(questionIds: number[]) {
+  const uniqueQuestionIds = [...new Set(questionIds)].filter(id => id > 0)
+  if (!uniqueQuestionIds.length) {
+    questions.value = []
+    questionMap.value = new Map()
+    return
+  }
+
   try {
-    // 批量获取题目详情
-    const questionPromises = questionIds.map(id => getQuestionDetail(id))
-    const questionDetails = await Promise.all(questionPromises)
+    // 限流并发获取题目详情，避免一次性并发过高导致整体失败
+    const questionDetails: Array<Question | undefined> = new Array(uniqueQuestionIds.length)
+    const failedQuestionIds: number[] = []
+    const workerCount = Math.min(QUESTION_DETAIL_CONCURRENCY, uniqueQuestionIds.length)
+    let nextIndex = 0
+
+    const workers = Array.from({ length: workerCount }, () =>
+      (async () => {
+        while (true) {
+          const currentIndex = nextIndex++
+          if (currentIndex >= uniqueQuestionIds.length) {
+            return
+          }
+
+          const questionId = uniqueQuestionIds[currentIndex]
+          if (!questionId) {
+            continue
+          }
+
+          try {
+            questionDetails[currentIndex] = await getQuestionDetail(questionId)
+          } catch (error) {
+            failedQuestionIds.push(questionId)
+            console.error('加载题目详情失败:', { questionId, error })
+          }
+        }
+      })()
+    )
+
+    await Promise.all(workers)
+
+    const loadedDetails = questionDetails.filter((q): q is Question => q != null)
+    if (!loadedDetails.length) {
+      throw new Error('题目详情全部加载失败')
+    }
+
+    if (failedQuestionIds.length > 0) {
+      ElMessage.warning(`部分题目加载失败（${failedQuestionIds.length}题），可刷新重试`)
+    }
 
     // 转换为 QuizQuestion 格式
-    questions.value = questionDetails.map((q: Question) => {
+    questions.value = loadedDetails.map((q: Question) => {
       return {
         id: q.id,
         content: q.questionText,
@@ -219,6 +263,13 @@ async function loadQuestionsDetails(questionIds: number[]) {
 
     // 创建映射
     questionMap.value = new Map(questions.value.map(q => [q.id, q]))
+
+    // 与实际可用题目保持一致，避免缺失题目导致导航到空题
+    const loadedQuestionIds = questions.value.map(q => q.id)
+    quizStore.questionIds = loadedQuestionIds
+    if (quizStore.currentQuestionIndex >= loadedQuestionIds.length) {
+      quizStore.currentQuestionIndex = Math.max(loadedQuestionIds.length - 1, 0)
+    }
   } catch (error: unknown) {
     ElMessage.error('加载题目详情失败: ' + extractErrorMessage(error, '未知错误'))
     throw error
@@ -269,16 +320,40 @@ function restoreAnswerForDisplay(
   question: QuizQuestion,
   rawAnswer: string
 ): string | string[] | undefined {
-  if (!rawAnswer.trim()) {
+  const normalizedRawAnswer = normalizeAnswerString(rawAnswer)
+  if (!normalizedRawAnswer) {
     return undefined
   }
 
   if (!isChoiceType(question.type)) {
-    return rawAnswer
+    return normalizedRawAnswer
   }
 
   const multiple = question.type === 'multiple'
-  return mapChoiceAnswerForDisplay(rawAnswer, question.options, multiple)
+  return mapChoiceAnswerForDisplay(normalizedRawAnswer, question.options, multiple)
+}
+
+function normalizeAnswerString(rawAnswer: string): string {
+  const trimmed = rawAnswer.trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map(item => String(item).trim())
+          .filter(Boolean)
+          .join(',')
+      }
+    } catch {
+      // 保持原值，交由后续展示/解析逻辑处理
+    }
+  }
+
+  return trimmed
 }
 
 function mapAnswerForSubmit(question: QuizQuestion, answer: string | string[]): string | string[] {

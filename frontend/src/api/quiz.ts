@@ -52,7 +52,7 @@ export interface QuizDetail {
   questionText: string
   questionType: string
   options?: string
-  userAnswer?: string | string[]
+  userAnswer?: string
   correctAnswer: string
   isCorrect?: boolean
   timeSpent?: number

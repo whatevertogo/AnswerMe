@@ -31,6 +31,8 @@ public class AIProviderFactoryTests
         factory.GetProvider("Qwen").Should().NotBeNull();
         factory.GetProvider("Zhipu").Should().NotBeNull();
         factory.GetProvider("anthropic").Should().NotBeNull();
+        factory.GetProvider("antropic").Should().NotBeNull();
+        factory.GetProvider("anthropic_compatible").Should().NotBeNull();
         factory.GetProvider("Minimax").Should().NotBeNull();
     }
 }

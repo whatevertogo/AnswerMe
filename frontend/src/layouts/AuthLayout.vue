@@ -9,7 +9,7 @@ import { Reading, Star, Collection, Trophy } from '@element-plus/icons-vue'
       <div class="brand-content">
         <div class="brand-header">
           <div class="logo-icon">
-            <el-icon :size="32" color="#FFFFFF"><Reading /></el-icon>
+            <el-icon :size="32" color="var(--color-white)"><Reading /></el-icon>
           </div>
           <h1 class="brand-title">AnswerMe</h1>
           <p class="brand-subtitle">智能题库系统</p>

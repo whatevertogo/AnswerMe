@@ -250,7 +250,7 @@ const handleLogout = async () => {
 }
 
 .nav-item {
-  @apply flex items-center gap-2 px-4 py-2 rounded-md
+  @apply flex items-center gap-2 px-5 py-2 rounded-md
          no-underline text-sm font-medium;
   transition: all var(--transition-fast);
   color: var(--color-text-secondary);

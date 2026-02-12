@@ -39,16 +39,10 @@ const sessionId = computed(() => route.params.sessionId as string)
 const attemptId = computed(() => parseInt(sessionId.value))
 
 const hasUserAnswer = (detail: QuizDetail): boolean => {
-  if (Array.isArray(detail.userAnswer)) {
-    return detail.userAnswer.length > 0
-  }
   return typeof detail.userAnswer === 'string' && detail.userAnswer.trim().length > 0
 }
 
-const hasAnsweredString = (answer: string | string[] | undefined): boolean => {
-  if (Array.isArray(answer)) {
-    return answer.length > 0
-  }
+const hasAnsweredString = (answer: string | undefined): boolean => {
   return typeof answer === 'string' && answer.trim().length > 0
 }
 
@@ -216,11 +210,21 @@ const formatDate = (dateString: string) => {
 }
 
 // 获取答案显示文本
-const formatAnswer = (answer: string | string[] | undefined): string => {
+const formatAnswer = (answer: string | undefined): string => {
   if (!answer) return '未作答'
-  if (Array.isArray(answer)) {
-    return answer.join(', ')
+
+  const trimmed = answer.trim()
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => String(item)).join(', ')
+      }
+    } catch {
+      // JSON 解析失败时回退为原始答案显示
+    }
   }
+
   return answer
 }
 

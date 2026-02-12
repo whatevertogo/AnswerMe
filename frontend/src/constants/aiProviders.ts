@@ -31,6 +31,14 @@ export const aiProviders: AIProviderOption[] = [
     tagType: 'primary'
   },
   {
+    label: 'Anthropic兼容',
+    value: 'anthropic_compatible',
+    defaultModel: 'claude-3-5-sonnet-latest',
+    defaultEndpoint: 'https://your-api-endpoint.com/v1/messages',
+    tagType: 'primary',
+    description: 'Anthropic Messages API 兼容格式'
+  },
+  {
     label: '通义千问',
     value: 'qwen',
     defaultModel: 'qwen-turbo',
@@ -40,7 +48,7 @@ export const aiProviders: AIProviderOption[] = [
   {
     label: '智谱GLM',
     value: 'zhipu',
-    defaultModel: 'glm-4',
+    defaultModel: 'glm-4.7',
     defaultEndpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
     tagType: 'warning'
   },

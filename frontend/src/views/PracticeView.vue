@@ -109,38 +109,24 @@ const handleStartPractice = async (bank: QuestionBank) => {
     return
   }
 
-  // 1. 验证题库 ID 有效性
+  // 仅做本地快速校验，其他校验以服务端最新数据为准
   if (!bank.id || bank.id <= 0) {
     ElMessage.error('题库信息无效')
     return
   }
 
-  // 2. 验证用户权限
-  const currentUserId = authStore.userInfo?.id
-  if (currentUserId != null && bank.userId && bank.userId !== currentUserId) {
-    ElMessage.error('您没有权限访问此题库')
-    return
-  }
-
-  // 3. 检查题目数量
-  if (!bank.questionCount || bank.questionCount <= 0) {
-    ElMessage.warning('题库暂无题目，无法开始练习')
-    return
-  }
-
-  // 4. 实时验证题库是否有题目（防止缓存数据不准确）
   try {
+    const currentUserId = authStore.userInfo?.id
     startingBankId.value = bank.id
     const latestBank = await getQuestionBankDetail(bank.id)
 
-    if (!latestBank.questionCount || latestBank.questionCount <= 0) {
-      ElMessage.warning('题库暂无题目，无法开始练习')
+    if (currentUserId != null && latestBank.userId && latestBank.userId !== currentUserId) {
+      ElMessage.error('您没有权限访问此题库')
       return
     }
 
-    // 5. 再次验证用户权限（使用最新数据）
-    if (currentUserId != null && latestBank.userId && latestBank.userId !== currentUserId) {
-      ElMessage.error('您没有权限访问此题库')
+    if (!latestBank.questionCount || latestBank.questionCount <= 0) {
+      ElMessage.warning('题库暂无题目，无法开始练习')
       return
     }
 
@@ -249,19 +235,7 @@ const formatDate = (dateString: string) => {
 
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-tooltip
-              v-if="!row.questionCount || row.questionCount <= 0"
-              content="题库暂无题目，无法开始练习"
-              placement="top"
-            >
-              <span>
-                <el-button type="primary" :icon="Reading" size="small" disabled>
-                  开始练习
-                </el-button>
-              </span>
-            </el-tooltip>
             <el-button
-              v-else
               type="primary"
               :icon="Reading"
               size="small"
