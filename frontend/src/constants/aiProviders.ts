@@ -24,7 +24,7 @@ export const aiProviders: AIProviderOption[] = [
     description: 'V3.2 (128K context, 32K max output)'
   },
   {
-    label: 'Anthropic (Claude)',
+    label: 'Anthropic',
     value: 'anthropic',
     defaultModel: 'claude-3-5-sonnet-latest',
     defaultEndpoint: 'https://api.anthropic.com/v1/messages',
@@ -45,14 +45,14 @@ export const aiProviders: AIProviderOption[] = [
     tagType: 'warning'
   },
   {
-    label: 'Minimax(中文)',
+    label: 'Minimax(China)',
     value: 'minimax_cn',
     defaultModel: 'M2-her',
     defaultEndpoint: 'https://api.minimaxi.com/v1/text/chatcompletion_v2',
     tagType: 'info'
   },
   {
-    label: 'Minimax(英文)',
+    label: 'Minimax',
     value: 'minimax_global',
     defaultModel: 'M2-her',
     defaultEndpoint: 'https://api.minimax.io/v1/text/chatcompletion_v2',

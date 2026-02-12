@@ -6,7 +6,7 @@
 # ==========================================
 # 阶段1: 依赖安装
 # ==========================================
-FROM node:18-alpine AS deps
+FROM node:22-alpine AS deps
 
 # 安装pnpm(可选,也可使用npm)
 RUN npm install -g pnpm
@@ -23,7 +23,7 @@ RUN npm ci || pnpm install --frozen-lockfile
 # ==========================================
 # 阶段2: 构建
 # ==========================================
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -52,9 +52,9 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # 复制nginx配置
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 创建非root用户
-RUN addgroup -g 1000 nginx-user && \
-    adduser -D -u 1000 -G nginx-user nginx-user && \
+# 创建非root用户（避免固定UID/GID冲突）
+RUN addgroup -S nginx-user || true && \
+    adduser -S -G nginx-user nginx-user || true && \
     chown -R nginx-user:nginx-user /usr/share/nginx/html && \
     chown -R nginx-user:nginx-user /var/cache/nginx && \
     chown -R nginx-user:nginx-user /var/log/nginx && \

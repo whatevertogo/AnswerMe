@@ -74,7 +74,8 @@ services:
     container_name: answerme-backend
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB:-answermedb};Username=${POSTGRES_USER:-answeruser};Password=${POSTGRES_PASSWORD:-answerpass123}
+      - DB_TYPE=${DB_TYPE:-Sqlite}
+      - ConnectionStrings__DefaultConnection=${DEFAULT_CONNECTION_STRING:-Data Source=/tmp/answerme.db}
       - ConnectionStrings__Redis=redis:6379
       - JWT__Secret=${JWT_SECRET}
       - JWT__ExpiryDays=${JWT_EXPIRY_DAYS:-30}
@@ -120,21 +121,30 @@ services:
     networks:
       - answerme-network
 
-  # Frontend (预留,待frontend-developer完成)
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: answerme-frontend
-  #   environment:
-  #     - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:5000}
-  #   ports:
-  #     - "${FRONTEND_PORT:-3000}:80"
-  #   depends_on:
-  #     - backend
-  #   restart: unless-stopped
-  #   networks:
-  #     - answerme-network
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: answerme-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - answerme-network
 
 volumes:
   pgdata:

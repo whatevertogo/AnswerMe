@@ -7,6 +7,7 @@ using AnswerMe.Infrastructure.Data;
 using AnswerMe.Infrastructure.Repositories;
 using AnswerMe.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -42,6 +43,9 @@ public static class DependencyInjection
                 options.EnableDetailedErrors();
             }
 #endif
+
+            // Docker/开发环境下允许使用现有迁移启动，避免 PendingModelChangesWarning 中断自动迁移流程
+            options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
         });
 
         services.AddScoped<IUserRepository, UserRepository>();
