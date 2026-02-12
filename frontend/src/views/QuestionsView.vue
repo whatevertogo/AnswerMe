@@ -368,20 +368,21 @@ const formatCorrectAnswer = (question: Question) => {
 
 .page-title {
   @apply text-[1.5rem] font-bold m-0 mb-1;
-  color: #073642;
+  color: var(--color-text-primary);
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .dark .page-title {
-  color: #839496;
+  color: var(--color-text-primary);
 }
 
 .page-subtitle {
   @apply text-sm m-0;
-  color: #586E75;
+  color: var(--color-text-secondary);
 }
 
 .dark .page-subtitle {
-  color: #93A1A1;
+  color: var(--color-text-secondary);
 }
 
 /* 筛选栏 */
@@ -412,15 +413,16 @@ const formatCorrectAnswer = (question: Question) => {
 }
 
 .question-text {
-  @apply font-medium text-[#073642] overflow-hidden text-ellipsis
+  @apply font-medium overflow-hidden text-ellipsis
          line-clamp-2 leading-[1.5];
+  color: var(--color-text-primary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
 .dark .question-text {
-  color: #839496;
+  color: var(--color-text-primary);
 }
 
 .question-meta {
@@ -437,27 +439,30 @@ const formatCorrectAnswer = (question: Question) => {
 }
 
 .option-line {
-  @apply text-[#586E75] overflow-hidden text-ellipsis whitespace-nowrap;
+  @apply overflow-hidden text-ellipsis whitespace-nowrap;
+  color: var(--color-text-secondary);
 }
 
 .dark .option-line {
-  color: #93A1A1;
+  color: var(--color-text-secondary);
 }
 
 .more-hint {
-  @apply text-[#9ca3af] text-xs;
+  @apply text-xs;
+  color: var(--color-text-muted);
 }
 
 .answer-preview {
-  @apply text-[#586E75];
+  color: var(--color-text-secondary);
 }
 
 .dark .answer-preview {
-  color: #93A1A1;
+  color: var(--color-text-secondary);
 }
 
 .correct-answer {
-  @apply text-[#10b981] font-medium;
+  @apply font-medium;
+  color: var(--color-success);
 }
 
 /* 标签单元格 */
@@ -466,11 +471,13 @@ const formatCorrectAnswer = (question: Question) => {
 }
 
 .more-tags {
-  @apply text-[#9ca3af] text-xs;
+  @apply text-xs;
+  color: var(--color-text-muted);
 }
 
 .text-muted {
-  @apply text-sm text-[#9ca3af];
+  @apply text-sm;
+  color: var(--color-text-muted);
 }
 
 .table-actions {
@@ -483,11 +490,12 @@ const formatCorrectAnswer = (question: Question) => {
 
 /* 分页 */
 .pagination-wrapper {
-  @apply flex justify-center px-4 py-4 border-t border-[#e5e7eb];
+  @apply flex justify-center px-4 py-4 border-t;
+  border-top-color: var(--color-border);
 }
 
 .dark .pagination-wrapper {
-  border-top-color: #374151;
+  border-top-color: var(--color-border);
 }
 
 /* 表格样式优化 */
@@ -496,8 +504,8 @@ const formatCorrectAnswer = (question: Question) => {
 }
 
 :deep(.el-table th.el-table__cell) {
-  background: #EEE8D5;
-  color: #073642;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
   font-weight: 600;
   padding-left: 1.5rem;
   padding-top: 1rem;
@@ -514,24 +522,24 @@ const formatCorrectAnswer = (question: Question) => {
 }
 
 .dark :deep(.el-table th.el-table__cell) {
-  background: #073642;
-  color: #839496;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
 }
 
 :deep(.el-table tr:hover > td) {
-  background: #FDF6E3 !important;
+  background: var(--color-hover-light) !important;
 }
 
 .dark :deep(.el-table tr:hover > td) {
-  background: #073642 !important;
+  background: var(--color-hover-light) !important;
 }
 
 :deep(.el-table td.el-table__cell) {
-  border-color: #E8E4CE;
+  border-color: var(--color-border);
 }
 
 .dark :deep(.el-table td.el-table__cell) {
-  border-color: #586E75;
+  border-color: var(--color-border);
 }
 
 /* 响应式 */

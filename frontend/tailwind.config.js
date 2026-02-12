@@ -58,11 +58,38 @@ export default {
         xl: 'var(--shadow-xl)',
       },
       transitionDuration: {
-        '400': 'var(--transition-duration-400)',
-        '600': 'var(--transition-duration-600)',
+        '200': 'var(--transition-duration-200)',
+        '300': 'var(--transition-duration-300)',
       },
       transitionTimingFunction: {
         'smooth': 'var(--transition-timing-smooth)',
+      },
+      fontFamily: {
+        serif: [
+          'Noto Serif SC',
+          'Songti SC',
+          'SimSun',
+          'serif'
+        ],
+        display: [
+          'Cormorant Garamond',
+          'Noto Serif SC',
+          'serif'
+        ],
+      },
+      animation: {
+        'fade-in-up': 'fadeInUp 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        'ripple': 'ripple 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite',
+      },
+      keyframes: {
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        ripple: {
+          '0%': { transform: 'scale(1)', opacity: '0.4' },
+          '100%': { transform: 'scale(1.5)', opacity: '0' },
+        },
       },
     },
   },

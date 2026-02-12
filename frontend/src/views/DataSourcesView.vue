@@ -230,7 +230,7 @@ const getTypeTagType = (type: string) => {
 
 .header h1 {
   @apply m-0 text-[24px] font-semibold;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .search-card {
@@ -260,12 +260,12 @@ const getTypeTagType = (type: string) => {
 }
 
 .type-icon {
-  @apply text-[#409eff];
+  color: var(--color-primary);
 }
 
 .name {
   @apply font-semibold text-base;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .card-body {
@@ -277,11 +277,12 @@ const getTypeTagType = (type: string) => {
 }
 
 .label {
-  @apply text-[#909399] min-w-[70px];
+  @apply text-sm min-w-[70px];
+  color: var(--color-text-secondary);
 }
 
 .value {
-  @apply text-[#303133];
+  color: var(--color-text-primary);
 }
 
 .text-truncate {
@@ -289,7 +290,8 @@ const getTypeTagType = (type: string) => {
 }
 
 .masked {
-  @apply font-mono text-[#909399];
+  @apply font-mono;
+  color: var(--color-text-muted);
 }
 
 .card-actions {
@@ -301,7 +303,8 @@ const getTypeTagType = (type: string) => {
 }
 
 :deep(.el-card__header) {
-  @apply px-4 py-4 border-b border-[#f0f0f0];
+  @apply px-4 py-4 border-b;
+  border-color: var(--color-border);
 }
 
 :deep(.el-card__body) {
@@ -309,6 +312,8 @@ const getTypeTagType = (type: string) => {
 }
 
 :deep(.el-card__footer) {
-  @apply px-4 py-3 border-t border-[#f0f0f0] bg-[#fafafa];
+  @apply px-4 py-3 border-t;
+  border-color: var(--color-border);
+  background-color: var(--color-bg-secondary);
 }
 </style>

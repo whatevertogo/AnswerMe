@@ -135,7 +135,7 @@ const getStatusClass = (index: number) => {
 .question-item {
   @apply aspect-square relative flex items-center justify-center
          border-2 border-border rounded-md bg-bg
-         cursor-pointer transition-all duration-400 ease-smooth;
+         cursor-pointer transition-all duration-300 ease-in-out;
 }
 
 .dark .question-item {

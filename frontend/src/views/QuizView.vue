@@ -370,14 +370,14 @@ const goHome = () => {
         <div class="header-right">
           <!-- 进度 -->
           <div class="progress-indicator">
-            <el-icon :size="16" color="#10b981"><CircleCheck /></el-icon>
+            <el-icon :size="16" color="var(--color-success)"><CircleCheck /></el-icon>
             <span class="progress-text">{{ answeredCount }}/{{ totalQuestions }}</span>
             <el-progress :percentage="progress" :show-text="false" :stroke-width="6" />
           </div>
 
           <!-- 计时器 -->
           <div class="timer-indicator">
-            <el-icon :size="16" color="#3b82f6"><Clock /></el-icon>
+            <el-icon :size="16" color="var(--color-primary)"><Clock /></el-icon>
             <span class="timer-text">{{ formatTime(timeElapsed) }}</span>
           </div>
 

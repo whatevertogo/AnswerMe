@@ -131,7 +131,7 @@ const recentActivities = ref([
 <template>
   <div class="home-view">
     <!-- 欢迎横幅 -->
-    <div class="welcome-banner">
+    <div class="welcome-banner scroll-reveal">
       <div class="banner-content">
         <div class="banner-greeting">
           <el-icon :size="32" class="wave-icon"><Sugar /></el-icon>
@@ -152,7 +152,7 @@ const recentActivities = ref([
       <div
         v-for="stat in stats"
         :key="stat.title"
-        class="stat-card-large"
+        class="stat-card-large card-hover scroll-reveal"
         @click="router.push(stat.path)"
       >
         <div class="stat-icon" :style="{ background: stat.color }">
@@ -168,13 +168,13 @@ const recentActivities = ref([
     </div>
 
     <!-- 快捷操作 - 垂直列表 -->
-    <div class="actions-section">
+    <div class="actions-section scroll-reveal">
       <h2 class="section-title">快捷操作</h2>
       <div class="action-list">
         <div
           v-for="action in quickActions"
           :key="action.title"
-          class="action-item"
+          class="action-item card-hover"
           @click="action.action"
         >
           <div class="action-icon">
@@ -194,7 +194,7 @@ const recentActivities = ref([
     </div>
 
     <!-- 最近活动 - 简化展示 -->
-    <div class="activity-section" v-if="recentActivities.length > 0">
+    <div class="activity-section scroll-reveal" v-if="recentActivities.length > 0">
       <h2 class="section-title">最近活动</h2>
       <div class="activity-list">
         <div
@@ -202,7 +202,7 @@ const recentActivities = ref([
           :key="index"
           class="activity-item"
         >
-          <div class="activity-dot"></div>
+          <div class="activity-dot timeline-dot"></div>
           <div class="activity-content">
             <div class="activity-title">{{ activity.title }}</div>
             <div class="activity-time">{{ activity.time }}</div>
@@ -220,11 +220,20 @@ const recentActivities = ref([
 
 /* 欢迎横幅 */
 .welcome-banner {
-  @apply bg-bg-secondary rounded-xl p-10 mb-8 shadow-sm;
+  @apply rounded-xl p-10 mb-8 shadow-xs overflow-hidden relative;
+  background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-secondary) 100%);
+  border: 1px solid var(--color-border);
+}
+
+.welcome-banner::before {
+  content: '';
+  @apply absolute inset-0 pointer-events-none;
+  background: var(--color-primary-gradient);
+  opacity: 0.05;
 }
 
 .banner-content {
-  @apply flex justify-between items-center;
+  @apply flex justify-between items-center relative;
 }
 
 .banner-greeting {
@@ -234,6 +243,7 @@ const recentActivities = ref([
 .wave-icon {
   @apply text-primary;
   animation: wave 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 2px 8px rgba(61, 40, 23, 0.20));
 }
 
 @keyframes wave {
@@ -244,6 +254,11 @@ const recentActivities = ref([
 
 .greeting-text h1 {
   @apply text-[1.75rem] font-bold text-text-primary m-0 mb-1;
+  background: var(--color-primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .greeting-text p {
@@ -256,27 +271,37 @@ const recentActivities = ref([
 
 .decoration-circle {
   @apply w-[60px] h-[60px] rounded-full;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  @apply opacity-10;
+  background: var(--color-primary-gradient);
+  @apply opacity-15;
 }
 
 /* 统计概览 */
 .stats-section {
-  @apply grid grid-cols-4 gap-6 mb-8;
+  @apply grid grid-cols-4 gap-5 mb-8;
 }
 
 .stat-card-large {
-  @apply bg-bg rounded-lg p-6 shadow-sm
-         transition-all duration-400 ease-smooth
+  @apply rounded-lg p-6 shadow-xs
          flex items-center gap-4 cursor-pointer
-         border border-border
-         hover:-translate-y-1 hover:shadow-md hover:border-primary;
+         border border-border;
+  background: linear-gradient(135deg, var(--color-white) 0%, var(--color-bg-secondary) 100%);
+  border-radius: var(--radius-lg);
+  border-color: var(--color-border);
+  transition: all var(--transition-fast);
+}
+
+.stat-card-large:hover {
+  transform: translateY(-2px);
+  background-color: var(--color-hover-light);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary-light);
 }
 
 .stat-icon {
   @apply w-14 h-14 rounded-md
          flex items-center justify-center
          flex-shrink-0;
+  border-radius: var(--radius-md);
 }
 
 .stat-info {
@@ -285,6 +310,8 @@ const recentActivities = ref([
 
 .stat-value {
   @apply text-[1.75rem] font-bold text-text-primary mb-1;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .stat-title {
@@ -294,6 +321,7 @@ const recentActivities = ref([
 /* 区块 */
 .section-title {
   @apply text-[1.125rem] font-semibold text-text-primary m-0 mb-4;
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 /* 快捷操作 */
@@ -306,17 +334,27 @@ const recentActivities = ref([
 }
 
 .action-item {
-  @apply bg-bg rounded-md px-5 py-4
+  @apply rounded-md px-5 py-4
          flex items-center gap-4 cursor-pointer
-         transition-all duration-400 ease-smooth
-         border border-border shadow-xs
-         hover:translate-x-1 hover:shadow-sm hover:border-primary;
+         border border-border shadow-xs;
+  background: linear-gradient(135deg, var(--color-white) 0%, var(--color-bg-secondary) 100%);
+  border-radius: var(--radius-md);
+  border-color: var(--color-border);
+  transition: all var(--transition-fast);
+}
+
+.action-item:hover {
+  transform: translateX(4px);
+  background-color: var(--color-hover-light);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary-light);
 }
 
 .action-icon {
   @apply w-11 h-11 rounded-md bg-bg-secondary
          flex items-center justify-center text-primary
          flex-shrink-0;
+  border-radius: var(--radius-md);
 }
 
 .action-content {
@@ -333,6 +371,12 @@ const recentActivities = ref([
 
 .action-arrow {
   @apply text-text-muted;
+  transition: transform var(--transition-fast);
+}
+
+.action-item:hover .action-arrow {
+  @apply text-primary;
+  transform: translateX(2px);
 }
 
 /* 最近活动 */
@@ -341,8 +385,11 @@ const recentActivities = ref([
 }
 
 .activity-list {
-  @apply bg-bg rounded-lg p-6
+  @apply rounded-lg p-6
          border border-border shadow-xs;
+  background: linear-gradient(135deg, var(--color-white) 0%, var(--color-bg-secondary) 100%);
+  border-radius: var(--radius-lg);
+  border-color: var(--color-border);
 }
 
 .activity-item {
@@ -352,10 +399,13 @@ const recentActivities = ref([
 .activity-item:not(:last-child)::after {
   content: '';
   @apply absolute left-[7px] top-10 bottom-0 w-[2px] bg-bg-secondary;
+  background-color: var(--color-bg-tertiary);
 }
 
 .activity-dot {
   @apply w-4 h-4 rounded-full bg-primary flex-shrink-0 mt-1;
+  background-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(61, 40, 23, 0.12);
 }
 
 .activity-content {
@@ -363,7 +413,7 @@ const recentActivities = ref([
 }
 
 .activity-title {
-  @apply text-[0.9375rem] text-text-primary mb-1;
+  @apply text-[0.9375rem] text-text-primary mb-1 font-medium;
 }
 
 .activity-time {

@@ -67,7 +67,7 @@ const handleRegister = async () => {
     <div class="brand-section">
       <div class="brand-content">
         <div class="brand-icon">
-          <el-icon :size="48" color="#5B7280"><Reading /></el-icon>
+          <el-icon :size="48" color="var(--color-primary)"><Reading /></el-icon>
         </div>
         <h1 class="brand-title">加入 AnswerMe</h1>
         <p class="brand-subtitle">开启智能学习之旅</p>
@@ -76,15 +76,15 @@ const handleRegister = async () => {
         </p>
         <div class="feature-list">
           <div class="feature-item">
-            <el-icon :size="16" color="#5B7280"><Reading /></el-icon>
+            <el-icon :size="16" color="var(--color-primary)"><Reading /></el-icon>
             <span class="feature-text">智能题目生成</span>
           </div>
           <div class="feature-item">
-            <el-icon :size="16" color="#5B7280"><Reading /></el-icon>
+            <el-icon :size="16" color="var(--color-primary)"><Reading /></el-icon>
             <span class="feature-text">多题型支持</span>
           </div>
           <div class="feature-item">
-            <el-icon :size="16" color="#5B7280"><Reading /></el-icon>
+            <el-icon :size="16" color="var(--color-primary)"><Reading /></el-icon>
             <span class="feature-text">学习数据分析</span>
           </div>
         </div>
@@ -168,7 +168,8 @@ const handleRegister = async () => {
 
 /* 品牌区域 */
 .brand-section {
-  @apply flex items-center justify-center p-12 bg-bg-secondary;
+  @apply flex items-center justify-center p-12;
+  background-color: var(--color-bg-secondary);
 }
 
 .brand-content {
@@ -206,7 +207,8 @@ const handleRegister = async () => {
 
 /* 表单区域 */
 .form-section {
-  @apply flex items-center justify-center p-12 bg-bg border-l border-border;
+  @apply flex items-center justify-center p-12 bg-bg;
+  border-left: 1px solid var(--color-border);
 }
 
 .form-card {
@@ -260,7 +262,8 @@ const handleRegister = async () => {
   }
 
   .form-section {
-    @apply border-l-0 border-t border-border;
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
   }
 
   .feature-list {

@@ -337,12 +337,14 @@ onMounted(() => {
 
 .stat-item {
   @apply flex items-center gap-4 px-5 rounded-lg bg-bg border border-border shadow-xs
-         transition-all duration-400 ease-smooth
+         transition-all duration-300 ease-in-out
          hover:-translate-y-0.5 hover:shadow-sm;
 }
 
 .stat-item.correct {
-  @apply border-success bg-[#F0F9F4];
+  @apply border-success;
+  background-color: var(--color-success-light);
+  border-color: var(--color-success);
 }
 
 .stat-item.correct .el-icon {
@@ -350,7 +352,9 @@ onMounted(() => {
 }
 
 .stat-item.incorrect {
-  @apply border-danger bg-[#FEF2F2];
+  @apply border-danger;
+  background-color: var(--color-danger-light);
+  border-color: var(--color-danger);
 }
 
 .stat-item.incorrect .el-icon {
@@ -358,7 +362,9 @@ onMounted(() => {
 }
 
 .stat-item.unanswered {
-  @apply border-border bg-bg-secondary;
+  @apply border;
+  background-color: var(--color-bg-secondary);
+  border-color: var(--color-border);
 }
 
 .stat-item.unanswered .el-icon {
@@ -366,7 +372,9 @@ onMounted(() => {
 }
 
 .stat-item.total {
-  @apply border-info bg-[#EFF6FF];
+  @apply border-info;
+  background-color: var(--color-info-light);
+  border-color: var(--color-info);
 }
 
 .stat-item.total .el-icon {
@@ -400,7 +408,7 @@ onMounted(() => {
 
 .detail-item {
   @apply px-5 py-5 border-b border-border
-         transition-all duration-400 ease-smooth
+         transition-all duration-300 ease-in-out
          hover:bg-bg-secondary;
 }
 
@@ -409,15 +417,24 @@ onMounted(() => {
 }
 
 .detail-item.correct {
-  @apply bg-[#F0F9F4] border-l-4 border-l-success;
+  background-color: var(--color-success-light);
+  border-left-width: 4px;
+  border-left-style: solid;
+  border-left-color: var(--color-success);
 }
 
 .detail-item.incorrect {
-  @apply bg-[#FEF2F2] border-l-4 border-l-danger;
+  background-color: var(--color-danger-light);
+  border-left-width: 4px;
+  border-left-style: solid;
+  border-left-color: var(--color-danger);
 }
 
 .detail-item.unanswered {
-  @apply bg-bg-secondary border-l-4 border-l-text-muted;
+  background-color: var(--color-bg-secondary);
+  border-left-width: 4px;
+  border-left-style: solid;
+  border-left-color: var(--color-text-muted);
 }
 
 .detail-header {
@@ -498,11 +515,14 @@ onMounted(() => {
 }
 
 .explanation-section {
-  @apply mt-6 p-4 bg-[#F0F9F4] rounded-md;
+  @apply mt-6 p-4 rounded-md;
+  background-color: var(--color-success-light);
+  border: 1px solid var(--color-success);
 }
 
 .explanation-title {
-  @apply m-0 mb-2 text-success text-sm font-semibold;
+  @apply m-0 mb-2 text-sm font-semibold;
+  color: var(--color-success);
 }
 
 .explanation-text {

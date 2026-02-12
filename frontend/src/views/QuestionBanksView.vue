@@ -123,10 +123,10 @@ const getDifficultyLabel = (difficulty: string): string => {
 <template>
   <div class="question-banks-view">
     <!-- 页面标题和操作 -->
-    <div class="page-header">
+    <div class="page-header scroll-reveal">
       <div class="header-content">
         <h2 class="page-title">题库管理</h2>
-        <p class="page-subtitle">管理你的题库,创建和编辑题目</p>
+        <p class="page-subtitle">管理你的题库，创建和编辑题目</p>
       </div>
       <el-button type="primary" :icon="Plus" @click="handleCreate">
         创建题库
@@ -134,7 +134,7 @@ const getDifficultyLabel = (difficulty: string): string => {
     </div>
 
     <!-- 搜索和筛选 -->
-    <div class="filter-bar">
+    <div class="filter-bar scroll-reveal">
       <el-input
         v-model="searchKeyword"
         placeholder="搜索题库名称或描述..."
@@ -147,7 +147,7 @@ const getDifficultyLabel = (difficulty: string): string => {
     </div>
 
     <!-- 题库表格 -->
-    <div class="table-card">
+    <div class="table-card scroll-reveal">
       <el-table
         v-loading="loading"
         :data="questionBankStore.questionBanks"
@@ -199,13 +199,13 @@ const getDifficultyLabel = (difficulty: string): string => {
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button type="primary" size="small" :icon="View" @click="handleView(row.id)">
+              <el-button type="primary" size="small" :icon="View" @click="handleView(row.id)" class="btn-hover">
                 查看
               </el-button>
-              <el-button size="small" :icon="Edit" @click="handleEdit(row)">
+              <el-button size="small" :icon="Edit" @click="handleEdit(row)" class="btn-hover">
                 编辑
               </el-button>
-              <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)">
+              <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)" class="btn-hover">
                 删除
               </el-button>
             </div>
@@ -260,11 +260,15 @@ const getDifficultyLabel = (difficulty: string): string => {
 
 .page-title {
   @apply text-[1.5rem] font-bold m-0 mb-1;
-  color: var(--color-text-primary);
+  background: var(--color-primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .page-subtitle {
-  @apply text-sm m-0;
+  @apply text-base m-0;
   color: var(--color-text-secondary);
 }
 
@@ -282,7 +286,8 @@ const getDifficultyLabel = (difficulty: string): string => {
   @apply overflow-hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: var(--color-white);
+  background: linear-gradient(135deg, var(--color-white) 0%, var(--color-bg-secondary) 100%);
+  box-shadow: var(--shadow-xs);
 }
 
 .bank-name-cell {
@@ -301,7 +306,7 @@ const getDifficultyLabel = (difficulty: string): string => {
 
 .text-muted {
   @apply text-sm;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 .table-actions {
@@ -335,6 +340,7 @@ const getDifficultyLabel = (difficulty: string): string => {
 :deep(.el-table td.el-table__cell) {
   padding-top: 0.875rem;
   padding-bottom: 0.875rem;
+  padding-left: 1.5rem;
 }
 
 :deep(.el-table td.el-table__cell:first-child) {
@@ -345,22 +351,16 @@ const getDifficultyLabel = (difficulty: string): string => {
   background: var(--table-row-hover-bg) !important;
 }
 
+:deep(.el-table tr.current-row > td) {
+  background: var(--table-row-current-bg) !important;
+}
+
 :deep(.el-table td.el-table__cell) {
   border-color: var(--color-border);
 }
 
 /* 响应式 */
 @media (max-width: 1024px) {
-  .table-actions {
-    @apply flex-col gap-1;
-  }
-
-  :deep(.el-table-column) {
-    @apply py-2;
-  }
-}
-
-@media (max-width: 768px) {
   .page-header {
     @apply flex-col items-stretch;
   }
@@ -372,13 +372,19 @@ const getDifficultyLabel = (difficulty: string): string => {
   .search-input {
     @apply max-w-none;
   }
+}
 
-  :deep(.el-table) {
-    @apply text-xs;
+@media (max-width: 768px) {
+  :deep(.el-table-column) {
+    @apply py-2;
+  }
+
+  .table-actions {
+    @apply flex-col gap-1;
   }
 
   .table-actions .el-button {
-    @apply px-2 py-1 text-xs;
+    @apply w-full;
   }
 }
 </style>

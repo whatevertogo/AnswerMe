@@ -113,11 +113,14 @@ const handleLocalLogin = async () => {
 }
 
 .form-title {
-  @apply text-[1.8rem] font-bold text-text-primary m-0 mb-2;
+  @apply text-[1.8rem] font-bold m-0 mb-2;
+  color: var(--color-primary);
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .form-subtitle {
-  @apply text-base text-text-secondary m-0;
+  @apply text-base m-0;
+  color: var(--color-text-secondary);
 }
 
 .login-form {
@@ -129,19 +132,26 @@ const handleLocalLogin = async () => {
 }
 
 .form-item :deep(.el-form-item__label) {
-  @apply font-medium text-text-primary pb-2;
+  @apply font-medium pb-2;
+  color: var(--color-text-primary);
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .custom-input :deep(.el-input__wrapper) {
-  @apply rounded-md shadow-xs transition-all duration-400 ease-smooth;
+  @apply shadow-xs transition-all duration-200 ease-out;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-white);
+  box-shadow: 0 0 0 1px var(--color-border) inset;
 }
 
 .custom-input :deep(.el-input__wrapper:hover) {
-  @apply shadow-sm;
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 0 1px var(--color-primary-light), var(--shadow-xs) inset;
 }
 
 .custom-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light), 0 0 0 1px var(--color-primary) inset;
 }
 
 .options-row {
@@ -149,7 +159,15 @@ const handleLocalLogin = async () => {
 }
 
 .login-button {
-  @apply w-full h-12 text-base font-semibold rounded-md mb-5;
+  @apply w-full h-12 text-base font-semibold mb-5;
+  background: var(--color-primary-gradient);
+  border: none;
+  border-radius: var(--radius-sm);
+}
+
+.login-button:hover {
+  opacity: 0.9;
+  box-shadow: var(--shadow-sm);
 }
 
 .form-footer {
@@ -157,11 +175,18 @@ const handleLocalLogin = async () => {
 }
 
 .footer-text {
-  @apply text-sm text-text-secondary;
+  @apply text-sm;
+  color: var(--color-text-secondary);
 }
 
 .footer-link {
-  @apply text-sm text-primary font-semibold ml-1;
+  @apply text-sm font-semibold ml-1;
+  color: var(--color-primary);
+  transition: color var(--transition-fast);
+}
+
+.footer-link:hover {
+  color: var(--color-primary-hover);
 }
 
 .local-login-wrapper {
@@ -169,10 +194,13 @@ const handleLocalLogin = async () => {
 }
 
 .local-login-text {
-  @apply text-sm text-primary font-semibold italic cursor-pointer transition-all duration-400 ease-smooth;
+  @apply text-sm font-semibold italic cursor-pointer transition-all duration-200 ease-out;
+  color: var(--color-primary);
 }
 
 .local-login-text:hover {
-  @apply text-primary-hover;
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary-light);
 }
 </style>

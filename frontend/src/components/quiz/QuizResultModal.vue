@@ -113,17 +113,17 @@ const getDifficultyColor = (difficulty: string) => {
           <div class="stat-card success">
             <div class="card-header">
               <span class="card-label">正确率</span>
-              <el-icon :size="20" color="#10b981"><ArrowUp /></el-icon>
+              <el-icon :size="20" color="var(--color-success)"><ArrowUp /></el-icon>
             </div>
             <div class="stat-value">{{ accuracy }}%</div>
             <div class="stat-label">{{ correctCount }}/{{ answeredCount }} 题</div>
           </div>
 
           <!-- 用时卡片 -->
-          <div class="stat-card purple">
+          <div class="stat-card amber">
             <div class="card-header">
               <span class="card-label">用时</span>
-              <el-icon :size="20" color="#8b5cf6"><Clock /></el-icon>
+              <el-icon :size="20" color="var(--color-primary)"><Clock /></el-icon>
             </div>
             <div class="stat-value">{{ formatTime(timeElapsed) }}</div>
             <div class="stat-label">平均每题 {{ Math.round(timeElapsed / questions.length) }} 秒</div>
@@ -145,7 +145,7 @@ const getDifficultyColor = (difficulty: string) => {
               <span class="progress-label">正确率</span>
               <span class="progress-value">{{ accuracy }}%</span>
             </div>
-            <el-progress :percentage="accuracy" :stroke-width="8" color="#10b981" />
+            <el-progress :percentage="accuracy" :stroke-width="8" color="var(--color-success)" />
           </div>
         </div>
 
@@ -277,52 +277,56 @@ const getDifficultyColor = (difficulty: string) => {
 
 .score-card {
   @apply px-6 py-6 rounded-xl;
-  background: linear-gradient(to bottom right, #dbeafe, #bfdbfe);
-  border: 1px solid #93c5fd;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
 }
 
 .dark .score-card {
-  background: linear-gradient(to bottom right, #1e3a8a33, #1e40af33);
-  border-color: #1e40af;
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border);
 }
 
 .score-card.excellent {
-  background: linear-gradient(to bottom right, #d1fae5, #a7f3d0);
-  border-color: #6ee7b7;
+  background: var(--color-success-light);
+  border-color: var(--color-success);
 }
 
 .dark .score-card.excellent {
-  background: linear-gradient(to bottom right, #064e3b33, #065f4633);
-  border-color: #059669;
+  background: rgba(45, 90, 62, 0.15);
+  border-color: var(--color-success);
 }
 
 .stat-card {
-  @apply px-6 py-6 rounded-xl bg-[#f9fafb] border border-[#e5e7eb];
+  @apply px-6 py-6 rounded-xl;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
 }
 
 .dark .stat-card {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border);
 }
 
 .stat-card.success {
-  background: linear-gradient(to bottom right, #d1fae5, #a7f3d0);
-  border-color: #6ee7b7;
+  background: var(--color-success-light);
+  border-color: var(--color-success);
 }
 
 .dark .stat-card.success {
-  background: linear-gradient(to bottom right, #064e3b33, #065f4633);
-  border-color: #059669;
+  background: rgba(45, 90, 62, 0.15);
+  border-color: var(--color-success);
 }
 
-.stat-card.purple {
-  background: linear-gradient(to bottom right, #ede9fe, #ddd6fe);
-  border-color: #c4b5fd;
+.stat-card.amber {
+  background: linear-gradient(to bottom right, var(--color-bg-secondary), var(--color-bg-tertiary));
+  border-color: var(--color-primary);
 }
 
-.dark .stat-card.purple {
-  background: linear-gradient(to bottom right, #4c1d9533, #5b21b633);
-  border-color: #6d28d9;
+.dark .stat-card.amber {
+  background: linear-gradient(to bottom right, var(--color-bg-tertiary), var(--color-bg-glass));
+  border-color: var(--color-primary);
 }
 
 .card-header {
@@ -330,39 +334,26 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .card-label {
-  @apply text-sm text-[#6b7280];
-}
-
-.dark .card-label {
-  color: #9ca3af;
+  @apply text-sm;
+  color: var(--color-text-secondary);
 }
 
 .score-value {
   @apply text-[2.25rem] font-bold leading-none mb-1;
-  color: #111827;
-}
-
-.dark .score-value {
-  color: #f9fafb;
+  color: var(--color-text-primary);
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .stat-value {
   @apply text-[2.25rem] font-bold leading-none mb-1;
-  color: #111827;
-}
-
-.dark .stat-value {
-  color: #f9fafb;
+  color: var(--color-text-primary);
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .score-label,
 .stat-label {
-  @apply text-sm text-[#6b7280];
-}
-
-.dark .score-label,
-.dark .stat-label {
-  color: #9ca3af;
+  @apply text-sm;
+  color: var(--color-text-secondary);
 }
 
 .progress-section {
@@ -379,19 +370,12 @@ const getDifficultyColor = (difficulty: string) => {
 
 .progress-label {
   @apply text-sm font-medium;
-  color: #374151;
-}
-
-.dark .progress-label {
-  color: #d1d5db;
+  color: var(--color-text-primary);
 }
 
 .progress-value {
-  @apply text-sm text-[#6b7280];
-}
-
-.dark .progress-value {
-  color: #9ca3af;
+  @apply text-sm;
+  color: var(--color-text-secondary);
 }
 
 .action-buttons {
@@ -404,12 +388,19 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .detail-item {
-  @apply px-4 py-4 border border-[#e5e7eb] rounded-md bg-bg;
+  @apply px-4 py-4 border rounded-md bg-white;
+  border-color: var(--color-border);
+  transition: all var(--transition-fast);
+}
+
+.detail-item:hover {
+  background-color: var(--color-hover-light);
+  border-color: var(--color-primary-light);
 }
 
 .dark .detail-item {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border);
 }
 
 .detail-header {
@@ -421,55 +412,42 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .detail-status.answered {
-  @apply text-[#10b981];
+  color: var(--color-success);
 }
 
 .detail-status.unanswered {
-  @apply text-[#d1d5db];
+  color: var(--color-text-muted);
 }
 
 .detail-index {
-  @apply text-sm font-medium text-[#6b7280];
-}
-
-.dark .detail-index {
-  color: #9ca3af;
+  @apply text-sm font-medium;
+  color: var(--color-text-secondary);
 }
 
 .detail-content {
   @apply text-sm leading-[1.5] mb-2 m-0;
-  color: #374151;
-}
-
-.dark .detail-content {
-  color: #d1d5db;
+  color: var(--color-text-primary);
 }
 
 .detail-explanation {
-  @apply mt-3 px-3 py-3 bg-[#dbeafe] rounded-md border border-[#93c5fd];
+  @apply mt-3 px-3 py-3 rounded-md border;
+  background: var(--color-info-light);
+  border-color: var(--color-info);
 }
 
 .dark .detail-explanation {
-  background: #1e3a8a33;
-  border-color: #1e40af;
+  background: rgba(61, 74, 92, 0.12);
+  border-color: var(--color-info);
 }
 
 .explanation-label {
   @apply text-xs font-semibold mb-1 m-0;
-  color: #1e40af;
-}
-
-.dark .explanation-label {
-  color: #60a5fa;
+  color: var(--color-info);
 }
 
 .explanation-text {
   @apply text-xs m-0;
-  color: #1e3a8a;
-}
-
-.dark .explanation-text {
-  color: #93c5fd;
+  color: var(--color-text-secondary);
 }
 
 /* 分析 */
@@ -478,21 +456,20 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .analysis-card {
-  @apply px-4 py-4 bg-[#f9fafb] border border-[#e5e7eb] rounded-md;
+  @apply px-4 py-4 rounded-md;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
 }
 
 .dark .analysis-card {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border);
 }
 
 .analysis-title {
   @apply text-sm font-semibold mb-3 m-0;
-  color: #111827;
-}
-
-.dark .analysis-title {
-  color: #f9fafb;
+  color: var(--color-text-primary);
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .stat-list {
@@ -508,33 +485,25 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .stat-dot.easy {
-  @apply bg-[#10b981];
+  background-color: var(--color-success);
 }
 
 .stat-dot.medium {
-  @apply bg-[#f59e0b];
+  background-color: var(--color-warning);
 }
 
 .stat-dot.hard {
-  @apply bg-[#ef4444];
+  background-color: var(--color-danger);
 }
 
 .stat-name {
   @apply text-sm flex-1;
-  color: #374151;
-}
-
-.dark .stat-name {
-  color: #d1d5db;
+  color: var(--color-text-primary);
 }
 
 .stat-count {
   @apply text-sm font-medium;
-  color: #111827;
-}
-
-.dark .stat-count {
-  color: #f9fafb;
+  color: var(--color-text-primary);
 }
 
 .knowledge-list {
@@ -551,47 +520,34 @@ const getDifficultyColor = (difficulty: string) => {
 
 .knowledge-name {
   @apply text-sm;
-  color: #374151;
-}
-
-.dark .knowledge-name {
-  color: #d1d5db;
+  color: var(--color-text-primary);
 }
 
 .knowledge-percent {
   @apply text-sm font-medium;
-  color: #111827;
-}
-
-.dark .knowledge-percent {
-  color: #f9fafb;
+  color: var(--color-text-primary);
 }
 
 .suggestions {
-  @apply px-4 py-4 bg-[#fef3c7] border border-[#fcd34d] rounded-md;
+  @apply px-4 py-4 rounded-md;
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
 }
 
 .dark .suggestions {
-  background: #451a0333;
-  border-color: #b45309;
+  background: rgba(139, 107, 58, 0.12);
+  border-color: var(--color-warning);
 }
 
 .suggestions-title {
   @apply text-sm font-semibold mb-2 m-0;
-  color: #92400e;
-}
-
-.dark .suggestions-title {
-  color: #fcd34d;
+  color: var(--color-warning);
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .suggestions-list {
   @apply text-sm m-0 pl-5;
-  color: #78350f;
-}
-
-.dark .suggestions-list {
-  color: #fde68a;
+  color: var(--color-text-primary);
 }
 
 .suggestions-list li {
@@ -604,11 +560,11 @@ const getDifficultyColor = (difficulty: string) => {
 }
 
 .details-list::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
+  background: rgba(92, 91, 88, 0.5);
   border-radius: 3px;
 }
 
 .details-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
+  background: rgba(92, 91, 88, 0.7);
 }
 </style>

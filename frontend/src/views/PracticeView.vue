@@ -294,7 +294,8 @@ const formatDate = (dateString: string) => {
 }
 
 .text-muted {
-  @apply text-sm text-[#9ca3af];
+  @apply text-sm;
+  color: var(--color-text-muted);
 }
 
 .pagination-wrapper {

@@ -22,21 +22,21 @@ import { Reading, Star, Collection, Trophy } from '@element-plus/icons-vue'
         <div class="feature-grid">
           <div class="feature-box">
             <div class="feature-icon">
-              <el-icon :size="24" color="#5B7280"><Star /></el-icon>
+              <el-icon :size="24" color="var(--color-primary)"><Star /></el-icon>
             </div>
             <h3>AI 智能生成</h3>
             <p>基于大语言模型自动生成高质量题目</p>
           </div>
           <div class="feature-box">
             <div class="feature-icon">
-              <el-icon :size="24" color="#5B7280"><Collection /></el-icon>
+              <el-icon :size="24" color="var(--color-primary)"><Collection /></el-icon>
             </div>
             <h3>题库管理</h3>
             <p>多维度分类管理，支持导入导出</p>
           </div>
           <div class="feature-box">
             <div class="feature-icon">
-              <el-icon :size="24" color="#5B7280"><Trophy /></el-icon>
+              <el-icon :size="24" color="var(--color-primary)"><Trophy /></el-icon>
             </div>
             <h3>智能练习</h3>
             <p>个性化推荐，针对性提升</p>
@@ -73,10 +73,11 @@ import { Reading, Star, Collection, Trophy } from '@element-plus/icons-vue'
 
 /* ─── 左侧品牌区域 ─── */
 .brand-card {
-  @apply w-[50vw] min-w-[320px] bg-bg-secondary
+  @apply w-[50vw] min-w-[320px]
          flex flex-col justify-center items-center
          py-[3vh] px-[3vw] overflow-y-auto
          border-r border-border;
+  background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-tertiary) 100%);
 }
 
 @keyframes slideUp {
@@ -95,20 +96,26 @@ import { Reading, Star, Collection, Trophy } from '@element-plus/icons-vue'
 }
 
 .logo-icon {
-  @apply w-16 h-16 bg-primary rounded-lg
+  @apply w-16 h-16 rounded-lg
          flex items-center justify-center
          mx-auto mb-[2vh] shadow-md
-         transition-all duration-400 ease-smooth
+         transition-all duration-300 ease-in-out
          hover:-translate-y-0.5 hover:shadow-lg;
+  background: var(--color-primary-gradient);
 }
 
 .brand-title {
-  @apply text-[clamp(1.5rem,3vw,2.2rem)] font-bold m-0 mb-[1vh] text-text-primary;
+  @apply text-[clamp(1.5rem,3vw,2.2rem)] font-bold m-0 mb-[1vh];
+  background: var(--color-primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   letter-spacing: -0.02em;
 }
 
 .brand-subtitle {
-  @apply text-[clamp(0.875rem,1.2vw,1.1rem)] m-0 text-text-secondary font-medium;
+  @apply text-[clamp(0.875rem,1.2vw,1.1rem)] m-0 font-medium;
+  color: var(--color-text-secondary);
 }
 
 .brand-description {
@@ -124,11 +131,16 @@ import { Reading, Star, Collection, Trophy } from '@element-plus/icons-vue'
 }
 
 .feature-box {
-  @apply bg-bg rounded-lg py-[2vh] px-[1vw]
-         text-center transition-all duration-400 ease-smooth
+  @apply bg-white rounded-lg py-[2vh] px-[1vw]
+         text-center transition-all duration-300 ease-in-out
          border border-border min-h-[180px]
-         flex flex-col justify-center shadow-sm
-         hover:-translate-y-1 hover:shadow-lg hover:border-primary;
+         flex flex-col justify-center shadow-sm;
+  background: linear-gradient(135deg, var(--color-white) 0%, var(--color-bg-secondary) 100%);
+}
+
+.feature-box:hover {
+  @apply -translate-y-1 shadow-lg border-primary;
+  box-shadow: 0 8px 30px rgba(35, 131, 228, 0.10);
 }
 
 .feature-box .feature-icon {
@@ -137,11 +149,13 @@ import { Reading, Star, Collection, Trophy } from '@element-plus/icons-vue'
 
 .feature-box h3 {
   @apply text-[clamp(0.75rem,1vw,0.875rem)] font-semibold
-         m-0 mb-[0.5vh] text-text-primary;
+         m-0 mb-[0.5vh];
+  color: var(--color-text-primary);
 }
 
 .feature-box p {
-  @apply text-[clamp(0.6875rem,0.9vw,0.75rem)] m-0 text-text-secondary leading-[1.4];
+  @apply text-[clamp(0.6875rem,0.9vw,0.75rem)] m-0 leading-[1.4];
+  color: var(--color-text-secondary);
 }
 
 .brand-footer {
@@ -166,7 +180,7 @@ import { Reading, Star, Collection, Trophy } from '@element-plus/icons-vue'
 /* ─── 过渡动画 ─── */
 .fade-enter-active,
 .fade-leave-active {
-  @apply transition-all duration-400 ease-smooth;
+  @apply transition-all duration-300 ease-in-out;
 }
 
 .fade-enter-from {

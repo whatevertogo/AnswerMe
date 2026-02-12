@@ -544,7 +544,7 @@ function getTypeTagType(type: string) {
 }
 
 .datasource-actions :deep(.el-button.is-text.el-button--danger:hover) {
-  background-color: rgba(220, 38, 38, 0.14);
+  background-color: var(--color-danger-light);
 }
 
 :deep(.el-form-item__label) {
@@ -578,27 +578,27 @@ function getTypeTagType(type: string) {
 }
 
 .dark .ai-config-view :deep(.el-tag) {
-  background-color: rgba(148, 163, 184, 0.2);
-  border-color: rgba(148, 163, 184, 0.35);
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border);
   color: var(--color-text-secondary);
 }
 
 .dark .ai-config-view :deep(.el-tag.el-tag--success) {
-  background-color: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.45);
-  color: #6ee7b7;
+  background-color: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success);
 }
 
 .dark .ai-config-view :deep(.el-tag.el-tag--warning) {
-  background-color: rgba(245, 158, 11, 0.2);
-  border-color: rgba(245, 158, 11, 0.45);
-  color: #fcd34d;
+  background-color: var(--color-warning-light);
+  border-color: var(--color-warning);
+  color: var(--color-warning);
 }
 
 .dark .ai-config-view :deep(.el-tag.el-tag--danger) {
-  background-color: rgba(220, 38, 38, 0.2);
-  border-color: rgba(220, 38, 38, 0.45);
-  color: #fca5a5;
+  background-color: var(--color-danger-light);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 </style>

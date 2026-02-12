@@ -244,7 +244,7 @@ function taskStatusText(status: string) {
 <template>
   <div class="generate-container">
     <!-- 顶部导航 -->
-    <header class="generate-header">
+    <header class="generate-header scroll-reveal">
       <div class="header-left">
         <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
         <h1 class="page-title">
@@ -499,7 +499,7 @@ function taskStatusText(status: string) {
           <div v-if="aiGenerationStore.generatedQuestions.length === 0" class="empty-state">
             <el-empty description="暂无生成结果">
               <template #image>
-                <el-icon :size="60" color="#dcdfe6"><MagicStick /></el-icon>
+                <el-icon :size="60" color="var(--color-text-muted)"><MagicStick /></el-icon>
               </template>
             </el-empty>
           </div>
@@ -588,7 +588,7 @@ function taskStatusText(status: string) {
 }
 
 .dark .generate-container {
-  background: linear-gradient(to bottom right, #030712, #111827);
+  background: linear-gradient(to bottom right, var(--color-bg-secondary), var(--color-bg));
 }
 
 .generate-header {
@@ -601,11 +601,12 @@ function taskStatusText(status: string) {
 
 .page-title {
   @apply text-[1.5rem] font-semibold m-0 flex items-center gap-2;
-  color: #111827;
+  color: var(--color-text-primary);
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .dark .page-title {
-  color: #f9fafb;
+  color: var(--color-text-primary);
 }
 
 .generate-content {
@@ -619,19 +620,20 @@ function taskStatusText(status: string) {
 
 .card-title {
   @apply text-base font-semibold;
-  color: #111827;
+  color: var(--color-text-primary);
 }
 
 .dark .card-title {
-  color: #f9fafb;
+  color: var(--color-text-primary);
 }
 
 .form-hint {
-  @apply text-xs text-[#6b7280] ml-2;
+  @apply text-xs ml-2;
+  color: var(--color-text-muted);
 }
 
 .form-hint.error {
-  @apply text-[#ef4444];
+  color: var(--color-danger);
 }
 
 .action-buttons {
@@ -639,12 +641,14 @@ function taskStatusText(status: string) {
 }
 
 .progress-card {
-  @apply border border-[#bfdbfe] bg-[#eff6ff];
+  @apply border;
+  border-color: var(--color-border);
+  background-color: var(--color-bg-secondary);
 }
 
 .dark .progress-card {
-  background: #1e3a8a33;
-  border-color: #1e40af;
+  background-color: var(--color-bg-secondary);
+  border-color: var(--color-border);
 }
 
 .progress-content {
@@ -657,46 +661,51 @@ function taskStatusText(status: string) {
 
 .progress-label {
   @apply text-sm font-medium;
-  color: #374151;
+  color: var(--color-text-primary);
 }
 
 .dark .progress-label {
-  color: #d1d5db;
+  color: var(--color-text-primary);
 }
 
 .progress-details {
-  @apply text-sm text-[#6b7280] text-center;
+  @apply text-sm text-center;
+  color: var(--color-text-secondary);
 }
 
 .dark .progress-details {
-  color: #9ca3af;
+  color: var(--color-text-secondary);
 }
 
 .progress-error {
-  @apply text-xs text-[#dc2626] bg-[#fef2f2] border border-[#fecaca]
-         px-3 py-2 rounded-md;
+  @apply text-xs px-3 py-2 rounded-md;
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-light);
+  border-color: var(--color-danger);
 }
 
 .dark .progress-error {
-  color: #fca5a5;
-  background: #7f1d1d33;
-  border-color: #7f1d1d;
+  color: var(--color-danger);
+  background-color: rgba(139, 58, 58, 0.15);
+  border-color: var(--color-danger);
 }
 
 .task-id {
   @apply flex items-center gap-2 text-xs px-2 py-2 bg-bg rounded-md;
+  background-color: var(--color-bg-secondary);
 }
 
 .task-id .label {
-  @apply text-[#6b7280];
+  color: var(--color-text-secondary);
 }
 
 .dark .task-id {
-  background: #1f2937;
+  background-color: var(--color-bg);
 }
 
 .task-id code {
-  @apply font-mono text-[#3b82f6] text-xs;
+  @apply font-mono text-xs;
+  color: var(--color-primary);
 }
 
 .result-section {
@@ -708,11 +717,12 @@ function taskStatusText(status: string) {
 }
 
 .count {
-  @apply text-sm font-normal text-[#6b7280];
+  @apply text-sm font-normal;
+  color: var(--color-text-secondary);
 }
 
 .dark .count {
-  color: #9ca3af;
+  color: var(--color-text-secondary);
 }
 
 .empty-state {
@@ -724,12 +734,13 @@ function taskStatusText(status: string) {
 }
 
 .question-item {
-  @apply px-4 py-4 border border-[#e5e7eb] rounded-md bg-bg;
+  @apply px-4 py-4 border rounded-md bg-bg;
+  border-color: var(--color-border);
 }
 
 .dark .question-item {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
 }
 
 .question-header {
@@ -737,7 +748,8 @@ function taskStatusText(status: string) {
 }
 
 .question-number {
-  @apply text-sm font-semibold text-[#3b82f6];
+  @apply text-sm font-semibold;
+  color: var(--color-primary);
 }
 
 .question-tags {
@@ -746,11 +758,11 @@ function taskStatusText(status: string) {
 
 .question-content {
   @apply text-[0.9375rem] leading-[1.6] mb-3;
-  color: #374151;
+  color: var(--color-text-primary);
 }
 
 .dark .question-content {
-  color: #d1d5db;
+  color: var(--color-text-primary);
 }
 
 .question-options {
@@ -758,19 +770,23 @@ function taskStatusText(status: string) {
 }
 
 .option-item {
-  @apply text-sm text-[#4b5563];
+  @apply text-sm;
+  color: var(--color-text-secondary);
 }
 
 .dark .option-item {
-  color: #9ca3af;
+  color: var(--color-text-secondary);
 }
 
 .question-meta {
-  @apply flex flex-col gap-2 px-3 py-3 bg-[#f9fafb] rounded-md mb-3;
+  @apply flex flex-col gap-2 px-3 py-3 rounded-md mb-3;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
 }
 
 .dark .question-meta {
-  background: #111827;
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border);
 }
 
 .answer-section,
@@ -779,27 +795,30 @@ function taskStatusText(status: string) {
 }
 
 .answer-section .label {
-  @apply font-semibold text-[#059669] whitespace-nowrap;
+  @apply font-semibold whitespace-nowrap;
+  color: var(--color-accent);
 }
 
 .answer-section .answer {
-  @apply font-medium text-[#374151];
+  @apply font-medium;
+  color: var(--color-text-primary);
 }
 
 .dark .answer-section .answer {
-  color: #d1d5db;
+  color: var(--color-text-primary);
 }
 
 .explanation-section .label {
-  @apply font-semibold text-[#2563eb] whitespace-nowrap;
+  @apply font-semibold whitespace-nowrap;
+  color: var(--color-accent);
 }
 
 .explanation-section .explanation {
-  @apply text-[#374151];
+  color: var(--color-text-primary);
 }
 
 .dark .explanation-section .explanation {
-  color: #d1d5db;
+  color: var(--color-text-primary);
 }
 
 .question-actions {

@@ -5,7 +5,7 @@
 ## 技术栈
 
 - **后端**: .NET 8, EF Core, SQLite/PostgreSQL, Redis
-- **前端**: Vue 3, TypeScript, Element Plus, Pinia, Tailwind CSS
+- **前端**: Vue 3, TypeScript, Element Plus, Pinia, Tailwind CSS v3.x
 
 ## 架构
 

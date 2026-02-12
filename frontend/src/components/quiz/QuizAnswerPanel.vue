@@ -175,7 +175,7 @@ const getOptionLabel = (index: number) => {
 
 .option-item {
   @apply px-5 py-4 border-2 border-border rounded-md
-         transition-all duration-400 ease-smooth;
+         transition-all duration-300 ease-in-out;
 }
 
 .dark .option-item {
@@ -261,7 +261,7 @@ const getOptionLabel = (index: number) => {
 
 .boolean-option {
   @apply px-10 py-4 border-2 border-border rounded-lg
-         transition-all duration-400 ease-smooth;
+         transition-all duration-300 ease-in-out;
 }
 
 .dark .boolean-option {
