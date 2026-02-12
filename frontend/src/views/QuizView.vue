@@ -215,7 +215,7 @@ async function loadQuestionsDetails(questionIds: number[]) {
 
     const workers = Array.from({ length: workerCount }, () =>
       (async () => {
-        while (true) {
+        while (nextIndex < uniqueQuestionIds.length) {
           const currentIndex = nextIndex++
           if (currentIndex >= uniqueQuestionIds.length) {
             return
