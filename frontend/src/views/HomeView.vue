@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, markRaw, onMounted, computed } from 'vue'
+import type { Component } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Notebook,
@@ -22,7 +23,7 @@ const authStore = useAuthStore()
 const username = computed(() => authStore.userInfo?.username || authStore.userInfo?.email || '用户')
 
 interface StatCard {
-  icon: any
+  icon: Component
   title: string
   value: string
   color: string
@@ -194,14 +195,10 @@ const recentActivities = ref([
     </div>
 
     <!-- 最近活动 - 简化展示 -->
-    <div class="activity-section scroll-reveal" v-if="recentActivities.length > 0">
+    <div v-if="recentActivities.length > 0" class="activity-section scroll-reveal">
       <h2 class="section-title">最近活动</h2>
       <div class="activity-list">
-        <div
-          v-for="(activity, index) in recentActivities"
-          :key="index"
-          class="activity-item"
-        >
+        <div v-for="(activity, index) in recentActivities" :key="index" class="activity-item">
           <div class="activity-dot timeline-dot"></div>
           <div class="activity-content">
             <div class="activity-title">{{ activity.title }}</div>
@@ -243,13 +240,20 @@ const recentActivities = ref([
 .wave-icon {
   @apply text-primary;
   animation: wave 1.5s ease-in-out infinite;
-  filter: drop-shadow(0 2px 8px rgba(61, 40, 23, 0.20));
+  filter: drop-shadow(0 2px 8px rgba(61, 40, 23, 0.2));
 }
 
 @keyframes wave {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(20deg); }
-  75% { transform: rotate(-20deg); }
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(20deg);
+  }
+  75% {
+    transform: rotate(-20deg);
+  }
 }
 
 .greeting-text h1 {
@@ -404,6 +408,7 @@ const recentActivities = ref([
 
 .activity-dot {
   @apply w-4 h-4 rounded-full bg-primary flex-shrink-0 mt-1;
+  position: relative;
   background-color: var(--color-primary);
   box-shadow: 0 0 0 4px rgba(61, 40, 23, 0.12);
 }

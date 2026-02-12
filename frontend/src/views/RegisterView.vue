@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Message, Reading } from '@element-plus/icons-vue'
 import { authApi } from '@/api/auth'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 const router = useRouter()
 
@@ -52,8 +53,8 @@ const handleRegister = async () => {
     })
     ElMessage.success('注册成功，请登录')
     router.push('/login')
-  } catch (error: any) {
-    const message = error.response?.data?.message || '注册失败，请稍后重试'
+  } catch (error: unknown) {
+    const message = extractErrorMessage(error, '注册失败，请稍后重试')
     ElMessage.error(message)
   } finally {
     loading.value = false

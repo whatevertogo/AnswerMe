@@ -55,7 +55,9 @@ const correctCount = computed(() => {
 })
 
 const score = computed(() => Math.round((correctCount.value / props.questions.length) * 100))
-const accuracy = computed(() => answeredCount.value > 0 ? Math.round((correctCount.value / answeredCount.value) * 100) : 0)
+const accuracy = computed(() =>
+  answeredCount.value > 0 ? Math.round((correctCount.value / answeredCount.value) * 100) : 0
+)
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60)
@@ -79,10 +81,14 @@ const getScoreLabel = (score: number) => {
 
 const getDifficultyColor = (difficulty: string) => {
   switch (difficulty) {
-    case 'easy': return 'var(--color-success)'
-    case 'medium': return 'var(--color-warning)'
-    case 'hard': return 'var(--color-danger)'
-    default: return 'var(--color-text-muted)'
+    case 'easy':
+      return 'var(--color-success)'
+    case 'medium':
+      return 'var(--color-warning)'
+    case 'hard':
+      return 'var(--color-danger)'
+    default:
+      return 'var(--color-text-muted)'
   }
 }
 </script>
@@ -90,10 +96,10 @@ const getDifficultyColor = (difficulty: string) => {
 <template>
   <el-dialog
     :model-value="visible"
-    @update:model-value="emit('update:visible', $event)"
     title="考试结果"
     width="900px"
     :close-on-click-modal="false"
+    @update:model-value="emit('update:visible', $event)"
   >
     <el-tabs v-model="activeTab">
       <!-- 总览 -->
@@ -126,7 +132,9 @@ const getDifficultyColor = (difficulty: string) => {
               <el-icon :size="20" color="var(--color-primary)"><Clock /></el-icon>
             </div>
             <div class="stat-value">{{ formatTime(timeElapsed) }}</div>
-            <div class="stat-label">平均每题 {{ Math.round(timeElapsed / questions.length) }} 秒</div>
+            <div class="stat-label">
+              平均每题 {{ Math.round(timeElapsed / questions.length) }} 秒
+            </div>
           </div>
         </div>
 
@@ -159,35 +167,26 @@ const getDifficultyColor = (difficulty: string) => {
       <!-- 答题详情 -->
       <el-tab-pane label="答题详情" name="details">
         <div class="details-list">
-          <div
-            v-for="(question, index) in questions"
-            :key="question.id"
-            class="detail-item"
-          >
+          <div v-for="(question, index) in questions" :key="question.id" class="detail-item">
             <div class="detail-header">
-              <el-icon
-                :class="[
-                  'detail-status',
-                  answers[question.id] ? 'answered' : 'unanswered'
-                ]"
-              >
+              <el-icon :class="['detail-status', answers[question.id] ? 'answered' : 'unanswered']">
                 <CircleCheck />
               </el-icon>
               <span class="detail-index">第 {{ index + 1 }} 题</span>
-              <el-tag
-                size="small"
-                :color="getDifficultyColor(question.difficulty)"
-              >
-                {{ question.difficulty === 'easy' ? '简单' : question.difficulty === 'medium' ? '中等' : '困难' }}
+              <el-tag size="small" :color="getDifficultyColor(question.difficulty)">
+                {{
+                  question.difficulty === 'easy'
+                    ? '简单'
+                    : question.difficulty === 'medium'
+                      ? '中等'
+                      : '困难'
+                }}
               </el-tag>
             </div>
 
             <p class="detail-content">{{ question.content }}</p>
 
-            <div
-              v-if="answers[question.id] && question.explanation"
-              class="detail-explanation"
-            >
+            <div v-if="answers[question.id] && question.explanation" class="detail-explanation">
               <p class="explanation-label">解析</p>
               <p class="explanation-text">{{ question.explanation }}</p>
             </div>

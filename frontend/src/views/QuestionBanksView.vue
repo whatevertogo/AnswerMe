@@ -69,15 +69,11 @@ const handleEdit = (bank: QuestionBank) => {
 
 const handleDelete = async (bank: QuestionBank) => {
   try {
-    await ElMessageBox.confirm(
-      `确定要删除题库"${bank.name}"吗？删除后无法恢复。`,
-      '删除确认',
-      {
-        confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
+    await ElMessageBox.confirm(`确定要删除题库"${bank.name}"吗？删除后无法恢复。`, '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
     await questionBankStore.deleteQuestionBank(bank.id)
     ElMessage.success('删除成功')
     await fetchQuestionBanks(true)
@@ -128,9 +124,7 @@ const getDifficultyLabel = (difficulty: string): string => {
         <h2 class="page-title">题库管理</h2>
         <p class="page-subtitle">管理你的题库，创建和编辑题目</p>
       </div>
-      <el-button type="primary" :icon="Plus" @click="handleCreate">
-        创建题库
-      </el-button>
+      <el-button type="primary" :icon="Plus" @click="handleCreate"> 创建题库 </el-button>
     </div>
 
     <!-- 搜索和筛选 -->
@@ -179,11 +173,7 @@ const getDifficultyLabel = (difficulty: string): string => {
 
         <el-table-column prop="difficulty" label="难度" width="100" align="center">
           <template #default="{ row }">
-            <el-tag
-              v-if="row.difficulty"
-              :type="getDifficultyColor(row.difficulty)"
-              size="small"
-            >
+            <el-tag v-if="row.difficulty" :type="getDifficultyColor(row.difficulty)" size="small">
               {{ getDifficultyLabel(row.difficulty) }}
             </el-tag>
             <span v-else class="text-muted">-</span>
@@ -199,13 +189,25 @@ const getDifficultyLabel = (difficulty: string): string => {
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button type="primary" size="small" :icon="View" @click="handleView(row.id)" class="btn-hover">
+              <el-button
+                type="primary"
+                size="small"
+                :icon="View"
+                class="btn-hover"
+                @click="handleView(row.id)"
+              >
                 查看
               </el-button>
-              <el-button size="small" :icon="Edit" @click="handleEdit(row)" class="btn-hover">
+              <el-button size="small" :icon="Edit" class="btn-hover" @click="handleEdit(row)">
                 编辑
               </el-button>
-              <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)" class="btn-hover">
+              <el-button
+                type="danger"
+                size="small"
+                :icon="Delete"
+                class="btn-hover"
+                @click="handleDelete(row)"
+              >
                 删除
               </el-button>
             </div>
@@ -213,10 +215,7 @@ const getDifficultyLabel = (difficulty: string): string => {
         </el-table-column>
 
         <template #empty>
-          <el-empty
-            description="暂无题库"
-            :image-size="120"
-          >
+          <el-empty description="暂无题库" :image-size="120">
             <el-button type="primary" @click="handleCreate">创建第一个题库</el-button>
           </el-empty>
         </template>
@@ -224,12 +223,7 @@ const getDifficultyLabel = (difficulty: string): string => {
 
       <!-- 分页 -->
       <div v-if="questionBankStore.hasMore" class="pagination-wrapper">
-        <el-button
-          :loading="loading"
-          @click="fetchQuestionBanks()"
-        >
-          加载更多
-        </el-button>
+        <el-button :loading="loading" @click="fetchQuestionBanks()"> 加载更多 </el-button>
       </div>
     </div>
 

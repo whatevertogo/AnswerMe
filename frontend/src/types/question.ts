@@ -211,14 +211,18 @@ export function isBooleanQuestionData(data: QuestionData | undefined): data is B
 /**
  * 类型守卫：判断是否为填空题数据
  */
-export function isFillBlankQuestionData(data: QuestionData | undefined): data is FillBlankQuestionData {
+export function isFillBlankQuestionData(
+  data: QuestionData | undefined
+): data is FillBlankQuestionData {
   return data?.type === 'fillBlank'
 }
 
 /**
  * 类型守卫：判断是否为简答题数据
  */
-export function isShortAnswerQuestionData(data: QuestionData | undefined): data is ShortAnswerQuestionData {
+export function isShortAnswerQuestionData(
+  data: QuestionData | undefined
+): data is ShortAnswerQuestionData {
   return data?.type === 'shortAnswer'
 }
 

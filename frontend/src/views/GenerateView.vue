@@ -7,6 +7,7 @@ import { useAIGenerationStore } from '@/stores/aiGeneration'
 import { useDataSourceStore } from '@/stores/dataSource'
 import type { DataSource } from '@/api/dataSource'
 import type { AIGenerateRequest } from '@/api/aiGeneration'
+import type { GeneratedQuestion } from '@/api/aiGeneration'
 import { getQuestionBanks } from '@/api/questionBank'
 import type { QuestionBank } from '@/types'
 import {
@@ -72,14 +73,18 @@ const showAdvancedOptions = ref(false)
 
 // 计算属性
 const isFormValid = computed(() => {
-  return formData.value.subject.trim().length > 0 &&
-         formData.value.count > 0 &&
-         formData.value.count <= 100 &&
-         formData.value.questionTypes.length > 0 &&
-         selectedDataSource.value !== null
+  return (
+    formData.value.subject.trim().length > 0 &&
+    formData.value.count > 0 &&
+    formData.value.count <= 100 &&
+    formData.value.questionTypes.length > 0 &&
+    selectedDataSource.value !== null
+  )
 })
 
-const willUseAsync = computed(() => formData.value.count >= 10 || formData.value.providerName === 'custom_api')
+const willUseAsync = computed(
+  () => formData.value.count >= 10 || formData.value.providerName === 'custom_api'
+)
 
 const canGenerate = computed(() => isFormValid.value && !aiGenerationStore.loading)
 
@@ -130,7 +135,7 @@ function handleDataSourceChange() {
 // 题库选择变更
 function handleQuestionBankChange() {
   if (selectedQuestionBank.value) {
-    formData.value.questionBankId = selectedQuestionBank.value.id as any
+    formData.value.questionBankId = selectedQuestionBank.value.id
   } else {
     formData.value.questionBankId = undefined
   }
@@ -158,12 +163,14 @@ function handleCancel() {
     confirmButtonText: '确定',
     cancelButtonText: '继续生成',
     type: 'warning'
-  }).then(() => {
-    aiGenerationStore.cancelGeneration()
-    ElMessage.info('已取消生成')
-  }).catch(() => {
-    // 用户点击取消
   })
+    .then(() => {
+      aiGenerationStore.cancelGeneration()
+      ElMessage.info('已取消生成')
+    })
+    .catch(() => {
+      // 用户点击取消
+    })
 }
 
 // 重置表单
@@ -182,13 +189,16 @@ function handleReset() {
 }
 
 // 复制题目文本
-function copyQuestionText(question: any) {
+function copyQuestionText(question: GeneratedQuestion) {
   const text = formatQuestionForCopy(question)
-  navigator.clipboard.writeText(text).then(() => {
-    ElMessage.success('已复制到剪贴板')
-  }).catch(() => {
-    ElMessage.error('复制失败')
-  })
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      ElMessage.success('已复制到剪贴板')
+    })
+    .catch(() => {
+      ElMessage.error('复制失败')
+    })
 }
 
 // 返回
@@ -207,7 +217,7 @@ onUnmounted(() => {
 
 watch(
   () => aiGenerationStore.taskStatus,
-  (status) => {
+  status => {
     if (status === 'failed' && aiGenerationStore.progress?.errorMessage) {
       ElMessage.error(aiGenerationStore.progress.errorMessage)
     }
@@ -216,7 +226,7 @@ watch(
 
 // 辅助函数
 function progressStatusType(status: string) {
-  const typeMap: Record<string, any> = {
+  const typeMap: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
     pending: 'info',
     processing: 'warning',
     completed: 'success',
@@ -322,15 +332,10 @@ function taskStatusText(status: string) {
                 v-model="selectedDataSource"
                 :disabled="aiGenerationStore.loading || aiGenerationStore.generating"
                 placeholder="选择数据源"
-                @change="handleDataSourceChange"
                 value-key="id"
+                @change="handleDataSourceChange"
               >
-                <el-option
-                  v-for="ds in dataSources"
-                  :key="ds.id"
-                  :label="ds.name"
-                  :value="ds"
-                >
+                <el-option v-for="ds in dataSources" :key="ds.id" :label="ds.name" :value="ds">
                   <span>{{ ds.name }}</span>
                   <el-tag v-if="ds.isDefault" size="small" type="success" style="margin-left: 8px">
                     默认
@@ -339,7 +344,7 @@ function taskStatusText(status: string) {
               </el-select>
               <div v-if="dataSources.length === 0" class="form-hint error">
                 暂无数据源，请先
-                <router-link to="/datasource">配置数据源</router-link>
+                <router-link to="/ai-config">配置数据源</router-link>
               </div>
             </el-form-item>
 
@@ -351,16 +356,11 @@ function taskStatusText(status: string) {
                 placeholder="可选：选择目标题库"
                 clearable
                 filterable
-                @change="handleQuestionBankChange"
                 value-key="id"
                 :loading="loadingQuestionBanks"
+                @change="handleQuestionBankChange"
               >
-                <el-option
-                  v-for="qb in questionBanks"
-                  :key="qb.id"
-                  :label="qb.name"
-                  :value="qb"
-                >
+                <el-option v-for="qb in questionBanks" :key="qb.id" :label="qb.name" :value="qb">
                   <span>{{ qb.name }}</span>
                   <span style="color: var(--color-text-muted); font-size: 12px; margin-left: 8px">
                     {{ qb.questionCount }} 题
@@ -371,11 +371,7 @@ function taskStatusText(status: string) {
 
             <!-- 高级选项 -->
             <el-form-item>
-              <el-button
-                type="primary"
-                text
-                @click="showAdvancedOptions = !showAdvancedOptions"
-              >
+              <el-button type="primary" text @click="showAdvancedOptions = !showAdvancedOptions">
                 {{ showAdvancedOptions ? '收起' : '展开' }}高级选项
               </el-button>
             </el-form-item>
@@ -419,18 +415,10 @@ function taskStatusText(status: string) {
             >
               {{ willUseAsync ? '开始生成（异步）' : '立即生成' }}
             </el-button>
-            <el-button
-              v-else
-              type="danger"
-              :icon="Delete"
-              @click="handleCancel"
-            >
+            <el-button v-else type="danger" :icon="Delete" @click="handleCancel">
               取消生成
             </el-button>
-            <el-button
-              :disabled="aiGenerationStore.generating"
-              @click="handleReset"
-            >
+            <el-button :disabled="aiGenerationStore.generating" @click="handleReset">
               重置
             </el-button>
           </div>
@@ -463,11 +451,17 @@ function taskStatusText(status: string) {
             />
 
             <div v-if="aiGenerationStore.progress" class="progress-details">
-              <span>{{ aiGenerationStore.progress.generatedCount }} / {{ aiGenerationStore.progress.totalCount }} 题</span>
+              <span
+                >{{ aiGenerationStore.progress.generatedCount }} /
+                {{ aiGenerationStore.progress.totalCount }} 题</span
+              >
             </div>
 
             <div
-              v-if="aiGenerationStore.taskStatus === 'failed' && aiGenerationStore.progress?.errorMessage"
+              v-if="
+                aiGenerationStore.taskStatus === 'failed' &&
+                aiGenerationStore.progress?.errorMessage
+              "
               class="progress-error"
             >
               {{ aiGenerationStore.progress.errorMessage }}
@@ -514,11 +508,24 @@ function taskStatusText(status: string) {
               <div class="question-header">
                 <span class="question-number">第 {{ index + 1 }} 题</span>
                 <div class="question-tags">
-                  <el-tag size="small" :type="DifficultyColors[question.difficulty as keyof typeof DifficultyColors] || 'info'">
-                    {{ DifficultyLabels[question.difficulty as keyof typeof DifficultyLabels] || question.difficulty }}
+                  <el-tag
+                    size="small"
+                    :type="
+                      DifficultyColors[question.difficulty as keyof typeof DifficultyColors] ||
+                      'info'
+                    "
+                  >
+                    {{
+                      DifficultyLabels[question.difficulty as keyof typeof DifficultyLabels] ||
+                      question.difficulty
+                    }}
                   </el-tag>
                   <el-tag size="small" type="info">
-                    {{ getQuestionTypeLabel(question.questionTypeEnum || question.questionType || 'SingleChoice') }}
+                    {{
+                      getQuestionTypeLabel(
+                        question.questionTypeEnum || question.questionType || 'SingleChoice'
+                      )
+                    }}
                   </el-tag>
                 </div>
               </div>
@@ -565,11 +572,7 @@ function taskStatusText(status: string) {
               </div>
 
               <div class="question-actions">
-                <el-button
-                  size="small"
-                  :icon="DocumentCopy"
-                  @click="copyQuestionText(question)"
-                >
+                <el-button size="small" :icon="DocumentCopy" @click="copyQuestionText(question)">
                   复制
                 </el-button>
               </div>

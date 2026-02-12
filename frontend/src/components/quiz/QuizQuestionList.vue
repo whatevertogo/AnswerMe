@@ -22,7 +22,9 @@ const emit = defineEmits<{
 
 const getDifficultyClass = (difficulty: string): 'easy' | 'medium' | 'hard' => {
   const validDifficulties: Difficulty[] = ['easy', 'medium', 'hard']
-  return validDifficulties.includes(difficulty as Difficulty) ? (difficulty as Difficulty) : 'medium'
+  return validDifficulties.includes(difficulty as Difficulty)
+    ? (difficulty as Difficulty)
+    : 'medium'
 }
 
 const getStatusClass = (index: number) => {

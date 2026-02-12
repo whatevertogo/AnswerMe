@@ -140,7 +140,7 @@ import { Reading, Star, Collection, Trophy } from '@element-plus/icons-vue'
 
 .feature-box:hover {
   @apply -translate-y-1 shadow-lg border-primary;
-  box-shadow: 0 8px 30px rgba(35, 131, 228, 0.10);
+  box-shadow: 0 8px 30px rgba(35, 131, 228, 0.1);
 }
 
 .feature-box .feature-icon {

@@ -11,6 +11,7 @@ import {
   type CreateDataSourceParams,
   type UpdateDataSourceParams
 } from '@/api/dataSource'
+import { extractErrorMessage } from '@/utils/errorHandler'
 import {
   aiProviders,
   getProviderByValue,
@@ -41,7 +42,7 @@ const formData = ref<CreateDataSourceParams>({
   isDefault: false
 })
 
-const validateApiKey = (_rule: any, value: string, callback: (error?: Error) => void) => {
+const validateApiKey = (_rule: unknown, value: string, callback: (error?: Error) => void) => {
   if (dialogMode.value === 'create' && (!value || !value.trim())) {
     callback(new Error('请输入API密钥'))
     return
@@ -90,8 +91,8 @@ function handleRouteQuery() {
 async function fetchDataSources() {
   try {
     await dataSourceStore.fetchDataSources()
-  } catch (error: any) {
-    ElMessage.error('加载数据源列表失败: ' + (error.message || '未知错误'))
+  } catch (error: unknown) {
+    ElMessage.error('加载数据源列表失败: ' + extractErrorMessage(error, '未知错误'))
   }
 }
 
@@ -139,9 +140,9 @@ async function handleDelete(dataSource: DataSource) {
     await dataSourceStore.deleteDataSource(dataSource.id)
     ElMessage.success('删除成功')
     await fetchDataSources()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败: ' + (error.message || '未知错误'))
+  } catch (error: unknown) {
+    if (error !== 'cancel' && error !== 'close') {
+      ElMessage.error('删除失败: ' + extractErrorMessage(error, '未知错误'))
     }
   }
 }
@@ -151,8 +152,8 @@ async function handleSetDefault(dataSource: DataSource) {
     await dataSourceStore.setDefault(dataSource.id)
     ElMessage.success(`已将"${dataSource.name}"设置为默认数据源`)
     await fetchDataSources()
-  } catch (error: any) {
-    ElMessage.error('设置失败: ' + (error.message || '未知错误'))
+  } catch (error: unknown) {
+    ElMessage.error('设置失败: ' + extractErrorMessage(error, '未知错误'))
   }
 }
 
@@ -165,8 +166,8 @@ async function handleValidate(dataSource: DataSource) {
     } else {
       ElMessage.error('API密钥无效')
     }
-  } catch (error: any) {
-    ElMessage.error('验证失败: ' + (error.message || '未知错误'))
+  } catch (error: unknown) {
+    ElMessage.error('验证失败: ' + extractErrorMessage(error, '未知错误'))
   } finally {
     validatingId.value = null
   }
@@ -175,7 +176,7 @@ async function handleValidate(dataSource: DataSource) {
 async function handleSubmit() {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid) => {
+  await formRef.value.validate(async valid => {
     if (!valid) return
 
     try {
@@ -210,8 +211,12 @@ async function handleSubmit() {
       }
       dialogVisible.value = false
       await fetchDataSources()
-    } catch (error: any) {
-      ElMessage.error((dialogMode.value === 'create' ? '创建' : '更新') + '失败: ' + (error.message || '未知错误'))
+    } catch (error: unknown) {
+      ElMessage.error(
+        (dialogMode.value === 'create' ? '创建' : '更新') +
+          '失败: ' +
+          extractErrorMessage(error, '未知错误')
+      )
     }
   })
 }
@@ -271,9 +276,7 @@ function getTypeTagType(type: string) {
         <h1>AI配置管理</h1>
         <p class="subtitle">管理您的AI数据源，用于题目生成</p>
       </div>
-      <el-button type="primary" :icon="Plus" @click="handleAdd">
-        添加配置
-      </el-button>
+      <el-button type="primary" :icon="Plus" @click="handleAdd"> 添加配置 </el-button>
     </div>
 
     <!-- 数据源列表 -->
@@ -283,11 +286,7 @@ function getTypeTagType(type: string) {
       </el-empty>
 
       <div v-else class="datasource-list">
-        <div
-          v-for="dataSource in dataSources"
-          :key="dataSource.id"
-          class="datasource-item"
-        >
+        <div v-for="dataSource in dataSources" :key="dataSource.id" class="datasource-item">
           <div class="datasource-info">
             <div class="info-header">
               <el-icon class="type-icon" :size="24">
@@ -296,9 +295,7 @@ function getTypeTagType(type: string) {
               <div class="info-text">
                 <div class="name-row">
                   <span class="name">{{ dataSource.name }}</span>
-                  <el-tag v-if="dataSource.isDefault" type="success" size="small">
-                    默认
-                  </el-tag>
+                  <el-tag v-if="dataSource.isDefault" type="success" size="small"> 默认 </el-tag>
                 </div>
                 <el-tag :type="getTypeTagType(dataSource.type)" size="small">
                   {{ getTypeLabel(dataSource.type) }}
@@ -338,11 +335,7 @@ function getTypeTagType(type: string) {
               测试
             </el-button>
 
-            <el-button
-              v-if="!dataSource.isDefault"
-              text
-              @click="handleSetDefault(dataSource)"
-            >
+            <el-button v-if="!dataSource.isDefault" text @click="handleSetDefault(dataSource)">
               <el-icon><Star /></el-icon>
               设为默认
             </el-button>
@@ -371,17 +364,9 @@ function getTypeTagType(type: string) {
       :destroy-on-close="true"
       @close="handleDialogClose"
     >
-      <el-form
-        ref="formRef"
-        :model="formData"
-        :rules="formRules"
-        label-width="100px"
-      >
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
         <el-form-item label="配置名称" prop="name">
-          <el-input
-            v-model="formData.name"
-            placeholder="例如：我的OpenAI配置"
-          />
+          <el-input v-model="formData.name" placeholder="例如：我的OpenAI配置" />
         </el-form-item>
 
         <el-form-item label="提供商" prop="type">
@@ -600,5 +585,4 @@ function getTypeTagType(type: string) {
   border-color: var(--color-danger);
   color: var(--color-danger);
 }
-
 </style>

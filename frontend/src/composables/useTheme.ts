@@ -29,13 +29,17 @@ export function useTheme() {
     selector: 'html',
     attribute: 'class',
     valueDark: 'dark',
-    valueLight: '',
+    valueLight: ''
   })
 
   // 监听 isDark 变化，同步到 useDark
-  watch(isDark, (value) => {
-    dark.value = value
-  }, { immediate: true })
+  watch(
+    isDark,
+    value => {
+      dark.value = value
+    },
+    { immediate: true }
+  )
 
   /**
    * 设置主题模式
@@ -62,6 +66,6 @@ export function useTheme() {
     themeMode: readonly(themeMode),
     isDark: readonly(isDark),
     setTheme,
-    toggleTheme,
+    toggleTheme
   }
 }

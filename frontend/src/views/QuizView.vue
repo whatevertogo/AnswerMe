@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Clock, CircleCheck, Flag, ArrowLeft, ArrowRight, House, Reading, Sunny, Moon } from '@element-plus/icons-vue'
+import {
+  Clock,
+  CircleCheck,
+  Flag,
+  ArrowLeft,
+  ArrowRight,
+  House,
+  Reading,
+  Sunny,
+  Moon
+} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import QuizQuestionList from '@/components/quiz/QuizQuestionList.vue'
 import QuizQuestionPanel from '@/components/quiz/QuizQuestionPanel.vue'
@@ -11,7 +21,11 @@ import { useQuizStore } from '@/stores/quiz'
 import { useTheme } from '@/composables/useTheme'
 import { getQuestionDetail } from '@/api/question'
 import type { QuizQuestion } from '@/stores/quiz'
+import type { QuizDetail } from '@/api/quiz'
+import type { Question } from '@/types/question'
 import { getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
+import { extractErrorMessage } from '@/utils/errorHandler'
+import { parseAnswerToArray } from '@/utils/answerFormatter'
 
 const router = useRouter()
 const route = useRoute()
@@ -77,17 +91,26 @@ onUnmounted(() => {
 })
 
 // 监听路由参数变化
-watch(() => route.params, async () => {
-  if (route.name === 'Quiz' || route.name === 'QuizNew') {
-    stopTimer()
-    await initializeQuiz()
-    startTimer()
+watch(
+  () => route.params,
+  async () => {
+    if (route.name === 'Quiz' || route.name === 'QuizNew') {
+      stopTimer()
+      await initializeQuiz()
+      startTimer()
+    }
   }
-})
+)
 
 async function initializeQuiz() {
   initializing.value = true
   loading.value = true
+  showResult.value = false
+  timeElapsed.value = 0
+  questions.value = []
+  questionMap.value = new Map()
+  markedQuestions.value = new Set()
+  quizStore.reset()
 
   try {
     // 如果是新答题路由或 sessionId 是 'new'，则开始新答题
@@ -98,8 +121,8 @@ async function initializeQuiz() {
       // 加载已有答题
       await loadExistingQuiz()
     }
-  } catch (error: any) {
-    ElMessage.error('初始化答题失败: ' + (error.message || '未知错误'))
+  } catch (error: unknown) {
+    ElMessage.error('初始化答题失败: ' + extractErrorMessage(error, '未知错误'))
     console.error('初始化答题失败:', error)
     router.back()
   } finally {
@@ -109,61 +132,64 @@ async function initializeQuiz() {
 }
 
 async function startNewQuiz() {
-  try {
-    // 调用 startQuiz API
-    await quizStore.startQuiz(bankId.value, 'sequential')
+  // 调用 startQuiz API
+  await quizStore.startQuiz(bankId.value, 'sequential')
 
-    // 获取题目详情
-    await loadQuestionsDetails(quizStore.questionIds)
+  // 获取题目详情
+  await loadQuestionsDetails(quizStore.questionIds)
 
-    // 恢复标记状态（如果有保存的）
-    loadMarkedQuestions()
+  // 恢复标记状态（如果有保存的）
+  loadMarkedQuestions()
 
-    ElMessage.success('答题开始！')
-  } catch (error: any) {
-    throw error
-  }
+  ElMessage.success('答题开始！')
 }
 
 async function loadExistingQuiz() {
-  try {
-    const attemptId = parseInt(sessionId.value)
+  const attemptId = parseInt(sessionId.value)
+  if (Number.isNaN(attemptId) || attemptId <= 0) {
+    throw new Error('答题会话 ID 无效')
+  }
 
-    // 加载答题详情
-    const details = await quizStore.fetchQuizDetails(attemptId)
+  // 先获取答题会话状态，避免已完成会话继续提交导致 400
+  const attemptResult = await quizStore.fetchQuizResult(attemptId)
+  showResult.value = Boolean(attemptResult.completedAt)
 
-    // 从详情中提取题目ID
-    const questionIds = details.map((d: any) => d.questionId)
+  // 加载答题详情
+  const details = await quizStore.fetchQuizDetails(attemptId)
 
-    // 更新 store 状态
-    quizStore.currentAttemptId = attemptId
-    quizStore.questionIds = questionIds
+  // 从详情中提取题目ID
+  const questionIds = [...new Set(details.map((detail: QuizDetail) => detail.questionId))].filter(
+    id => id > 0
+  )
 
-    // 恢复答案和用时
-    details.forEach((detail: any) => {
-      if (detail.userAnswer) {
-        quizStore.answers[detail.questionId] = detail.userAnswer
-      }
-      if (detail.timeSpent) {
-        quizStore.timeSpents[detail.questionId] = detail.timeSpent
-      }
-    })
+  // 更新 store 状态
+  quizStore.currentAttemptId = attemptId
+  quizStore.questionIds = questionIds
+  quizStore.answers = {}
+  quizStore.timeSpents = {}
 
+  if (questionIds.length > 0) {
     // 获取题目详情
     await loadQuestionsDetails(questionIds)
 
-    // 恢复标记状态
-    loadMarkedQuestions()
-
-    // 检查是否已完成
-    const completedDetail = details.find((d: any) => d.completedAt !== null)
-    if (completedDetail) {
-      // 已完成，直接显示结果
-      showResult.value = true
-    }
-  } catch (error: any) {
-    throw error
+    // 恢复答案和用时
+    details.forEach((detail: QuizDetail) => {
+      const question = questionMap.value.get(detail.questionId)
+      if (typeof detail.userAnswer === 'string' && question) {
+        if (question.type === 'multiple') {
+          quizStore.answers[detail.questionId] = parseAnswerToArray(detail.userAnswer)
+        } else {
+          quizStore.answers[detail.questionId] = detail.userAnswer
+        }
+      }
+      if (typeof detail.timeSpent === 'number' && detail.timeSpent > 0) {
+        quizStore.timeSpents[detail.questionId] = detail.timeSpent
+      }
+    })
   }
+
+  // 恢复标记状态
+  loadMarkedQuestions()
 }
 
 async function loadQuestionsDetails(questionIds: number[]) {
@@ -173,11 +199,11 @@ async function loadQuestionsDetails(questionIds: number[]) {
     const questionDetails = await Promise.all(questionPromises)
 
     // 转换为 QuizQuestion 格式
-    questions.value = questionDetails.map((q: any) => {
+    questions.value = questionDetails.map((q: Question) => {
       return {
         id: q.id,
         content: q.questionText,
-        type: convertQuestionType(q.questionTypeEnum || q.questionType),
+        type: convertQuestionType(q.questionTypeEnum),
         options: extractOptions(q),
         difficulty: q.difficulty || 'medium',
         tags: q.tags || [],
@@ -188,19 +214,19 @@ async function loadQuestionsDetails(questionIds: number[]) {
 
     // 创建映射
     questionMap.value = new Map(questions.value.map(q => [q.id, q]))
-  } catch (error: any) {
-    ElMessage.error('加载题目详情失败: ' + (error.message || '未知错误'))
+  } catch (error: unknown) {
+    ElMessage.error('加载题目详情失败: ' + extractErrorMessage(error, '未知错误'))
     throw error
   }
 }
 
 // 从新格式 data 中提取选项
-function extractOptions(question: any): string[] {
+function extractOptions(question: Question): string[] {
   return getQuestionOptions(question)
 }
 
 // 从新格式 data 中提取答案
-function extractCorrectAnswer(question: any): string | undefined {
+function extractCorrectAnswer(question: Question): string | undefined {
   const answer = getQuestionCorrectAnswers(question)
   if (Array.isArray(answer)) {
     return answer.join(',')
@@ -211,18 +237,21 @@ function extractCorrectAnswer(question: any): string | undefined {
   return answer ? String(answer) : undefined
 }
 
-function convertQuestionType(type: string): QuizQuestion['type'] {
+function convertQuestionType(type: string | undefined): QuizQuestion['type'] {
   const typeMap: Record<string, QuizQuestion['type']> = {
-    'SingleChoice': 'single',
-    'MultipleChoice': 'multiple',
-    'TrueFalse': 'boolean',
-    'FillBlank': 'fill',
-    'ShortAnswer': 'essay',
+    SingleChoice: 'single',
+    MultipleChoice: 'multiple',
+    TrueFalse: 'boolean',
+    FillBlank: 'fill',
+    ShortAnswer: 'essay',
     // 兼容旧格式
-    'choice': 'single',
+    choice: 'single',
     'multiple-choice': 'multiple',
     'true-false': 'boolean',
     'short-answer': 'essay'
+  }
+  if (!type) {
+    return 'single'
   }
   return typeMap[type] || 'single'
 }
@@ -248,11 +277,15 @@ const formatTime = (seconds: number) => {
 }
 
 const handleAnswer = async (questionId: number, answer: string | string[]) => {
+  if (questionId <= 0 || !quizStore.questionIds.includes(questionId) || showResult.value) {
+    return
+  }
+
   try {
-    // 直接传递原始格式，store 内部会转换为逗号分隔字符串
+    // 直接传递原始格式，store 内部会按题型格式化
     await quizStore.submitAnswer(questionId, answer, timeElapsed.value)
-  } catch (error: any) {
-    ElMessage.error('提交答案失败: ' + (error.message || '未知错误'))
+  } catch (error: unknown) {
+    ElMessage.error('提交答案失败: ' + extractErrorMessage(error, '未知错误'))
     console.error('提交答案失败:', error)
   }
 }
@@ -330,8 +363,8 @@ const handleSubmit = async () => {
     clearMarkedQuestions()
     showResult.value = true
     ElMessage.success('交卷成功！')
-  } catch (error: any) {
-    ElMessage.error('交卷失败: ' + (error.message || '未知错误'))
+  } catch (error: unknown) {
+    ElMessage.error('交卷失败: ' + extractErrorMessage(error, '未知错误'))
     console.error('交卷失败:', error)
   } finally {
     loading.value = false
@@ -416,7 +449,7 @@ const goHome = () => {
               :question="safeCurrentQuestion"
               :answer="quizStore.answers[safeCurrentQuestion.id]"
               :disabled="quizStore.loading || showResult"
-              @update:answer="(ans) => handleAnswer(safeCurrentQuestion.id, ans)"
+              @update:answer="ans => handleAnswer(safeCurrentQuestion.id, ans)"
             />
           </div>
         </div>

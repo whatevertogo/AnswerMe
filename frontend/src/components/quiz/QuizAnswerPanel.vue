@@ -45,13 +45,18 @@ const handleSingleSelect = (option: string) => {
 }
 
 const handleMultipleSelect = (option: string, checked: boolean | string[]) => {
-  const currentAnswers = (props.answer as string[]) || []
+  const currentAnswers = Array.isArray(props.answer) ? props.answer : []
   // el-checkbox 可能传递 boolean 或 string[]
   const isChecked = typeof checked === 'boolean' ? checked : checked.includes(option)
-  if (isChecked) {
+  if (isChecked && !currentAnswers.includes(option)) {
     emit('update:answer', [...currentAnswers, option])
-  } else {
-    emit('update:answer', currentAnswers.filter(a => a !== option))
+    return
+  }
+  if (!isChecked) {
+    emit(
+      'update:answer',
+      currentAnswers.filter(a => a !== option)
+    )
   }
 }
 
@@ -104,8 +109,10 @@ const getOptionLabel = (index: number) => {
         >
           <el-checkbox
             :model-value="(answer as string[])?.includes(option)"
-            @update:model-value="(val: any) => handleMultipleSelect(option, val as boolean)"
             :disabled="disabled"
+            @update:model-value="
+              (val: boolean | string[]) => handleMultipleSelect(option, val as boolean | string[])
+            "
           >
             <span class="option-label">{{ getOptionLabel(index) }}.</span>
             <span class="option-text">{{ option }}</span>
@@ -118,9 +125,9 @@ const getOptionLabel = (index: number) => {
     <div v-if="currentType === 'boolean'" class="boolean-container">
       <el-radio-group
         :model-value="booleanValue"
-        @update:model-value="handleBooleanChange"
         :disabled="disabled"
         class="boolean-options"
+        @update:model-value="handleBooleanChange"
       >
         <el-radio :value="true" size="large" class="boolean-option">
           <span class="boolean-option-text">正确</span>
@@ -139,13 +146,13 @@ const getOptionLabel = (index: number) => {
       </div>
       <el-input
         :model-value="Array.isArray(answer) ? answer.join(', ') : answer"
-        @update:model-value="handleEssayChange"
         type="textarea"
         :rows="4"
         placeholder="请输入答案，多个答案用逗号分隔..."
         :disabled="disabled"
         resize="vertical"
         class="fill-input"
+        @update:model-value="handleEssayChange"
       />
     </div>
 
@@ -153,13 +160,13 @@ const getOptionLabel = (index: number) => {
     <el-input
       v-if="currentType === 'essay'"
       :model-value="answer"
-      @update:model-value="handleEssayChange"
       type="textarea"
       :rows="8"
       placeholder="请输入你的答案..."
       :disabled="disabled"
       resize="vertical"
       class="essay-input"
+      @update:model-value="handleEssayChange"
     />
   </div>
 </template>

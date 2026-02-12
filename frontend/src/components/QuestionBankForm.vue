@@ -92,13 +92,7 @@ const handleClose = () => {
     :close-on-click-modal="false"
     @close="handleClose"
   >
-    <el-form
-      ref="formRef"
-      :model="form"
-      :rules="rules"
-      label-width="100px"
-      :disabled="loading"
-    >
+    <el-form ref="formRef" :model="form" :rules="rules" label-width="100px" :disabled="loading">
       <el-form-item label="题库名称" prop="name">
         <el-input
           v-model="form.name"

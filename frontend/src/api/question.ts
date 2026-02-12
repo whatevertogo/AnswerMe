@@ -1,10 +1,5 @@
 import { request } from '@/utils/request'
-import type {
-  Question,
-  QuestionQueryParams,
-  CreateQuestionDto,
-  UpdateQuestionDto
-} from '@/types'
+import type { Question, QuestionQueryParams, CreateQuestionDto, UpdateQuestionDto } from '@/types'
 
 /**
  * 题目列表响应
@@ -47,10 +42,7 @@ export function createQuestions(data: CreateQuestionDto[]): Promise<Question[]> 
 /**
  * 更新题目
  */
-export function updateQuestion(
-  id: number,
-  data: UpdateQuestionDto
-): Promise<Question> {
+export function updateQuestion(id: number, data: UpdateQuestionDto): Promise<Question> {
   return request.put(`/questions/${id}`, data) as Promise<Question>
 }
 
@@ -64,8 +56,14 @@ export function deleteQuestion(id: number): Promise<{ message: string }> {
 /**
  * 批量删除题目
  */
-export function deleteQuestions(ids: number[]): Promise<{ message: string; successCount: number; notFoundCount: number }> {
-  return request.post('/questions/batch-delete', ids) as Promise<{ message: string; successCount: number; notFoundCount: number }>
+export function deleteQuestions(
+  ids: number[]
+): Promise<{ message: string; successCount: number; notFoundCount: number }> {
+  return request.post('/questions/batch-delete', ids) as Promise<{
+    message: string
+    successCount: number
+    notFoundCount: number
+  }>
 }
 
 /**

@@ -2,8 +2,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+type RouteComponent = NonNullable<RouteRecordRaw['component']>
+
 // Helper function to create authenticated routes
-function authRoute(path: string, name: string, component: () => Promise<any>): RouteRecordRaw {
+function authRoute(path: string, name: string, component: RouteComponent): RouteRecordRaw {
   return {
     path,
     name,
@@ -13,7 +15,12 @@ function authRoute(path: string, name: string, component: () => Promise<any>): R
 }
 
 // Helper function to create public routes
-function publicRoute(path: string, name: string, component: () => Promise<any>, layout: 'auth' | 'app' = 'auth'): RouteRecordRaw {
+function publicRoute(
+  path: string,
+  name: string,
+  component: RouteComponent,
+  layout: 'auth' | 'app' = 'auth'
+): RouteRecordRaw {
   return {
     path,
     name,
@@ -28,9 +35,17 @@ const routes: Array<RouteRecordRaw> = [
   publicRoute('/login', 'Login', () => import('@/views/LoginView.vue')),
   publicRoute('/register', 'Register', () => import('@/views/RegisterView.vue')),
   authRoute('/question-banks', 'QuestionBanks', () => import('@/views/QuestionBanksView.vue')),
-  authRoute('/question-banks/:id', 'QuestionBankDetail', () => import('@/views/QuestionBankDetailView.vue')),
+  authRoute(
+    '/question-banks/:id',
+    'QuestionBankDetail',
+    () => import('@/views/QuestionBankDetailView.vue')
+  ),
   authRoute('/questions', 'Questions', () => import('@/views/QuestionsView.vue')),
-  authRoute('/question-banks/:bankId/questions', 'BankQuestions', () => import('@/views/QuestionsView.vue')),
+  authRoute(
+    '/question-banks/:bankId/questions',
+    'BankQuestions',
+    () => import('@/views/QuestionsView.vue')
+  ),
   authRoute('/practice', 'Practice', () => import('@/views/PracticeView.vue')),
   authRoute('/ai-config', 'AIConfig', () => import('@/views/AIConfigView.vue')),
   authRoute('/generate', 'Generate', () => import('@/views/GenerateView.vue')),

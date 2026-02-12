@@ -59,7 +59,12 @@ export interface GeneratedQuestion {
  * 归一化生成的题目（兼容新旧格式）
  * 优先使用 questionTypeEnum，fallback 到 questionType
  */
-export function normalizeGeneratedQuestion(raw: any): GeneratedQuestion {
+type GeneratedQuestionInput = GeneratedQuestion & {
+  questionTypeEnum?: QuestionType
+  questionType?: QuestionType
+}
+
+export function normalizeGeneratedQuestion(raw: GeneratedQuestionInput): GeneratedQuestion {
   return {
     ...raw,
     // 优先使用 questionTypeEnum，fallback 到 questionType
@@ -123,7 +128,9 @@ export const generateQuestionsApi = (params: AIGenerateRequest): Promise<AIGener
 /**
  * 生成题目（异步，>20题）
  */
-export const generateQuestionsAsyncApi = (params: AIGenerateRequest): Promise<AIGenerateResponse> => {
+export const generateQuestionsAsyncApi = (
+  params: AIGenerateRequest
+): Promise<AIGenerateResponse> => {
   return request.post('/AIGeneration/generate-async', params)
 }
 

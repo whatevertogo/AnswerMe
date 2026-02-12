@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { UserDto } from '@/types'
 import { authApi } from '@/api/auth'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 export interface UserInfo {
   id: number
@@ -76,12 +77,13 @@ export const useAuthStore = defineStore('auth', () => {
           email: userData.email,
           createdAt: userData.createdAt
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const status = (error as { response?: { status?: number } })?.response?.status
         // 根据错误类型处理
-        if (error?.response?.status === 401 || error?.response?.status === 403) {
+        if (status === 401 || status === 403) {
           clearAuth() // 无效 token，清除
         } else {
-          loadError.value = '网络错误，无法获取用户信息'
+          loadError.value = extractErrorMessage(error, '网络错误，无法获取用户信息')
           // 保留 token，允许重试
         }
       } finally {

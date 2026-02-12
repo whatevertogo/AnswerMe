@@ -1,11 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type {
-  Question,
-  QuestionQueryParams,
-  CreateQuestionDto,
-  UpdateQuestionDto
-} from '@/types'
+import type { Question, QuestionQueryParams, CreateQuestionDto, UpdateQuestionDto } from '@/types'
 import * as questionApi from '@/api/question'
 import { extractErrorMessage } from '@/utils/errorHandler'
 
@@ -85,10 +80,7 @@ export const useQuestionStore = defineStore('question', () => {
     }
   }
 
-  async function updateQuestion(
-    id: number,
-    data: UpdateQuestionDto
-  ): Promise<Question> {
+  async function updateQuestion(id: number, data: UpdateQuestionDto): Promise<Question> {
     loading.value = true
     error.value = null
     try {

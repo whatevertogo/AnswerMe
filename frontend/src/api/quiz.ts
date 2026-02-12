@@ -22,7 +22,7 @@ export interface QuizStartResponse {
 export interface QuizSubmitParams {
   attemptId: number
   questionId: number
-  userAnswer: string | string[]
+  userAnswer: string
   timeSpent?: number
 }
 
@@ -88,9 +88,7 @@ export function submitAnswer(data: QuizSubmitParams): Promise<boolean> {
 /**
  * 完成答题
  */
-export function completeQuiz(data: {
-  attemptId: number
-}): Promise<QuizResult> {
+export function completeQuiz(data: { attemptId: number }): Promise<QuizResult> {
   return request.post('/attempts/complete', data)
 }
 

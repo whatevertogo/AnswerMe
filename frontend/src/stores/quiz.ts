@@ -4,6 +4,7 @@ import * as quizApi from '@/api/quiz'
 import type { QuizResult as ApiQuizResult, QuizDetail as ApiQuizDetail } from '@/api/quiz'
 import { useAuthStore } from './auth'
 import { formatAnswerForSubmit, compareAnswers } from '@/utils/answerFormatter'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 export interface QuizQuestion {
   id: number
@@ -110,22 +111,43 @@ export const useQuizStore = defineStore('quiz', () => {
       startedAt.value = new Date()
       return response
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '开始答题失败'
+      const message = extractErrorMessage(err, '开始答题失败')
       error.value = message
-      throw error.value
+      throw new Error(message)
     } finally {
       loading.value = false
     }
   }
 
-  async function submitAnswer(questionId: number, userAnswer: string | string[], timeSpent?: number) {
+  async function submitAnswer(
+    questionId: number,
+    userAnswer: string | string[],
+    timeSpent?: number
+  ) {
     if (!currentAttemptId.value) {
       throw new Error('答题未开始')
+    }
+    if (result.value?.completedAt) {
+      throw new Error('答题已完成，无法继续提交答案')
+    }
+    if (questionId <= 0) {
+      throw new Error('题目ID无效')
+    }
+    if (!questionIds.value.includes(questionId)) {
+      throw new Error('题目不属于本次答题')
     }
 
     loading.value = true
     error.value = null
     try {
+      const previousAnswer = answers.value[questionId]
+      if (compareAnswers(previousAnswer, userAnswer)) {
+        if (timeSpent) {
+          timeSpents.value[questionId] = timeSpent
+        }
+        return true
+      }
+
       // 使用统一的答案格式化函数
       const answerString = formatAnswerForSubmit(userAnswer)
 
@@ -144,9 +166,9 @@ export const useQuizStore = defineStore('quiz', () => {
 
       return true
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '提交答案失败'
+      const message = extractErrorMessage(err, '提交答案失败')
       error.value = message
-      throw error.value
+      throw new Error(message)
     } finally {
       loading.value = false
     }
@@ -171,9 +193,9 @@ export const useQuizStore = defineStore('quiz', () => {
       }
       return response
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '完成答题失败'
+      const message = extractErrorMessage(err, '完成答题失败')
       error.value = message
-      throw error.value
+      throw new Error(message)
     } finally {
       loading.value = false
     }
@@ -192,9 +214,9 @@ export const useQuizStore = defineStore('quiz', () => {
       }
       return response
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '获取答题结果失败'
+      const message = extractErrorMessage(err, '获取答题结果失败')
       error.value = message
-      throw error.value
+      throw new Error(message)
     } finally {
       loading.value = false
     }
@@ -208,9 +230,9 @@ export const useQuizStore = defineStore('quiz', () => {
       details.value = response
       return response
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '获取答题详情失败'
+      const message = extractErrorMessage(err, '获取答题详情失败')
       error.value = message
-      throw error.value
+      throw new Error(message)
     } finally {
       loading.value = false
     }
@@ -223,9 +245,9 @@ export const useQuizStore = defineStore('quiz', () => {
       const response = await quizApi.getQuizStatistics()
       return response
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '获取答题统计失败'
+      const message = extractErrorMessage(err, '获取答题统计失败')
       error.value = message
-      throw error.value
+      throw new Error(message)
     } finally {
       loading.value = false
     }

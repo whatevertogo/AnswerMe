@@ -27,9 +27,7 @@ const filteredDataSources = computed(() => {
   }
   const query = searchQuery.value.toLowerCase()
   return dataSourceStore.dataSources.filter(
-    ds =>
-      ds.name.toLowerCase().includes(query) ||
-      ds.type.toLowerCase().includes(query)
+    ds => ds.name.toLowerCase().includes(query) || ds.type.toLowerCase().includes(query)
   )
 })
 
@@ -58,8 +56,8 @@ const handleDelete = async (dataSource: DataSource) => {
 
     await dataSourceStore.deleteDataSource(dataSource.id)
     ElMessage.success('删除成功')
-  } catch (error: any) {
-    if (error !== 'cancel') {
+  } catch (error: unknown) {
+    if (error !== 'cancel' && error !== 'close') {
       ElMessage.error('删除失败')
     }
   }
@@ -103,9 +101,7 @@ const getTypeTagType = (type: string) => {
   <div class="datasources-view">
     <div class="header">
       <h1>AI配置管理</h1>
-      <el-button type="primary" :icon="Plus" @click="handleAdd">
-        添加配置
-      </el-button>
+      <el-button type="primary" :icon="Plus" @click="handleAdd"> 添加配置 </el-button>
     </div>
 
     <el-card class="search-card">
@@ -143,9 +139,7 @@ const getTypeTagType = (type: string) => {
                 <Connection />
               </el-icon>
               <span class="name">{{ dataSource.name }}</span>
-              <el-tag v-if="dataSource.isDefault" type="success" size="small">
-                默认
-              </el-tag>
+              <el-tag v-if="dataSource.isDefault" type="success" size="small"> 默认 </el-tag>
             </div>
           </div>
         </template>
@@ -175,9 +169,7 @@ const getTypeTagType = (type: string) => {
 
           <div class="info-row">
             <span class="label">创建时间:</span>
-            <span class="value">{{
-              new Date(dataSource.createdAt).toLocaleString('zh-CN')
-            }}</span>
+            <span class="value">{{ new Date(dataSource.createdAt).toLocaleString('zh-CN') }}</span>
           </div>
         </div>
 
@@ -192,11 +184,7 @@ const getTypeTagType = (type: string) => {
               测试
             </el-button>
 
-            <el-button
-              v-if="!dataSource.isDefault"
-              text
-              @click="handleSetDefault(dataSource)"
-            >
+            <el-button v-if="!dataSource.isDefault" text @click="handleSetDefault(dataSource)">
               <el-icon><Star /></el-icon>
               设为默认
             </el-button>

@@ -7,6 +7,28 @@ export interface ErrorResponse {
   errorCode?: string
 }
 
+interface ErrorLike {
+  message?: string
+  errorCode?: string
+  response?: {
+    status?: number
+    data?: {
+      message?: string
+      errorCode?: string
+      error?: {
+        message?: string
+      }
+    }
+  }
+}
+
+function toErrorLike(err: unknown): ErrorLike {
+  if (typeof err === 'object' && err !== null) {
+    return err as ErrorLike
+  }
+  return {}
+}
+
 /**
  * 可重试的错误码列表
  */
@@ -67,20 +89,22 @@ const ERROR_MESSAGE_MAP: Record<string, string> = {
  * @param fallback - 默认错误消息
  * @returns 提取的错误消息
  */
-export function extractErrorMessage(err: any, fallback: string = '操作失败'): string {
+export function extractErrorMessage(err: unknown, fallback: string = '操作失败'): string {
   if (!err) return fallback
 
+  const normalizedErr = toErrorLike(err)
+
   // 尝试从响应中提取错误码
-  const errorCode = err.response?.data?.errorCode || err.errorCode
+  const errorCode = normalizedErr.response?.data?.errorCode || normalizedErr.errorCode
   if (errorCode && ERROR_MESSAGE_MAP[errorCode]) {
     return ERROR_MESSAGE_MAP[errorCode]
   }
 
   // 尝试从响应中提取消息
   const errorMsg =
-    err.response?.data?.message ||
-    err.response?.data?.error?.message ||
-    err.message ||
+    normalizedErr.response?.data?.message ||
+    normalizedErr.response?.data?.error?.message ||
+    normalizedErr.message ||
     fallback
 
   // 根据错误消息内容进行映射
@@ -94,10 +118,12 @@ function mapErrorMessage(errorMsg: string): string {
   const msg = errorMsg.toLowerCase()
 
   // 认证错误
-  if (msg.includes('incorrect api key') ||
-      msg.includes('invalid_api_key') ||
-      msg.includes('401') ||
-      msg.includes('unauthorized')) {
+  if (
+    msg.includes('incorrect api key') ||
+    msg.includes('invalid_api_key') ||
+    msg.includes('401') ||
+    msg.includes('unauthorized')
+  ) {
     return 'API Key 无效或未配置'
   }
 
@@ -127,16 +153,18 @@ function mapErrorMessage(errorMsg: string): string {
  * @param err - 错误对象
  * @returns 是否可重试
  */
-export function isRetryableError(err: any): boolean {
+export function isRetryableError(err: unknown): boolean {
   if (!err) return false
 
-  const errorCode = err.response?.data?.errorCode || err.errorCode
+  const normalizedErr = toErrorLike(err)
+
+  const errorCode = normalizedErr.response?.data?.errorCode || normalizedErr.errorCode
   if (errorCode && RETRYABLE_ERROR_CODES.includes(errorCode)) {
     return true
   }
 
   // 根据错误消息判断
-  const msg = (err.response?.data?.message || err.message || '').toLowerCase()
+  const msg = (normalizedErr.response?.data?.message || normalizedErr.message || '').toLowerCase()
   return (
     msg.includes('timeout') ||
     msg.includes('network') ||
@@ -151,15 +179,16 @@ export function isRetryableError(err: any): boolean {
  * @param err - 错误对象
  * @returns 错误详情对象
  */
-export function getErrorDetails(err: any): {
+export function getErrorDetails(err: unknown): {
   message: string
   code?: string
   retryable: boolean
   category: ErrorCategory
 } {
+  const normalizedErr = toErrorLike(err)
   return {
     message: extractErrorMessage(err),
-    code: err.response?.data?.errorCode || err.errorCode,
+    code: normalizedErr.response?.data?.errorCode || normalizedErr.errorCode,
     retryable: isRetryableError(err),
     category: categorizeError(err)
   }
@@ -177,23 +206,27 @@ export const ErrorCategory = {
   UNKNOWN: 'unknown'
 } as const
 
-export type ErrorCategory = typeof ErrorCategory[keyof typeof ErrorCategory]
+export type ErrorCategory = (typeof ErrorCategory)[keyof typeof ErrorCategory]
 
 /**
  * 对错误进行分类
  */
-function categorizeError(err: any): ErrorCategory {
+function categorizeError(err: unknown): ErrorCategory {
   if (!err) return ErrorCategory.UNKNOWN
 
-  const errorCode = err.response?.data?.errorCode || err.errorCode
-  const msg = (err.response?.data?.message || err.message || '').toLowerCase()
+  const normalizedErr = toErrorLike(err)
+
+  const errorCode = normalizedErr.response?.data?.errorCode || normalizedErr.errorCode
+  const msg = (normalizedErr.response?.data?.message || normalizedErr.message || '').toLowerCase()
 
   // 认证错误
-  if (errorCode === 'UNAUTHORIZED' ||
-      errorCode === 'INVALID_TOKEN' ||
-      errorCode === 'TOKEN_EXPIRED' ||
-      msg.includes('unauthorized') ||
-      msg.includes('token')) {
+  if (
+    errorCode === 'UNAUTHORIZED' ||
+    errorCode === 'INVALID_TOKEN' ||
+    errorCode === 'TOKEN_EXPIRED' ||
+    msg.includes('unauthorized') ||
+    msg.includes('token')
+  ) {
     return ErrorCategory.AUTHENTICATION
   }
 
@@ -203,21 +236,17 @@ function categorizeError(err: any): ErrorCategory {
   }
 
   // 网络错误
-  if (msg.includes('network') ||
-      msg.includes('timeout') ||
-      msg.includes('fetch')) {
+  if (msg.includes('network') || msg.includes('timeout') || msg.includes('fetch')) {
     return ErrorCategory.NETWORK
   }
 
   // 验证错误
-  if (errorCode?.startsWith('INVALID_') ||
-      errorCode === 'VALIDATION_ERROR') {
+  if (errorCode?.startsWith('INVALID_') || errorCode === 'VALIDATION_ERROR') {
     return ErrorCategory.VALIDATION
   }
 
   // 服务错误
-  if (errorCode === 'SERVICE_UNAVAILABLE' ||
-      errorCode === 'RATE_LIMIT_EXCEEDED') {
+  if (errorCode === 'SERVICE_UNAVAILABLE' || errorCode === 'RATE_LIMIT_EXCEEDED') {
     return ErrorCategory.SERVICE
   }
 

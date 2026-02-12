@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api/auth'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -28,8 +29,8 @@ const handleLogin = async () => {
     authStore.setAuth(response.token, response.user)
     ElMessage.success('登录成功')
     router.push('/home')
-  } catch (error: any) {
-    const message = error.response?.data?.message || '登录失败，请检查邮箱和密码'
+  } catch (error: unknown) {
+    const message = extractErrorMessage(error, '登录失败，请检查邮箱和密码')
     ElMessage.error(message)
   } finally {
     loading.value = false
@@ -43,8 +44,8 @@ const handleLocalLogin = async () => {
     authStore.setAuth(response.token, response.user)
     ElMessage.success('本地登录成功')
     router.push('/home')
-  } catch (error: any) {
-    const message = error.response?.data?.message || '本地登录失败'
+  } catch (error: unknown) {
+    const message = extractErrorMessage(error, '本地登录失败')
     ElMessage.error(message)
   } finally {
     loading.value = false
@@ -61,20 +62,40 @@ const handleLocalLogin = async () => {
 
     <el-form :model="loginForm" class="login-form" label-position="top">
       <el-form-item label="邮箱" class="form-item">
-        <el-input v-model="loginForm.email" size="large" placeholder="请输入邮箱" :prefix-icon="User" class="custom-input"
-          @keyup.enter="handleLogin" />
+        <el-input
+          v-model="loginForm.email"
+          size="large"
+          placeholder="请输入邮箱"
+          :prefix-icon="User"
+          class="custom-input"
+          @keyup.enter="handleLogin"
+        />
       </el-form-item>
 
       <el-form-item label="密码" class="form-item">
-        <el-input v-model="loginForm.password" type="password" size="large" placeholder="请输入密码" :prefix-icon="Lock"
-          show-password class="custom-input" @keyup.enter="handleLogin" />
+        <el-input
+          v-model="loginForm.password"
+          type="password"
+          size="large"
+          placeholder="请输入密码"
+          :prefix-icon="Lock"
+          show-password
+          class="custom-input"
+          @keyup.enter="handleLogin"
+        />
       </el-form-item>
 
       <div class="options-row">
         <el-checkbox>记住我</el-checkbox>
       </div>
 
-      <el-button type="primary" size="large" :loading="loading" class="login-button" @click="handleLogin">
+      <el-button
+        type="primary"
+        size="large"
+        :loading="loading"
+        class="login-button"
+        @click="handleLogin"
+      >
         登录
       </el-button>
 
@@ -146,12 +167,16 @@ const handleLocalLogin = async () => {
 
 .custom-input :deep(.el-input__wrapper:hover) {
   border-color: var(--color-primary-light);
-  box-shadow: 0 0 0 1px var(--color-primary-light), var(--shadow-xs) inset;
+  box-shadow:
+    0 0 0 1px var(--color-primary-light),
+    var(--shadow-xs) inset;
 }
 
 .custom-input :deep(.el-input__wrapper.is-focus) {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light), 0 0 0 1px var(--color-primary) inset;
+  box-shadow:
+    0 0 0 3px var(--color-primary-light),
+    0 0 0 1px var(--color-primary) inset;
 }
 
 .options-row {

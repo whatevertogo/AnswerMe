@@ -14,9 +14,10 @@ export function formatQuestionForCopy(question: GeneratedQuestion): string {
   // 选项文本
   let optionsText = ''
   if (isChoiceQuestionData(question.data)) {
-    optionsText = question.data.options
-      .map((opt, idx) => `${String.fromCharCode(65 + idx)}. ${opt}`)
-      .join('\n') + '\n'
+    optionsText =
+      question.data.options
+        .map((opt, idx) => `${String.fromCharCode(65 + idx)}. ${opt}`)
+        .join('\n') + '\n'
   }
 
   // 答案文本

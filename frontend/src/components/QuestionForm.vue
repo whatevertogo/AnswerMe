@@ -13,7 +13,11 @@ import type {
   FillBlankQuestionData,
   ShortAnswerQuestionData
 } from '@/types/question'
-import { QuestionType as QuestionTypeEnum } from '@/types/question'
+import {
+  QuestionType as QuestionTypeEnum,
+  getQuestionCorrectAnswers,
+  getQuestionOptions
+} from '@/types/question'
 
 interface Props {
   question?: Question | null
@@ -61,7 +65,10 @@ const inputTagRef = ref<HTMLInputElement>()
 
 // 判断是否需要选项
 const needsOptions = computed(() => {
-  const choiceTypes: QuestionType[] = [QuestionTypeEnum.SingleChoice, QuestionTypeEnum.MultipleChoice]
+  const choiceTypes: QuestionType[] = [
+    QuestionTypeEnum.SingleChoice,
+    QuestionTypeEnum.MultipleChoice
+  ]
   return choiceTypes.includes(form.value.questionTypeEnum)
 })
 
@@ -71,19 +78,15 @@ const isMultipleChoice = computed(() => {
 })
 
 const rules: FormRules = {
-  questionBankId: [
-    { required: true, message: '请选择题库', trigger: 'change' }
-  ],
+  questionBankId: [{ required: true, message: '请选择题库', trigger: 'change' }],
   questionText: [
     { required: true, message: '请输入题目内容', trigger: 'blur' },
     { min: 5, max: 1000, message: '题目内容长度应在5-1000个字符之间', trigger: 'blur' }
   ],
-  questionTypeEnum: [
-    { required: true, message: '请选择题型', trigger: 'change' }
-  ],
+  questionTypeEnum: [{ required: true, message: '请选择题型', trigger: 'change' }],
   options: [
     {
-      validator: (_rule: any, _value: any, callback: any) => {
+      validator: (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
         if (needsOptions.value) {
           const options = form.value.options || []
           const validOptions = options.filter((opt: string) => opt && opt.trim())
@@ -99,12 +102,8 @@ const rules: FormRules = {
       trigger: 'change'
     }
   ],
-  correctAnswer: [
-    { required: true, message: '请配置正确答案', trigger: 'change' }
-  ],
-  difficulty: [
-    { required: true, message: '请选择难度', trigger: 'change' }
-  ]
+  correctAnswer: [{ required: true, message: '请配置正确答案', trigger: 'change' }],
+  difficulty: [{ required: true, message: '请选择难度', trigger: 'change' }]
 }
 
 const dialogTitle = computed(() => (props.mode === 'create' ? '创建题目' : '编辑题目'))
@@ -136,14 +135,13 @@ watch(
       // 编辑模式 - 需要适配新旧数据格式
       form.value = {
         questionBankId: props.questionBankId ? Number(props.questionBankId) : 0,
-        // 兼容新旧数据格式
-        questionText: (props.question as any).questionText || (props.question as any).content || '',
-        questionTypeEnum: normalizeQuestionType((props.question as any).questionType || (props.question as any).type),
-        options: (props.question as any).data?.options || (props.question as any).options || ['', '', '', ''],
+        questionText: props.question.questionText || '',
+        questionTypeEnum: normalizeQuestionType(props.question.questionTypeEnum),
+        options: getQuestionOptions(props.question) || ['', '', '', ''],
         correctAnswer: extractCorrectAnswer(props.question),
-        explanation: props.question.explanation || (props.question as any).data?.explanation || '',
-        difficulty: (props.question as any).data?.difficulty || props.question.difficulty || 'medium',
-        tags: (props.question as any).tags || []
+        explanation: props.question.explanation || '',
+        difficulty: props.question.difficulty || 'medium',
+        tags: props.question.tags || []
       }
     } else if (val && props.mode === 'create') {
       // 创建模式
@@ -179,30 +177,14 @@ function normalizeQuestionType(type: string | undefined): QuestionType {
 }
 
 function extractCorrectAnswer(question: Question): string {
-  const data = (question as any).data as QuestionData | undefined
-  if (data) {
-    if ((data as ChoiceQuestionData).correctAnswers) {
-      return (data as ChoiceQuestionData).correctAnswers.join(',')
-    }
-    if ((data as BooleanQuestionData).correctAnswer !== undefined) {
-      return (data as BooleanQuestionData).correctAnswer ? 'true' : 'false'
-    }
-    if ((data as FillBlankQuestionData).acceptableAnswers) {
-      return (data as FillBlankQuestionData).acceptableAnswers.join(',')
-    }
-    if ((data as ShortAnswerQuestionData).referenceAnswer) {
-      return (data as ShortAnswerQuestionData).referenceAnswer
-    }
+  const answer = getQuestionCorrectAnswers(question)
+  if (typeof answer === 'boolean') {
+    return answer ? 'true' : 'false'
   }
-  // 处理旧字段格式（可能是 string, string[], boolean）
-  const legacyAnswer = question.correctAnswer
-  if (typeof legacyAnswer === 'boolean') {
-    return legacyAnswer ? 'true' : 'false'
+  if (Array.isArray(answer)) {
+    return answer.join(',')
   }
-  if (Array.isArray(legacyAnswer)) {
-    return legacyAnswer.join(',')
-  }
-  return legacyAnswer || ''
+  return answer || ''
 }
 
 // 监听题型变化,自动调整答案格式
@@ -211,7 +193,8 @@ watch(
   (newType, oldType) => {
     if (newType === oldType) return
 
-    const needsOptions = newType === QuestionTypeEnum.SingleChoice || newType === QuestionTypeEnum.MultipleChoice
+    const needsOptions =
+      newType === QuestionTypeEnum.SingleChoice || newType === QuestionTypeEnum.MultipleChoice
     const isTrueFalse = newType === QuestionTypeEnum.TrueFalse
 
     form.value.options = needsOptions ? ['', '', '', ''] : undefined
@@ -238,9 +221,9 @@ const handleRemoveOption = (index: number) => {
   }
 }
 
-const handleOptionChange = (index: number, value: any) => {
+const handleOptionChange = (index: number, value: unknown) => {
   if (form.value.options) {
-    form.value.options[index] = value as string
+    form.value.options[index] = String(value ?? '')
   }
 }
 
@@ -329,8 +312,10 @@ function buildQuestionData(): QuestionData | undefined {
   const explanation = form.value.explanation || undefined
   const difficulty = form.value.difficulty
 
-  if (form.value.questionTypeEnum === QuestionTypeEnum.SingleChoice ||
-      form.value.questionTypeEnum === QuestionTypeEnum.MultipleChoice) {
+  if (
+    form.value.questionTypeEnum === QuestionTypeEnum.SingleChoice ||
+    form.value.questionTypeEnum === QuestionTypeEnum.MultipleChoice
+  ) {
     const options = (form.value.options || []).map(opt => opt.trim()).filter(Boolean)
     const answers = Array.isArray(form.value.correctAnswer)
       ? form.value.correctAnswer
@@ -391,20 +376,9 @@ function buildQuestionData(): QuestionData | undefined {
     :close-on-click-modal="false"
     @close="handleClose"
   >
-    <el-form
-      ref="formRef"
-      :model="form"
-      :rules="rules"
-      label-width="100px"
-      :disabled="loading"
-    >
-
+    <el-form ref="formRef" :model="form" :rules="rules" label-width="100px" :disabled="loading">
       <el-form-item label="题型" prop="questionTypeEnum">
-        <el-select
-          v-model="form.questionTypeEnum"
-          placeholder="请选择题型"
-          style="width: 100%"
-        >
+        <el-select v-model="form.questionTypeEnum" placeholder="请选择题型" style="width: 100%">
           <el-option
             v-for="option in questionTypeOptions"
             :key="option.value"
@@ -429,34 +403,24 @@ function buildQuestionData(): QuestionData | undefined {
       <template v-if="needsOptions">
         <el-form-item label="选项" prop="options" required>
           <div class="options-container">
-            <div
-              v-for="(option, index) in form.options"
-              :key="index"
-              class="option-item"
-            >
+            <div v-for="(option, index) in form.options" :key="index" class="option-item">
               <span class="option-label">{{ getOptionLabel(index) }}.</span>
               <el-input
                 :model-value="option"
-                @update:model-value="(val: any) => handleOptionChange(index, val as string)"
                 placeholder="请输入选项内容"
                 maxlength="200"
+                @update:model-value="(val: string) => handleOptionChange(index, val)"
               >
                 <template #append>
                   <el-button
                     :icon="Delete"
-                    @click="handleRemoveOption(index)"
                     :disabled="form.options!.length <= 2"
+                    @click="handleRemoveOption(index)"
                   />
                 </template>
               </el-input>
             </div>
-            <el-button
-              type="primary"
-              plain
-              size="small"
-              @click="handleAddOption"
-              :icon="Plus"
-            >
+            <el-button type="primary" plain size="small" :icon="Plus" @click="handleAddOption">
               添加选项
             </el-button>
           </div>
@@ -480,20 +444,27 @@ function buildQuestionData(): QuestionData | undefined {
       </template>
 
       <!-- 判断题答案 -->
-      <el-form-item label="正确答案" prop="correctAnswer" v-else-if="form.questionTypeEnum === QuestionTypeEnum.TrueFalse">
+      <el-form-item
+        v-else-if="form.questionTypeEnum === QuestionTypeEnum.TrueFalse"
+        label="正确答案"
+        prop="correctAnswer"
+      >
         <el-radio-group v-model="form.correctAnswer">
-          <el-radio
-            v-for="option in trueFalseOptions"
-            :key="option.value"
-            :label="option.value"
-          >
+          <el-radio v-for="option in trueFalseOptions" :key="option.value" :label="option.value">
             {{ option.label }}
           </el-radio>
         </el-radio-group>
       </el-form-item>
 
       <!-- 填空题答案 -->
-      <el-form-item label="参考答案" prop="correctAnswer" v-else-if="form.questionTypeEnum === QuestionTypeEnum.FillBlank || form.questionTypeEnum === QuestionTypeEnum.ShortAnswer">
+      <el-form-item
+        v-else-if="
+          form.questionTypeEnum === QuestionTypeEnum.FillBlank ||
+          form.questionTypeEnum === QuestionTypeEnum.ShortAnswer
+        "
+        label="参考答案"
+        prop="correctAnswer"
+      >
         <el-input
           v-model="form.correctAnswer"
           type="textarea"
@@ -506,11 +477,7 @@ function buildQuestionData(): QuestionData | undefined {
 
       <el-form-item label="难度" prop="difficulty">
         <el-radio-group v-model="form.difficulty">
-          <el-radio
-            v-for="option in difficultyOptions"
-            :key="option.value"
-            :label="option.value"
-          >
+          <el-radio v-for="option in difficultyOptions" :key="option.value" :label="option.value">
             {{ option.label }}
           </el-radio>
         </el-radio-group>
@@ -533,8 +500,8 @@ function buildQuestionData(): QuestionData | undefined {
             v-for="tag in form.tags"
             :key="tag"
             closable
-            @close="handleTagClose(tag)"
             style="margin-right: 8px"
+            @close="handleTagClose(tag)"
           >
             {{ tag }}
           </el-tag>
@@ -547,13 +514,7 @@ function buildQuestionData(): QuestionData | undefined {
             @blur="handleTagInputConfirm"
             @keyup.enter="handleTagInputConfirm"
           />
-          <el-button
-            v-else
-            size="small"
-            @click="showTagInput"
-          >
-            + 添加标签
-          </el-button>
+          <el-button v-else size="small" @click="showTagInput"> + 添加标签 </el-button>
         </div>
       </el-form-item>
     </el-form>

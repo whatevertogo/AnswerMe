@@ -10,7 +10,9 @@ import type {
 /**
  * 获取题库列表（游标分页）
  */
-export function getQuestionBanks(params: QuestionBankQueryParams): Promise<QuestionBankListResponse> {
+export function getQuestionBanks(
+  params: QuestionBankQueryParams
+): Promise<QuestionBankListResponse> {
   return request.get('/questionbanks', { params })
 }
 
@@ -38,10 +40,7 @@ export function createQuestionBank(data: CreateQuestionBankDto): Promise<Questio
 /**
  * 更新题库
  */
-export function updateQuestionBank(
-  id: number,
-  data: UpdateQuestionBankDto
-): Promise<QuestionBank> {
+export function updateQuestionBank(id: number, data: UpdateQuestionBankDto): Promise<QuestionBank> {
   return request.put(`/questionbanks/${id}`, data)
 }
 

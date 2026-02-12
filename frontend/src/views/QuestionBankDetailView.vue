@@ -13,8 +13,12 @@ import {
 } from '@element-plus/icons-vue'
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionBankForm from '@/components/QuestionBankForm.vue'
-import type { QuestionBank } from '@/stores/questionBank'
-import { getQuestionTypeLabel, getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
+import type { Question, QuestionBank } from '@/stores/questionBank'
+import {
+  getQuestionTypeLabel,
+  getQuestionOptions,
+  getQuestionCorrectAnswers
+} from '@/types/question'
 
 const route = useRoute()
 const router = useRouter()
@@ -102,7 +106,7 @@ const handleExport = async () => {
     // 调用后端导出API
     const response = await fetch(`/api/questionbanks/${bankId.value}/export`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${localStorage.getItem('token')}`
       }
     })
 
@@ -152,11 +156,11 @@ const handleFormClose = () => {
 // 题目类型标签颜色
 const getQuestionTypeTagType = (type: string): string => {
   const typeMap: Record<string, string> = {
-    'SingleChoice': 'success',
-    'MultipleChoice': 'warning',
-    'TrueFalse': 'info',
-    'FillBlank': '',
-    'ShortAnswer': ''
+    SingleChoice: 'success',
+    MultipleChoice: 'warning',
+    TrueFalse: 'info',
+    FillBlank: '',
+    ShortAnswer: ''
   }
   return typeMap[type] || ''
 }
@@ -164,25 +168,25 @@ const getQuestionTypeTagType = (type: string): string => {
 // 题目难度标签颜色
 const getDifficultyTagType = (difficulty: string): string => {
   const typeMap: Record<string, string> = {
-    'easy': 'success',
-    'medium': 'warning',
-    'hard': 'danger'
+    easy: 'success',
+    medium: 'warning',
+    hard: 'danger'
   }
   return typeMap[difficulty] || ''
 }
 
 // 获取题目显示文本
-const getQuestionDisplayText = (question: any) => {
+const getQuestionDisplayText = (question: Question) => {
   return question.questionText || ''
 }
 
 // 获取题型显示文本
-const getQuestionTypeDisplay = (question: any) => {
+const getQuestionTypeDisplay = (question: Question) => {
   return getQuestionTypeLabel(question.questionTypeEnum)
 }
 
 // 获取正确答案显示文本
-const getCorrectAnswerDisplay = (question: any): string => {
+const getCorrectAnswerDisplay = (question: Question): string => {
   const answer = getQuestionCorrectAnswers(question)
   if (Array.isArray(answer)) {
     return answer.join(', ')
@@ -214,7 +218,8 @@ const getOptionIndex = (index: number) => {
           <p class="description">{{ currentQuestionBank.description || '暂无描述' }}</p>
           <div class="meta">
             <span
-              ><el-icon><Document /></el-icon> 共 {{ currentQuestionBank.questionCount }} 道题目</span
+              ><el-icon><Document /></el-icon> 共
+              {{ currentQuestionBank.questionCount }} 道题目</span
             >
             <span
               ><el-icon><Clock /></el-icon> 创建于
@@ -249,11 +254,7 @@ const getOptionIndex = (index: number) => {
         <span>题目列表</span>
       </template>
 
-      <el-empty
-        v-if="questions.length === 0"
-        description="暂无题目"
-        :image-size="120"
-      >
+      <el-empty v-if="questions.length === 0" description="暂无题目" :image-size="120">
         <el-button type="primary" @click="handleGenerateQuestions">AI 生成题目</el-button>
         <el-button @click="handleAddQuestion">手动添加</el-button>
       </el-empty>
@@ -270,11 +271,13 @@ const getOptionIndex = (index: number) => {
               {{ getQuestionTypeDisplay(question) }}
             </el-tag>
             <el-tag size="small" :type="getDifficultyTagType(question.difficulty)">
-              {{ question.difficulty === 'easy'
-                ? '简单'
-                : question.difficulty === 'medium'
-                  ? '中等'
-                  : '困难' }}
+              {{
+                question.difficulty === 'easy'
+                  ? '简单'
+                  : question.difficulty === 'medium'
+                    ? '中等'
+                    : '困难'
+              }}
             </el-tag>
           </div>
 
@@ -302,12 +305,7 @@ const getOptionIndex = (index: number) => {
           </div>
 
           <div v-if="question.tags && question.tags.length > 0" class="question-tags">
-            <el-tag
-              v-for="tag in question.tags"
-              :key="tag"
-              size="small"
-              type="info"
-            >
+            <el-tag v-for="tag in question.tags" :key="tag" size="small" type="info">
               {{ tag }}
             </el-tag>
           </div>

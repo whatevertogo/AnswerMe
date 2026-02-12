@@ -1,14 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { authApi } from '../auth'
-import request from '@/utils/request'
 import type { LoginDto, RegisterDto, AuthResponseDto } from '@/types'
 
-// Mock axios module
-vi.mock('@/utils/request', () => ({
-  default: {
+const { mockRequest } = vi.hoisted(() => ({
+  mockRequest: {
     post: vi.fn(),
     get: vi.fn()
   }
+}))
+
+// Mock axios module
+vi.mock('@/utils/request', () => ({
+  request: mockRequest
 }))
 
 describe('Auth API', () => {
@@ -32,11 +35,11 @@ describe('Auth API', () => {
       }
     }
 
-    vi.mocked(request.post).mockResolvedValue(mockResponse)
+    vi.mocked(mockRequest.post).mockResolvedValue(mockResponse)
 
     await authApi.login(mockLoginData)
 
-    expect(request.post).toHaveBeenCalledWith('/auth/login', mockLoginData)
+    expect(mockRequest.post).toHaveBeenCalledWith('/auth/login', mockLoginData)
   })
 
   it('register应该调用正确的API端点', async () => {
@@ -56,11 +59,11 @@ describe('Auth API', () => {
       }
     }
 
-    vi.mocked(request.post).mockResolvedValue(mockResponse)
+    vi.mocked(mockRequest.post).mockResolvedValue(mockResponse)
 
     await authApi.register(mockRegisterData)
 
-    expect(request.post).toHaveBeenCalledWith('/auth/register', mockRegisterData)
+    expect(mockRequest.post).toHaveBeenCalledWith('/auth/register', mockRegisterData)
   })
 
   it('getCurrentUser应该调用正确的API端点', async () => {
@@ -71,10 +74,10 @@ describe('Auth API', () => {
       createdAt: '2024-01-01T00:00:00Z'
     }
 
-    vi.mocked(request.get).mockResolvedValue(mockUser)
+    vi.mocked(mockRequest.get).mockResolvedValue(mockUser)
 
     await authApi.getCurrentUser()
 
-    expect(request.get).toHaveBeenCalledWith('/auth/me')
+    expect(mockRequest.get).toHaveBeenCalledWith('/auth/me')
   })
 })

@@ -4,27 +4,18 @@
  */
 
 /**
- * 将答案格式化为提交格式（JSON 数组字符串）
+ * 将答案格式化为后端提交格式
  * @param answer 答案（字符串或数组）
- * @returns JSON 数组字符串
+ * @returns 字符串答案（多选时为 JSON 数组字符串）
  */
 export function formatAnswerForSubmit(answer: string | string[]): string {
   if (Array.isArray(answer)) {
-    return JSON.stringify(answer)
+    // 后端多选兼容 JSON 数组和逗号分隔，统一发送 JSON 数组
+    return JSON.stringify(answer.filter(Boolean))
   }
 
-  // 如果是 JSON 数组字符串，直接返回
-  if (answer.trim().startsWith('[')) {
-    return answer
-  }
-
-  // 如果是逗号分隔字符串，转换为数组再序列化
-  if (answer.includes(',')) {
-    return JSON.stringify(answer.split(',').map(a => a.trim()))
-  }
-
-  // 单个答案，包装为数组
-  return JSON.stringify([answer])
+  // 单选/判断/填空/简答：按原始文本提交
+  return answer.trim()
 }
 
 /**

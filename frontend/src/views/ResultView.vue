@@ -5,6 +5,7 @@ import { ArrowLeft, TrendCharts, Check, Close, Clock, Document } from '@element-
 import { ElMessage } from 'element-plus'
 import { getQuizResult, getQuizDetails } from '@/api/quiz'
 import type { QuizResult, QuizDetail } from '@/api/quiz'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,8 +19,15 @@ const attemptId = computed(() => parseInt(sessionId.value))
 
 // 统计数据
 const correctCount = computed(() => details.value.filter(d => d.isCorrect).length)
-const incorrectCount = computed(() => details.value.filter(d => !d.isCorrect && d.userAnswer).length)
-const unansweredCount = computed(() => details.value.filter(d => !d.userAnswer || (Array.isArray(d.userAnswer) && d.userAnswer.length === 0)).length)
+const incorrectCount = computed(
+  () => details.value.filter(d => !d.isCorrect && d.userAnswer).length
+)
+const unansweredCount = computed(
+  () =>
+    details.value.filter(
+      d => !d.userAnswer || (Array.isArray(d.userAnswer) && d.userAnswer.length === 0)
+    ).length
+)
 
 // 格式化时间
 const formatDuration = (seconds: number) => {
@@ -69,8 +77,8 @@ async function loadResult() {
 
     result.value = resultRes
     details.value = detailsRes
-  } catch (error: any) {
-    ElMessage.error('加载结果失败: ' + (error.message || '未知错误'))
+  } catch (error: unknown) {
+    ElMessage.error('加载结果失败: ' + extractErrorMessage(error, '未知错误'))
     console.error('加载结果失败:', error)
   } finally {
     loading.value = false
@@ -187,27 +195,19 @@ onMounted(() => {
           >
             <div class="detail-header">
               <span class="question-number">第 {{ index + 1 }} 题</span>
+              <el-tag v-if="detail.isCorrect" type="success" size="small"> 正确 </el-tag>
               <el-tag
-                v-if="detail.isCorrect"
-                type="success"
-                size="small"
-              >
-                正确
-              </el-tag>
-              <el-tag
-                v-else-if="detail.userAnswer && !(Array.isArray(detail.userAnswer) && detail.userAnswer.length === 0)"
+                v-else-if="
+                  detail.userAnswer &&
+                  !(Array.isArray(detail.userAnswer) && detail.userAnswer.length === 0)
+                "
                 type="danger"
                 size="small"
               >
                 错误
               </el-tag>
               <el-tag v-else type="info" size="small">未作答</el-tag>
-              <el-button
-                type="primary"
-                size="small"
-                text
-                @click="showAnswer(detail)"
-              >
+              <el-button type="primary" size="small" text @click="showAnswer(detail)">
                 查看解析
               </el-button>
             </div>

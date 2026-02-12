@@ -58,21 +58,15 @@ export const STORAGE_KEYS = {
 
 // ==================== 难度级别 ====================
 export const DIFFICULTY_LEVELS = ['easy', 'medium', 'hard'] as const
-export type DifficultyLevel = typeof DIFFICULTY_LEVELS[number]
+export type DifficultyLevel = (typeof DIFFICULTY_LEVELS)[number]
 
 // ==================== 题目类型 ====================
-export const QUESTION_TYPES = [
-  'single',
-  'multiple',
-  'boolean',
-  'fill',
-  'essay'
-] as const
-export type QuestionType = typeof QUESTION_TYPES[number]
+export const QUESTION_TYPES = ['single', 'multiple', 'boolean', 'fill', 'essay'] as const
+export type QuestionType = (typeof QUESTION_TYPES)[number]
 
 // ==================== 答题模式 ====================
 export const QUIZ_MODES = ['sequential', 'random'] as const
-export type QuizMode = typeof QUIZ_MODES[number]
+export type QuizMode = (typeof QUIZ_MODES)[number]
 
 // ==================== 时间相关 ====================
 export const TIME_FORMAT = 'mm:ss'

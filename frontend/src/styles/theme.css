@@ -5,14 +5,14 @@
  * ============================================================
  */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* ─────────────────────────────────────────────
    引入衬线字体
    ───────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ─────────────────────────────────────────────
    设计令牌 — 书卷知识空间：深棕、米白、衬线体
@@ -193,6 +193,7 @@ body {
   font-weight: 400;
   letter-spacing: 0.02em;
   line-height: 1.7;
+  position: relative;
 }
 
 /* 英文元素使用 Cormorant Garamond */
@@ -237,6 +238,11 @@ body,
   width: 100%;
 }
 
+#app {
+  position: relative;
+  z-index: 1;
+}
+
 /* ─────────────────────────────────────────────
    纸张纹理系统 - 轻微质感
    ───────────────────────────────────────────── */
@@ -247,7 +253,7 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 0;
   opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
   mix-blend-mode: multiply;
@@ -368,7 +374,12 @@ body::before {
   border-radius: 50%;
   border: 1px solid var(--color-primary);
   opacity: 0;
+  z-index: -1;
   animation: ripple 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+.timeline-dot {
+  position: relative;
 }
 
 .timeline-dot:hover::after {

@@ -92,7 +92,10 @@ export const createDataSourceApi = (params: CreateDataSourceParams): Promise<Dat
  * 更新数据源
  * PUT /api/datasource/:id
  */
-export const updateDataSourceApi = (id: number, params: UpdateDataSourceParams): Promise<DataSource> => {
+export const updateDataSourceApi = (
+  id: number,
+  params: UpdateDataSourceParams
+): Promise<DataSource> => {
   return request.put(`/datasource/${id}`, params)
 }
 

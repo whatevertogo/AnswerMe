@@ -45,20 +45,20 @@ instance.interceptors.response.use(
   error => {
     const { response } = error
     let message = '请求失败'
-    let showError = true // 控制是否显示错误消息
+    const showError = true // 控制是否显示错误消息
 
     if (response) {
       // 尝试从错误响应中提取消息（支持新旧两种格式）
       const errorMessage =
         response.data?.error?.message || // 新格式: { error: { message } }
-        response.data?.message ||        // 旧格式: { message }
+        response.data?.message || // 旧格式: { message }
         '请求失败'
 
       switch (response.status) {
         case 400:
           message = errorMessage
           break
-        case 401:
+        case 401: {
           message = '登录已过期，请重新登录'
           // 清除用户状态
           const authStore = useAuthStore()
@@ -68,6 +68,7 @@ instance.interceptors.response.use(
             router.push('/login')
           }
           break
+        }
         case 403:
           message = '拒绝访问'
           break
@@ -111,19 +112,19 @@ export default instance
 // 类型安全的请求方法
 // 响应拦截器已经自动解包 response.data
 export const request = {
-  get: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+  get: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> => {
     return instance.get<T>(url, config).then(res => res.data)
   },
-  post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+  post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
     return instance.post<T>(url, data, config).then(res => res.data)
   },
-  put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+  put: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
     return instance.put<T>(url, data, config).then(res => res.data)
   },
-  delete: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+  delete: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> => {
     return instance.delete<T>(url, config).then(res => res.data)
   },
-  patch: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+  patch: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
     return instance.patch<T>(url, data, config).then(res => res.data)
   }
 }

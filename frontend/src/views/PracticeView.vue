@@ -7,6 +7,7 @@ import { useQuestionBankStore } from '@/stores/questionBank'
 import { useAuthStore } from '@/stores/auth'
 import type { QuestionBank } from '@/stores/questionBank'
 import { DifficultyLabels, DifficultyColors } from '@/types/question'
+import { extractErrorMessage } from '@/utils/errorHandler'
 
 const router = useRouter()
 const questionBankStore = useQuestionBankStore()
@@ -94,8 +95,8 @@ const handleStartPractice = async (bank: QuestionBank) => {
     }
 
     router.push(`/quiz/${bank.id}/new`)
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || '验证题库失败，请重试'
+  } catch (error: unknown) {
+    const errorMessage = extractErrorMessage(error, '验证题库失败，请重试')
     ElMessage.error(errorMessage)
   } finally {
     loading.value = false
@@ -219,10 +220,7 @@ const formatDate = (dateString: string) => {
         </el-table-column>
 
         <template #empty>
-          <el-empty
-            description="暂无题库"
-            :image-size="120"
-          >
+          <el-empty description="暂无题库" :image-size="120">
             <el-button type="primary" @click="handleCreateBank">创建题库</el-button>
             <el-button @click="handleGenerateQuestions">生成题目</el-button>
           </el-empty>
@@ -230,12 +228,7 @@ const formatDate = (dateString: string) => {
       </el-table>
 
       <div v-if="questionBankStore.hasMore" class="pagination-wrapper">
-        <el-button
-          :loading="loading"
-          @click="fetchQuestionBanks()"
-        >
-          加载更多
-        </el-button>
+        <el-button :loading="loading" @click="fetchQuestionBanks()"> 加载更多 </el-button>
       </div>
     </div>
   </div>

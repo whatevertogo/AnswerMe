@@ -70,7 +70,7 @@ const observeScrollReveal = () => {
 
     // 创建 Intersection Observer
     observer.value = new IntersectionObserver(
-      (entries) => {
+      entries => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             entry.target.classList.add('visible')
@@ -161,7 +161,7 @@ const handleLogout = async () => {
 
         <!-- 用户信息 -->
         <div class="user-section">
-          <el-dropdown @command="handleCommand" trigger="click">
+          <el-dropdown trigger="click" @command="handleCommand">
             <div class="user-dropdown">
               <el-avatar :size="36" class="user-avatar">
                 <el-icon><User /></el-icon>
@@ -191,9 +191,9 @@ const handleLogout = async () => {
     <!-- 内容区域 -->
     <main class="app-main">
       <div class="content-container">
-        <router-view v-slot="{ Component, route }">
-          <transition :name="(route.meta?.transition as string) || 'fade'" mode="out-in">
-            <component :is="Component" :key="route.path" />
+        <router-view v-slot="{ Component, route: currentRoute }">
+          <transition :name="(currentRoute.meta?.transition as string) || 'fade'" mode="out-in">
+            <component :is="Component" :key="currentRoute.path" />
           </transition>
         </router-view>
       </div>
@@ -264,7 +264,7 @@ const handleLogout = async () => {
 .nav-item.active {
   background: var(--color-primary-gradient);
   color: white;
-  box-shadow: 0 2px 8px rgba(61, 40, 23, 0.20);
+  box-shadow: 0 2px 8px rgba(61, 40, 23, 0.2);
 }
 
 .nav-text {

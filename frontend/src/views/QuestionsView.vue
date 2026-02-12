@@ -7,7 +7,14 @@ import { useQuestionStore } from '@/stores/question'
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionForm from '@/components/QuestionForm.vue'
 import type { Question } from '@/stores/question'
-import { getQuestionCorrectAnswers, getQuestionOptions, getQuestionTypeLabel, DifficultyLabels, DifficultyColors, QuestionType } from '@/types/question'
+import {
+  getQuestionCorrectAnswers,
+  getQuestionOptions,
+  getQuestionTypeLabel,
+  DifficultyLabels,
+  DifficultyColors,
+  QuestionType
+} from '@/types/question'
 
 const route = useRoute()
 const questionStore = useQuestionStore()
@@ -25,7 +32,9 @@ const formMode = ref<'create' | 'edit'>('create')
 const currentQuestion = ref<Question | null>(null)
 
 // 当前题库ID
-const currentBankId = computed(() => route.params.bankId as string || route.query.bankId as string || '')
+const currentBankId = computed(
+  () => (route.params.bankId as string) || (route.query.bankId as string) || ''
+)
 
 onMounted(async () => {
   if (currentBankId.value) {
@@ -38,15 +47,18 @@ onMounted(async () => {
 const fetchQuestions = async (options?: { append?: boolean }) => {
   loading.value = true
   try {
-    const lastId = options?.append ? questionStore.pagination.nextCursor ?? undefined : undefined
-    await questionStore.fetchQuestions({
-      pageSize: 20,
-      lastId,
-      questionBankId: Number(currentBankId.value) || undefined,
-      questionTypeEnum: selectedType.value || undefined,
-      difficulty: selectedDifficulty.value || undefined,
-      search: searchKeyword.value || undefined
-    }, { append: options?.append })
+    const lastId = options?.append ? (questionStore.pagination.nextCursor ?? undefined) : undefined
+    await questionStore.fetchQuestions(
+      {
+        pageSize: 20,
+        lastId,
+        questionBankId: Number(currentBankId.value) || undefined,
+        questionTypeEnum: selectedType.value || undefined,
+        difficulty: selectedDifficulty.value || undefined,
+        search: searchKeyword.value || undefined
+      },
+      { append: options?.append }
+    )
   } catch {
     ElMessage.error('获取题目列表失败')
   } finally {
@@ -83,8 +95,7 @@ const handleEdit = (question: Question) => {
 
 const handleDelete = async (question: Question) => {
   try {
-    // 兼容新旧数据格式
-    const questionText = (question as any).questionText || (question as any).content || ''
+    const questionText = question.questionText || ''
     const displayText = questionText.substring(0, 50)
 
     await ElMessageBox.confirm(
@@ -130,12 +141,12 @@ const handleBackToBank = () => {
 // 题型颜色映射（与标签不同，保留在本地）
 const getQuestionTypeColor = (type: string) => {
   const colors: Record<string, string> = {
-    'SingleChoice': 'primary',
-    'MultipleChoice': 'success',
-    'TrueFalse': 'warning',
-    'FillBlank': 'info',
-    'ShortAnswer': 'info',
-    'choice': 'primary',
+    SingleChoice: 'primary',
+    MultipleChoice: 'success',
+    TrueFalse: 'warning',
+    FillBlank: 'info',
+    ShortAnswer: 'info',
+    choice: 'primary',
     'multiple-choice': 'success',
     'true-false': 'warning',
     'short-answer': 'info'
@@ -144,7 +155,7 @@ const getQuestionTypeColor = (type: string) => {
 }
 
 const formatCorrectAnswer = (question: Question) => {
-  const answer = getQuestionCorrectAnswers(question as any)
+  const answer = getQuestionCorrectAnswers(question)
 
   if (answer === undefined || answer === null || answer === '') return '-'
 
@@ -169,20 +180,22 @@ const formatCorrectAnswer = (question: Question) => {
             :icon="ArrowLeft"
             circle
             size="small"
-            @click="handleBackToBank"
             class="back-button"
+            @click="handleBackToBank"
           />
           <div>
             <h2 class="page-title">
-              {{ currentBankId ? `${questionBankStore.currentBank?.name || '题库'} - 题目管理` : '题目管理' }}
+              {{
+                currentBankId
+                  ? `${questionBankStore.currentBank?.name || '题库'} - 题目管理`
+                  : '题目管理'
+              }}
             </h2>
             <p class="page-subtitle">管理题目,创建和编辑题目内容</p>
           </div>
         </div>
       </div>
-      <el-button type="primary" :icon="Plus" @click="handleCreate">
-        创建题目
-      </el-button>
+      <el-button type="primary" :icon="Plus" @click="handleCreate"> 创建题目 </el-button>
     </div>
 
     <!-- 搜索和筛选 -->
@@ -195,12 +208,7 @@ const formatCorrectAnswer = (question: Question) => {
         class="search-input"
         @clear="fetchQuestions()"
       />
-      <el-select
-        v-model="selectedType"
-        placeholder="题型筛选"
-        clearable
-        class="filter-select"
-      >
+      <el-select v-model="selectedType" placeholder="题型筛选" clearable class="filter-select">
         <el-option label="单选题" :value="QuestionType.SingleChoice" />
         <el-option label="多选题" :value="QuestionType.MultipleChoice" />
         <el-option label="判断题" :value="QuestionType.TrueFalse" />
@@ -222,26 +230,20 @@ const formatCorrectAnswer = (question: Question) => {
 
     <!-- 题目表格 -->
     <el-card class="table-card" shadow="never">
-      <el-table
-        v-loading="loading"
-        :data="questionStore.questions"
-        style="width: 100%"
-        stripe
-      >
+      <el-table v-loading="loading" :data="questionStore.questions" style="width: 100%" stripe>
         <el-table-column prop="questionText" label="题目内容" min-width="300">
           <template #default="{ row }">
             <div class="question-content">
-              <span class="question-text" :title="(row as any).content || (row as any).questionText">{{ (row as any).content || (row as any).questionText }}</span>
+              <span class="question-text" :title="row.questionText">{{ row.questionText }}</span>
               <div class="question-meta">
-                <el-tag
-                  :type="getQuestionTypeColor((row as any).questionType || (row as any).type)"
-                  size="small"
-                >
-                  {{ getQuestionTypeLabel((row as any).questionType || (row as any).type) }}
+                <el-tag :type="getQuestionTypeColor(row.questionTypeEnum)" size="small">
+                  {{ getQuestionTypeLabel(row.questionTypeEnum) }}
                 </el-tag>
                 <el-tag
                   v-if="row.difficulty"
-                  :type="DifficultyColors[row.difficulty as keyof typeof DifficultyColors] || 'info'"
+                  :type="
+                    DifficultyColors[row.difficulty as keyof typeof DifficultyColors] || 'info'
+                  "
                   size="small"
                 >
                   {{ DifficultyLabels[row.difficulty as keyof typeof DifficultyLabels] || '未知' }}
@@ -254,12 +256,22 @@ const formatCorrectAnswer = (question: Question) => {
         <el-table-column label="选项/答案" min-width="250">
           <template #default="{ row }">
             <div class="answer-cell">
-              <div v-if="(row as any).questionType === QuestionType.SingleChoice || (row as any).questionType === QuestionType.MultipleChoice || (row as any).type === 'choice' || (row as any).type === 'multiple-choice'" class="options-preview">
-                <div v-for="(opt, idx) in getQuestionOptions(row as any).slice(0, 2)" :key="idx" class="option-line">
+              <div
+                v-if="
+                  row.questionTypeEnum === QuestionType.SingleChoice ||
+                  row.questionTypeEnum === QuestionType.MultipleChoice
+                "
+                class="options-preview"
+              >
+                <div
+                  v-for="(opt, idx) in getQuestionOptions(row).slice(0, 2)"
+                  :key="idx"
+                  class="option-line"
+                >
                   {{ String.fromCharCode(65 + (idx as number)) }}. {{ opt }}
                 </div>
-                <span v-if="getQuestionOptions(row as any).length > 2" class="more-hint">
-                  +{{ getQuestionOptions(row as any).length - 2 }} 个选项
+                <span v-if="getQuestionOptions(row).length > 2" class="more-hint">
+                  +{{ getQuestionOptions(row).length - 2 }} 个选项
                 </span>
               </div>
               <div v-else class="answer-preview">
@@ -283,9 +295,7 @@ const formatCorrectAnswer = (question: Question) => {
               >
                 {{ tag }}
               </el-tag>
-              <span v-if="row.tags.length > 3" class="more-tags">
-                +{{ row.tags.length - 3 }}
-              </span>
+              <span v-if="row.tags.length > 3" class="more-tags"> +{{ row.tags.length - 3 }} </span>
             </div>
             <span v-else class="text-muted">-</span>
           </template>
@@ -297,9 +307,7 @@ const formatCorrectAnswer = (question: Question) => {
               <el-button type="primary" size="small" :icon="View" @click="handleView(row)">
                 查看
               </el-button>
-              <el-button size="small" :icon="Edit" @click="handleEdit(row)">
-                编辑
-              </el-button>
+              <el-button size="small" :icon="Edit" @click="handleEdit(row)"> 编辑 </el-button>
               <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)">
                 删除
               </el-button>
@@ -308,10 +316,7 @@ const formatCorrectAnswer = (question: Question) => {
         </el-table-column>
 
         <template #empty>
-          <el-empty
-            description="暂无题目"
-            :image-size="120"
-          >
+          <el-empty description="暂无题目" :image-size="120">
             <el-button type="primary" @click="handleCreate">创建第一道题目</el-button>
           </el-empty>
         </template>

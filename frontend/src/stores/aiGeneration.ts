@@ -76,18 +76,22 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
       }
     } catch (err: unknown) {
       // 改进错误提示，特别是 API Key 相关错误
-      const errObj = err as { response?: { data?: { message?: string; errorCode?: string } }; message?: string }
+      const errObj = err as {
+        response?: { data?: { message?: string; errorCode?: string } }
+        message?: string
+      }
       const errorMessage = errObj.response?.data?.message || errObj.message || '生成题目时发生错误'
       const errorCode = errObj.response?.data?.errorCode || ''
 
       // 如果是 API Key 无效错误，提供更友好的提示
-      if (errorMessage.includes('Incorrect API key') ||
-          errorMessage.includes('invalid_api_key') ||
-          errorMessage.includes('401') ||
-          errorMessage.includes('Unauthorized')) {
+      if (
+        errorMessage.includes('Incorrect API key') ||
+        errorMessage.includes('invalid_api_key') ||
+        errorMessage.includes('401') ||
+        errorMessage.includes('Unauthorized')
+      ) {
         error.value = 'API Key 无效或未配置。请先在"AI配置"中添加有效的 API Key。'
-      } else if (errorMessage.includes('未找到有效的AI配置') ||
-                 errorCode === 'NO_DATA_SOURCE') {
+      } else if (errorMessage.includes('未找到有效的AI配置') || errorCode === 'NO_DATA_SOURCE') {
         error.value = '未找到 AI 配置。请先在"AI配置"中添加数据源。'
       } else {
         error.value = errorMessage

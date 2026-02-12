@@ -8,7 +8,7 @@ interface Props {
   totalQuestions: number
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 const getDifficultyClass = (difficulty: string): 'success' | 'warning' | 'danger' | 'info' => {
   return DifficultyColors[difficulty as keyof typeof DifficultyColors] || 'info'
@@ -34,9 +34,7 @@ const getTypeLabel = (type: string): string => {
   <div class="question-panel">
     <!-- 题目元信息 -->
     <div class="question-meta">
-      <span class="question-index">
-        第 {{ questionNumber }} 题 / 共 {{ totalQuestions }} 题
-      </span>
+      <span class="question-index"> 第 {{ questionNumber }} 题 / 共 {{ totalQuestions }} 题 </span>
       <el-divider direction="vertical" />
       <el-tag :type="getDifficultyClass(question.difficulty)" size="small">
         {{ getDifficultyLabel(question.difficulty) }}
