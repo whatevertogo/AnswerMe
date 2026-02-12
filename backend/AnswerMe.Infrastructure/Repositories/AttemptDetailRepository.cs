@@ -143,28 +143,77 @@ public class AttemptDetailRepository : IAttemptDetailRepository
         int weeks = 12,
         CancellationToken cancellationToken = default)
     {
-        var startDate = DateTime.UtcNow.AddDays(-weeks * 7);
+        if (weeks <= 0)
+        {
+            return new List<(DateTime weekStart, int attemptCount, int questionCount, int correctCount)>();
+        }
+
+        var currentWeekStart = GetWeekStart(DateTime.UtcNow);
+        var startWeek = currentWeekStart.AddDays(-(weeks - 1) * 7);
+        var endExclusive = currentWeekStart.AddDays(7);
 
         var attempts = await _context.Attempts
-            .Where(a => a.UserId == userId && a.CompletedAt != null && a.StartedAt >= startDate)
+            .Where(a => a.UserId == userId && a.CompletedAt != null && a.StartedAt >= startWeek && a.StartedAt < endExclusive)
+            .Select(a => new { a.Id, a.StartedAt })
             .ToListAsync(cancellationToken);
+
+        if (attempts.Count == 0)
+        {
+            var emptyWeeks = new List<(DateTime weekStart, int attemptCount, int questionCount, int correctCount)>();
+            for (var weekStart = startWeek; weekStart <= currentWeekStart; weekStart = weekStart.AddDays(7))
+            {
+                emptyWeeks.Add((weekStart, 0, 0, 0));
+            }
+
+            return emptyWeeks;
+        }
 
         var attemptIds = attempts.Select(a => a.Id).ToList();
 
         var details = await _context.AttemptDetails
             .Where(d => attemptIds.Contains(d.AttemptId))
+            .Select(d => new { d.AttemptId, d.IsCorrect })
             .ToListAsync(cancellationToken);
 
-        var result = attempts
+        var detailStatsByAttemptId = details
+            .GroupBy(d => d.AttemptId)
+            .ToDictionary(
+                g => g.Key,
+                g => (
+                    questionCount: g.Count(),
+                    correctCount: g.Count(x => x.IsCorrect == true)
+                ));
+
+        var attemptIdsByWeek = attempts
             .GroupBy(a => GetWeekStart(a.StartedAt))
-            .Select(g => (
-                weekStart: g.Key,
-                attemptCount: g.Count(),
-                questionCount: details.Count(d => d.AttemptId != null && g.Select(a => a.Id).Contains(d.AttemptId)),
-                correctCount: details.Count(d => d.AttemptId != null && g.Select(a => a.Id).Contains(d.AttemptId) && d.IsCorrect == true)
-            ))
-            .OrderBy(x => x.weekStart)
-            .ToList();
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => x.Id).ToList());
+
+        var result = new List<(DateTime weekStart, int attemptCount, int questionCount, int correctCount)>();
+        for (var weekStart = startWeek; weekStart <= currentWeekStart; weekStart = weekStart.AddDays(7))
+        {
+            if (!attemptIdsByWeek.TryGetValue(weekStart, out var weekAttemptIds))
+            {
+                result.Add((weekStart, 0, 0, 0));
+                continue;
+            }
+
+            var questionCount = 0;
+            var correctCount = 0;
+            foreach (var attemptId in weekAttemptIds)
+            {
+                if (!detailStatsByAttemptId.TryGetValue(attemptId, out var stats))
+                {
+                    continue;
+                }
+
+                questionCount += stats.questionCount;
+                correctCount += stats.correctCount;
+            }
+
+            result.Add((weekStart, weekAttemptIds.Count, questionCount, correctCount));
+        }
 
         return result;
     }

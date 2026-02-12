@@ -32,6 +32,7 @@ const bankStats = computed(() => stats.value?.bankStats ?? [])
 
 // 趋势数据（简化显示）
 const weeklyTrend = computed(() => stats.value?.weeklyTrend ?? [])
+const hasWeeklyTrendData = computed(() => weeklyTrend.value.some(week => week.questionCount > 0))
 
 onMounted(async () => {
   await loadStats()
@@ -62,7 +63,7 @@ function goToPractice(bankId?: number) {
 
 function formatWeekLabel(weekStart: string): string {
   const date = new Date(weekStart)
-  return `${date.getMonth() + 1}/${date.getDate()}`
+  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`
 }
 </script>
 
@@ -154,7 +155,7 @@ function formatWeekLabel(weekStart: string): string {
     </div>
 
     <!-- 正确率趋势 -->
-    <div v-if="weeklyTrend.length > 0" class="section">
+    <div v-if="hasWeeklyTrendData" class="section">
       <div class="section-header">
         <h3>正确率趋势 (近12周)</h3>
       </div>
@@ -163,7 +164,10 @@ function formatWeekLabel(weekStart: string): string {
         <div v-for="week in weeklyTrend" :key="week.weekStart" class="trend-bar">
           <div
             class="bar"
-            :style="{ height: `${week.accuracyRate}%` }"
+            :style="{
+              height: `${week.accuracyRate}%`,
+              minHeight: week.questionCount > 0 ? '4px' : '0'
+            }"
             :title="`${week.accuracyRate}% (${week.correctCount}/${week.questionCount})`"
           />
           <div class="bar-label">{{ formatWeekLabel(week.weekStart) }}</div>
@@ -308,7 +312,6 @@ function formatWeekLabel(weekStart: string): string {
 
 .bar {
   @apply w-full bg-primary rounded-t transition-all;
-  min-height: 4px;
 }
 
 .bar-label {
