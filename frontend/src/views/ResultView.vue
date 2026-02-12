@@ -1,10 +1,22 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, TrendCharts, Check, Close, Clock, Document } from '@element-plus/icons-vue'
+import {
+  ArrowLeft,
+  TrendCharts,
+  Check,
+  Close,
+  Clock,
+  Document,
+  MagicStick,
+  Search,
+  Download,
+  CopyDocument,
+  RefreshRight
+} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getQuizResult, getQuizDetails } from '@/api/quiz'
-import type { QuizResult, QuizDetail } from '@/api/quiz'
+import { getQuizResult, getQuizDetails, generateAttemptAISuggestions } from '@/api/quiz'
+import type { QuizResult, QuizDetail, AttemptAISuggestion } from '@/api/quiz'
 import { extractErrorMessage } from '@/utils/errorHandler'
 
 const route = useRoute()
@@ -13,21 +25,101 @@ const router = useRouter()
 const loading = ref(true)
 const result = ref<QuizResult | null>(null)
 const details = ref<QuizDetail[]>([])
+const generatingSuggestion = ref(false)
+const suggestion = ref<AttemptAISuggestion | null>(null)
+const suggestionError = ref('')
+const detailFilter = ref<'all' | 'incorrect' | 'unanswered' | 'slow'>('all')
+const detailSearchKeyword = ref('')
 
 const sessionId = computed(() => route.params.sessionId as string)
 const attemptId = computed(() => parseInt(sessionId.value))
 
+const hasUserAnswer = (detail: QuizDetail): boolean => {
+  if (Array.isArray(detail.userAnswer)) {
+    return detail.userAnswer.length > 0
+  }
+  return typeof detail.userAnswer === 'string' && detail.userAnswer.trim().length > 0
+}
+
+const hasAnsweredString = (answer: string | string[] | undefined): boolean => {
+  if (Array.isArray(answer)) {
+    return answer.length > 0
+  }
+  return typeof answer === 'string' && answer.trim().length > 0
+}
+
 // 统计数据
 const correctCount = computed(() => details.value.filter(d => d.isCorrect).length)
-const incorrectCount = computed(
-  () => details.value.filter(d => !d.isCorrect && d.userAnswer).length
+const answeredCount = computed(() => details.value.filter(hasUserAnswer).length)
+const incorrectCount = computed(() => Math.max(answeredCount.value - correctCount.value, 0))
+const unansweredCount = computed(() =>
+  Math.max((result.value?.totalQuestions || 0) - answeredCount.value, 0)
 )
-const unansweredCount = computed(
+const accuracyRate = computed(() => {
+  const total = result.value?.totalQuestions || 0
+  if (!total) return 0
+  return Number(((correctCount.value / total) * 100).toFixed(2))
+})
+const averageTimePerAnswered = computed(() => {
+  const timeValues = details.value
+    .filter(
+      detail =>
+        hasUserAnswer(detail) && typeof detail.timeSpent === 'number' && detail.timeSpent > 0
+    )
+    .map(detail => detail.timeSpent as number)
+
+  if (!timeValues.length) return 0
+  return Math.round(timeValues.reduce((sum, sec) => sum + sec, 0) / timeValues.length)
+})
+const slowQuestionCount = computed(
   () =>
     details.value.filter(
-      d => !d.userAnswer || (Array.isArray(d.userAnswer) && d.userAnswer.length === 0)
+      detail =>
+        hasUserAnswer(detail) &&
+        typeof detail.timeSpent === 'number' &&
+        (detail.timeSpent as number) > 30
     ).length
 )
+
+const normalizedDetailSearch = computed(() => detailSearchKeyword.value.trim().toLowerCase())
+
+const filteredDetails = computed(() => {
+  return details.value.filter(detail => {
+    if (
+      detailFilter.value === 'incorrect' &&
+      (!hasAnsweredString(detail.userAnswer) || detail.isCorrect !== false)
+    ) {
+      return false
+    }
+
+    if (detailFilter.value === 'unanswered' && hasAnsweredString(detail.userAnswer)) {
+      return false
+    }
+
+    if (
+      detailFilter.value === 'slow' &&
+      (!hasAnsweredString(detail.userAnswer) ||
+        typeof detail.timeSpent !== 'number' ||
+        detail.timeSpent <= 30)
+    ) {
+      return false
+    }
+
+    if (!normalizedDetailSearch.value) {
+      return true
+    }
+
+    const questionText = detail.questionText?.toLowerCase() || ''
+    const userAnswer = formatAnswer(detail.userAnswer).toLowerCase()
+    const correctAnswer = formatAnswer(detail.correctAnswer).toLowerCase()
+
+    return (
+      questionText.includes(normalizedDetailSearch.value) ||
+      userAnswer.includes(normalizedDetailSearch.value) ||
+      correctAnswer.includes(normalizedDetailSearch.value)
+    )
+  })
+})
 
 // 格式化时间
 const formatDuration = (seconds: number) => {
@@ -58,10 +150,152 @@ const formatAnswer = (answer: string | string[] | undefined): string => {
 
 // 判断答案是否正确（带样式）
 const getAnswerClass = (detail: QuizDetail) => {
-  if (!detail.userAnswer || (Array.isArray(detail.userAnswer) && detail.userAnswer.length === 0)) {
+  if (!hasAnsweredString(detail.userAnswer)) {
     return 'unanswered'
   }
   return detail.isCorrect ? 'correct' : 'incorrect'
+}
+
+async function generateAISuggestions() {
+  if (generatingSuggestion.value) return
+
+  try {
+    generatingSuggestion.value = true
+    suggestionError.value = ''
+    suggestion.value = null
+    suggestion.value = await generateAttemptAISuggestions(attemptId.value)
+    ElMessage.success('AI 建议生成成功')
+  } catch (error: unknown) {
+    const message = extractErrorMessage(error, '生成 AI 建议失败')
+    suggestionError.value = message
+    ElMessage.error(message)
+  } finally {
+    generatingSuggestion.value = false
+  }
+}
+
+async function copySuggestionText() {
+  if (!suggestion.value) return
+
+  const suggestionText = buildSuggestionText(suggestion.value)
+  if (!suggestionText.trim()) return
+
+  try {
+    await navigator.clipboard.writeText(suggestionText)
+    ElMessage.success('AI 建议已复制')
+  } catch {
+    ElMessage.error('复制失败，请手动复制')
+  }
+}
+
+function exportSuggestionText() {
+  if (!suggestion.value) return
+
+  const content = buildSuggestionText(suggestion.value)
+  if (!content.trim()) return
+
+  const fileName = `ai_suggestion_attempt_${attemptId.value}.txt`
+  downloadTextFile(content, fileName)
+  ElMessage.success('AI 建议已导出')
+}
+
+function exportResultReport() {
+  if (!result.value) return
+
+  const lines: string[] = [
+    'AnswerMe 答题复盘报告',
+    '====================',
+    `题库：${result.value.questionBankName || '未知'}`,
+    `尝试ID：${result.value.id}`,
+    `完成时间：${formatDate(result.value.completedAt)}`,
+    `总题数：${result.value.totalQuestions}`,
+    `答对：${correctCount.value}`,
+    `答错：${incorrectCount.value}`,
+    `未作答：${unansweredCount.value}`,
+    `正确率：${accuracyRate.value}%`,
+    `总用时：${formatDuration(result.value.durationSeconds || 0)}`,
+    `平均每题用时：${averageTimePerAnswered.value} 秒`,
+    ''
+  ]
+
+  if (suggestion.value) {
+    lines.push('AI 学习建议')
+    lines.push('--------------------')
+    lines.push(buildSuggestionText(suggestion.value))
+    lines.push('')
+  }
+
+  lines.push('题目详情')
+  lines.push('--------------------')
+
+  details.value.forEach((detail, index) => {
+    const status = hasAnsweredString(detail.userAnswer)
+      ? detail.isCorrect
+        ? '正确'
+        : '错误'
+      : '未作答'
+    lines.push(`第 ${index + 1} 题 [${status}]`)
+    lines.push(`题干：${detail.questionText}`)
+    lines.push(`你的答案：${formatAnswer(detail.userAnswer)}`)
+    lines.push(`正确答案：${formatAnswer(detail.correctAnswer)}`)
+    if (detail.explanation) {
+      lines.push(`解析：${detail.explanation}`)
+    }
+    lines.push('')
+  })
+
+  downloadTextFile(lines.join('\n'), `result_report_attempt_${attemptId.value}.txt`)
+  ElMessage.success('复盘报告已导出')
+}
+
+function buildSuggestionText(data: AttemptAISuggestion): string {
+  const lines: string[] = [
+    `AI模型：${data.providerName}`,
+    `数据源：${data.dataSourceName}`,
+    `生成时间：${formatDate(data.generatedAt)}`,
+    '',
+    '总体诊断',
+    data.summary,
+    '',
+    '行动建议'
+  ]
+
+  data.suggestions.forEach((item, index) => {
+    lines.push(`${index + 1}. ${item}`)
+  })
+
+  lines.push('')
+  lines.push('7天复习计划')
+  lines.push(data.studyPlan)
+
+  if (data.weakPoints.length > 0) {
+    lines.push('')
+    lines.push('薄弱点')
+    data.weakPoints.forEach(point => {
+      lines.push(
+        `- ${point.category}: ${point.name} (错误 ${point.incorrect}/${point.total}, 准确率 ${point.accuracyRate}%)`
+      )
+    })
+  }
+
+  return lines.join('\n')
+}
+
+function downloadTextFile(content: string, fileName: string) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+function resetDetailFilters() {
+  detailFilter.value = 'all'
+  detailSearchKeyword.value = ''
 }
 
 // 加载结果数据
@@ -69,7 +303,6 @@ async function loadResult() {
   try {
     loading.value = true
 
-    // 并行加载结果和详情
     const [resultRes, detailsRes] = await Promise.all([
       getQuizResult(attemptId.value),
       getQuizDetails(attemptId.value)
@@ -113,21 +346,21 @@ onMounted(() => {
 
 <template>
   <div class="result-view">
-    <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
       <el-skeleton :rows="8" animated />
       <p class="loading-text">正在加载结果...</p>
     </div>
 
     <template v-else-if="result">
-      <!-- 顶部导航 -->
       <div class="result-header">
         <el-button :icon="ArrowLeft" @click="goBack">返回练习</el-button>
         <h2 class="header-title">答题结果</h2>
-        <el-button type="primary" @click="retryPractice">重新练习</el-button>
+        <div class="header-actions">
+          <el-button :icon="Download" @click="exportResultReport">导出复盘</el-button>
+          <el-button type="primary" @click="retryPractice">重新练习</el-button>
+        </div>
       </div>
 
-      <!-- 分数卡片 -->
       <div class="score-card">
         <div class="score-circle">
           <div class="score-value">{{ Math.round(result.score || 0) }}</div>
@@ -143,7 +376,7 @@ onMounted(() => {
             <span class="info-value">{{ formatDate(result.completedAt) }}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">用时</span>
+            <span class="info-label">总用时</span>
             <span class="info-value">
               <el-icon><Clock /></el-icon>
               {{ formatDuration(result.durationSeconds || 0) }}
@@ -152,7 +385,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 统计数据 -->
       <div class="stats-row">
         <div class="stat-item correct">
           <el-icon :size="24"><Check /></el-icon>
@@ -184,26 +416,150 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 题目详情列表 -->
+      <div class="summary-row">
+        <div class="summary-item">
+          <span class="summary-label">正确率</span>
+          <span class="summary-value">{{ accuracyRate }}%</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">平均每题用时</span>
+          <span class="summary-value">{{ averageTimePerAnswered }} 秒</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">高耗时题(>30秒)</span>
+          <span class="summary-value">{{ slowQuestionCount }} 题</span>
+        </div>
+      </div>
+
+      <div class="ai-section">
+        <div class="section-header">
+          <h3 class="section-title">AI 学习建议</h3>
+          <div class="ai-actions">
+            <el-button
+              v-if="suggestion"
+              :icon="CopyDocument"
+              :disabled="generatingSuggestion"
+              @click="copySuggestionText"
+            >
+              复制建议
+            </el-button>
+            <el-button
+              v-if="suggestion"
+              :icon="Download"
+              :disabled="generatingSuggestion"
+              @click="exportSuggestionText"
+            >
+              导出建议
+            </el-button>
+            <el-button
+              type="primary"
+              :icon="MagicStick"
+              :loading="generatingSuggestion"
+              @click="generateAISuggestions"
+            >
+              {{ suggestion ? '重新生成建议' : '生成 AI 建议' }}
+            </el-button>
+          </div>
+        </div>
+
+        <p class="ai-hint">将使用你在「AI配置」中设置的默认数据源生成建议。</p>
+
+        <el-alert
+          v-if="suggestionError"
+          type="error"
+          :closable="false"
+          class="ai-alert"
+          :title="suggestionError"
+        />
+
+        <el-skeleton v-if="generatingSuggestion" :rows="5" animated class="ai-skeleton" />
+
+        <el-empty v-else-if="!suggestion" description="尚未生成 AI 建议" :image-size="100" />
+
+        <div v-else class="ai-content">
+          <div class="ai-meta">
+            <el-tag type="info" size="small">{{ suggestion.providerName }}</el-tag>
+            <el-tag size="small">{{ suggestion.dataSourceName }}</el-tag>
+            <span class="ai-generated-time">生成于 {{ formatDate(suggestion.generatedAt) }}</span>
+          </div>
+
+          <div class="ai-summary-card">
+            <h4 class="ai-subtitle">总体诊断</h4>
+            <p class="ai-summary-text">{{ suggestion.summary }}</p>
+          </div>
+
+          <div class="ai-suggestions-card">
+            <h4 class="ai-subtitle">行动建议</h4>
+            <ul class="ai-suggestion-list">
+              <li v-for="(item, index) in suggestion.suggestions" :key="`suggestion-${index}`">
+                {{ item }}
+              </li>
+            </ul>
+          </div>
+
+          <div class="ai-plan-card">
+            <h4 class="ai-subtitle">7天复习计划</h4>
+            <p class="ai-plan-text">{{ suggestion.studyPlan }}</p>
+          </div>
+
+          <div v-if="suggestion.weakPoints.length > 0" class="weak-point-card">
+            <h4 class="ai-subtitle">薄弱点识别</h4>
+            <div class="weak-point-list">
+              <el-tag
+                v-for="item in suggestion.weakPoints"
+                :key="`${item.category}-${item.name}`"
+                type="warning"
+                class="weak-point-tag"
+              >
+                {{ item.category }}: {{ item.name }} ({{ item.incorrect }}/{{ item.total }})
+              </el-tag>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="details-section">
-        <h3 class="section-title">题目详情</h3>
+        <div class="section-header">
+          <h3 class="section-title">题目详情</h3>
+          <span class="detail-count"
+            >已显示 {{ filteredDetails.length }} / {{ details.length }} 题</span
+          >
+        </div>
+        <div class="detail-toolbar">
+          <el-radio-group v-model="detailFilter" size="small">
+            <el-radio-button value="all">全部</el-radio-button>
+            <el-radio-button value="incorrect">仅错题</el-radio-button>
+            <el-radio-button value="unanswered">仅未作答</el-radio-button>
+            <el-radio-button value="slow">仅高耗时</el-radio-button>
+          </el-radio-group>
+          <div class="detail-tools-right">
+            <el-input
+              v-model="detailSearchKeyword"
+              :prefix-icon="Search"
+              placeholder="搜索题干/答案"
+              clearable
+              class="detail-search"
+            />
+            <el-button :icon="RefreshRight" size="small" @click="resetDetailFilters">
+              重置筛选
+            </el-button>
+          </div>
+        </div>
         <el-card class="details-card">
+          <el-empty
+            v-if="filteredDetails.length === 0"
+            description="当前筛选条件下没有匹配题目"
+            :image-size="100"
+          />
           <div
-            v-for="(detail, index) in details"
+            v-for="(detail, index) in filteredDetails"
             :key="detail.questionId"
             :class="['detail-item', getAnswerClass(detail)]"
           >
             <div class="detail-header">
               <span class="question-number">第 {{ index + 1 }} 题</span>
               <el-tag v-if="detail.isCorrect" type="success" size="small"> 正确 </el-tag>
-              <el-tag
-                v-else-if="
-                  detail.userAnswer &&
-                  !(Array.isArray(detail.userAnswer) && detail.userAnswer.length === 0)
-                "
-                type="danger"
-                size="small"
-              >
+              <el-tag v-else-if="hasAnsweredString(detail.userAnswer)" type="danger" size="small">
                 错误
               </el-tag>
               <el-tag v-else type="info" size="small">未作答</el-tag>
@@ -231,7 +587,6 @@ onMounted(() => {
       </div>
     </template>
 
-    <!-- 答案解析弹窗 -->
     <el-dialog
       v-model="showAnswerModal"
       title="答案解析"
@@ -276,7 +631,6 @@ onMounted(() => {
   @apply max-w-[1000px] mx-auto p-6;
 }
 
-/* 加载状态 */
 .loading-container {
   @apply flex flex-col items-center gap-6 p-12;
 }
@@ -285,16 +639,18 @@ onMounted(() => {
   @apply text-text-secondary text-base;
 }
 
-/* 顶部导航 */
 .result-header {
   @apply flex items-center justify-between mb-8 pb-4 border-b border-border;
+}
+
+.header-actions {
+  @apply flex items-center gap-2;
 }
 
 .header-title {
   @apply text-[1.5rem] font-bold text-text-primary m-0;
 }
 
-/* 分数卡片 */
 .score-card {
   @apply flex items-center gap-8 rounded-xl p-8 mb-8 text-white shadow-md;
   background: var(--color-primary);
@@ -330,9 +686,8 @@ onMounted(() => {
   @apply font-semibold flex items-center gap-2;
 }
 
-/* 统计数据 */
 .stats-row {
-  @apply grid grid-cols-4 gap-4 mb-8;
+  @apply grid grid-cols-4 gap-4 mb-4;
 }
 
 .stat-item {
@@ -393,13 +748,116 @@ onMounted(() => {
   @apply text-xs text-text-secondary mt-1;
 }
 
-/* 详情区域 */
-.details-section {
-  @apply mb-8;
+.summary-row {
+  @apply grid grid-cols-3 gap-4 mb-8;
+}
+
+.summary-item {
+  @apply flex items-center justify-between px-4 py-3 rounded-lg border border-border bg-bg shadow-xs;
+}
+
+.summary-label {
+  @apply text-sm text-text-secondary;
+}
+
+.summary-value {
+  @apply text-base font-semibold text-text-primary;
+}
+
+.section-header {
+  @apply flex items-center justify-between gap-3;
+}
+
+.ai-actions {
+  @apply flex items-center gap-2 flex-wrap;
 }
 
 .section-title {
   @apply text-[1.125rem] font-semibold text-text-primary m-0 mb-4;
+}
+
+.ai-section {
+  @apply mb-8 p-5 rounded-lg border border-border bg-bg shadow-xs;
+}
+
+.ai-hint {
+  @apply text-sm text-text-secondary mt-0 mb-4;
+}
+
+.ai-alert {
+  @apply mb-4;
+}
+
+.ai-skeleton {
+  @apply mb-4;
+}
+
+.ai-content {
+  @apply flex flex-col gap-4;
+}
+
+.ai-meta {
+  @apply flex flex-wrap items-center gap-2;
+}
+
+.ai-generated-time {
+  @apply text-xs text-text-muted ml-auto;
+}
+
+.ai-summary-card,
+.ai-suggestions-card,
+.ai-plan-card,
+.weak-point-card {
+  @apply p-4 rounded-md border border-border bg-bg-secondary;
+}
+
+.ai-subtitle {
+  @apply m-0 mb-2 text-sm font-semibold text-text-primary;
+}
+
+.ai-summary-text,
+.ai-plan-text {
+  @apply m-0 text-sm text-text-primary leading-[1.7];
+}
+
+.ai-plan-text {
+  white-space: pre-line;
+}
+
+.ai-suggestion-list {
+  @apply m-0 pl-5 text-sm text-text-primary;
+}
+
+.ai-suggestion-list li {
+  @apply mb-1 leading-[1.6];
+}
+
+.weak-point-list {
+  @apply flex flex-wrap gap-2;
+}
+
+.weak-point-tag {
+  @apply mr-0;
+}
+
+.details-section {
+  @apply mb-8;
+}
+
+.detail-count {
+  @apply text-sm text-text-secondary;
+}
+
+.detail-toolbar {
+  @apply flex items-center justify-between gap-3 mb-4;
+}
+
+.detail-tools-right {
+  @apply flex items-center gap-2;
+}
+
+.detail-search {
+  @apply w-[280px];
 }
 
 .details-card {
@@ -481,7 +939,6 @@ onMounted(() => {
   @apply text-success font-medium;
 }
 
-/* 弹窗内容 */
 .answer-modal-content {
   @apply py-2;
 }
@@ -529,7 +986,6 @@ onMounted(() => {
   @apply m-0 text-text-primary leading-[1.6] text-sm;
 }
 
-/* 响应式 */
 @media (max-width: 768px) {
   .result-view {
     @apply p-4;
@@ -547,8 +1003,36 @@ onMounted(() => {
     @apply grid-cols-2;
   }
 
+  .summary-row {
+    @apply grid-cols-1;
+  }
+
   .result-header {
     @apply flex-col gap-4;
+  }
+
+  .header-actions {
+    @apply w-full justify-between;
+  }
+
+  .section-header {
+    @apply flex-col items-stretch;
+  }
+
+  .detail-toolbar {
+    @apply flex-col items-stretch;
+  }
+
+  .detail-tools-right {
+    @apply flex-col items-stretch;
+  }
+
+  .detail-search {
+    @apply w-full;
+  }
+
+  .ai-generated-time {
+    @apply ml-0;
   }
 }
 </style>

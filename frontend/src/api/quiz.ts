@@ -71,6 +71,39 @@ export interface QuizStatistics {
   overallAccuracy: number
 }
 
+export interface AttemptOverview {
+  totalQuestions: number
+  answeredQuestions: number
+  correctQuestions: number
+  incorrectQuestions: number
+  unansweredQuestions: number
+  accuracyRate: number
+  durationSeconds: number
+  averageTimePerAnswered: number
+}
+
+export interface AttemptWeakPoint {
+  category: string
+  name: string
+  total: number
+  incorrect: number
+  accuracyRate: number
+}
+
+export interface AttemptAISuggestion {
+  attemptId: number
+  questionBankId: number
+  questionBankName: string
+  overview: AttemptOverview
+  weakPoints: AttemptWeakPoint[]
+  summary: string
+  suggestions: string[]
+  studyPlan: string
+  providerName: string
+  dataSourceName: string
+  generatedAt: string
+}
+
 /**
  * 开始答题
  */
@@ -111,4 +144,11 @@ export function getQuizDetails(id: number): Promise<QuizDetail[]> {
  */
 export function getQuizStatistics(): Promise<QuizStatistics> {
   return request.get('/attempts/statistics')
+}
+
+/**
+ * 生成答题 AI 学习建议
+ */
+export function generateAttemptAISuggestions(attemptId: number): Promise<AttemptAISuggestion> {
+  return request.post(`/attempts/${attemptId}/ai-suggestions`)
 }
