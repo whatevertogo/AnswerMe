@@ -1,4 +1,4 @@
-# AI Question Bank
+<img width="1475" height="813" alt="image" src="https://github.com/user-attachments/assets/e6964159-4fe3-409b-ab92-44719f2f97f0" /># AI Question Bank
 
 <div align="center">
 
@@ -19,6 +19,7 @@
 
 ## ✨ 功能特性
 
+
 ### 核心功能
 
 - **🤖 AI驱动题目生成** - 支持OpenAI、通义千问等多个AI Provider,自定义生成参数
@@ -27,6 +28,9 @@
 - **📊 智能学习追踪** - 答题记录、错题本、学习统计分析
 - **🔒 API密钥安全** - AES-256加密存储,密钥永不泄露给前端
 - **📦 一键部署** - Docker Compose 5分钟快速部署
+
+![Uploading image.png…]()
+
 
 ### 技术亮点
 
