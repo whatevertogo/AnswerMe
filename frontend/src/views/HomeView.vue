@@ -99,7 +99,7 @@ const quickActions = ref([
     title: 'AI生成题目',
     description: '使用AI自动生成题目',
     icon: markRaw(Cpu),
-    action: () => router.push('/question-banks')
+    action: () => router.push('/generate')
   },
   {
     title: '开始练习',

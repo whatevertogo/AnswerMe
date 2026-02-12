@@ -457,6 +457,7 @@ function getTypeTagType(type: string) {
          hover:shadow-[0_2px_12px_rgba(64,158,255,0.1)];
   border: 1px solid var(--color-border);
   background-color: var(--color-bg);
+  min-width: 0;
 }
 
 .datasource-item:hover {
@@ -465,6 +466,7 @@ function getTypeTagType(type: string) {
 
 .datasource-info {
   @apply flex-1;
+  min-width: 0;
 }
 
 .info-header {
@@ -478,6 +480,7 @@ function getTypeTagType(type: string) {
 
 .info-text {
   @apply flex-1;
+  min-width: 0;
 }
 
 .name-row {
@@ -487,6 +490,7 @@ function getTypeTagType(type: string) {
 .name {
   @apply text-base font-semibold;
   color: var(--color-text-primary);
+  word-break: break-word;
 }
 
 .info-details {
@@ -504,6 +508,8 @@ function getTypeTagType(type: string) {
 
 .value {
   color: var(--color-text-primary);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .masked {
@@ -513,6 +519,7 @@ function getTypeTagType(type: string) {
 
 .datasource-actions {
   @apply flex items-center gap-2 ml-6;
+  flex-wrap: wrap;
 }
 
 .datasource-actions :deep(.el-button.is-text) {
@@ -584,5 +591,43 @@ function getTypeTagType(type: string) {
   background-color: var(--color-danger-light);
   border-color: var(--color-danger);
   color: var(--color-danger);
+}
+
+@media (max-width: 768px) {
+  .ai-config-view {
+    @apply px-4 py-4;
+  }
+
+  .header {
+    @apply flex-col items-stretch gap-3;
+  }
+
+  .header :deep(.el-button) {
+    @apply w-full;
+  }
+
+  .datasource-item {
+    @apply flex-col items-stretch gap-4 p-4;
+  }
+
+  .info-header {
+    @apply mb-2;
+  }
+
+  .info-details {
+    @apply grid-cols-1 gap-y-2 ml-0;
+  }
+
+  .detail-item {
+    @apply items-start;
+  }
+
+  .datasource-actions {
+    @apply ml-0 gap-1;
+  }
+
+  .datasource-actions :deep(.el-button) {
+    @apply px-2;
+  }
 }
 </style>

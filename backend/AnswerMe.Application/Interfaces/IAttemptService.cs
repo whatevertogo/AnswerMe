@@ -36,4 +36,19 @@ public interface IAttemptService
     /// 获取用户的答题统计
     /// </summary>
     Task<AttemptStatisticsDto> GetStatisticsAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取错题列表
+    /// </summary>
+    Task<WrongQuestionListDto> GetWrongQuestionsAsync(int userId, WrongQuestionQueryDto query, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取学习统计数据
+    /// </summary>
+    Task<LearningStatsDto> GetLearningStatsAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 标记错题为已掌握
+    /// </summary>
+    Task MarkQuestionAsMasteredAsync(int userId, int attemptDetailId, CancellationToken cancellationToken = default);
 }

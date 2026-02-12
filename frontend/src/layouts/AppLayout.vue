@@ -9,7 +9,9 @@ import {
   User,
   SwitchButton,
   ArrowDown,
-  Setting as SettingIcon
+  Setting as SettingIcon,
+  Document,
+  DataAnalysis
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -34,6 +36,16 @@ const menuItems = [
     path: '/practice',
     icon: Reading,
     title: '开始练习'
+  },
+  {
+    path: '/wrong-questions',
+    icon: Document,
+    title: '错题本'
+  },
+  {
+    path: '/learning-insights',
+    icon: DataAnalysis,
+    title: '学习分析'
   },
   {
     path: '/ai-config',
@@ -207,6 +219,7 @@ const handleLogout = async () => {
 <style scoped>
 .app-layout {
   @apply min-h-screen flex flex-col bg-bg;
+  overflow-x: clip;
 }
 
 /* 顶部导航栏 */
@@ -247,11 +260,13 @@ const handleLogout = async () => {
 /* 导航菜单 */
 .nav-menu {
   @apply flex items-center gap-1 flex-1;
+  margin-left: clamp(0.75rem, 1.8vw, 1.75rem);
 }
 
 .nav-item {
-  @apply flex items-center gap-2 px-5 py-2 rounded-md
+  @apply flex items-center px-5 py-2 rounded-md
          no-underline text-sm font-medium;
+  gap: clamp(0.55rem, 0.8vw, 0.75rem);
   transition: all var(--transition-fast);
   color: var(--color-text-secondary);
 }
@@ -327,6 +342,10 @@ const handleLogout = async () => {
 
 /* 响应式 */
 @media (max-width: 1024px) {
+  .nav-menu {
+    margin-left: clamp(0.5rem, 1.4vw, 1rem);
+  }
+
   .nav-text {
     @apply hidden;
   }
@@ -334,27 +353,46 @@ const handleLogout = async () => {
 
 @media (max-width: 768px) {
   .header-container {
-    @apply px-4 h-14;
+    @apply px-2 h-14;
   }
 
   .logo-text {
     @apply text-xl;
   }
 
+  .logo-section {
+    @apply gap-2;
+  }
+
   .nav-menu {
     @apply gap-0;
+    margin-left: 0.25rem;
   }
 
   .nav-item {
-    @apply px-2;
+    @apply px-1.5;
+  }
+
+  .user-dropdown {
+    @apply px-1.5;
   }
 
   .user-name {
-    @apply max-w-[80px];
+    @apply hidden;
+  }
+
+  .dropdown-icon {
+    @apply hidden;
   }
 
   .content-container {
     @apply px-4 py-6 min-h-[calc(100vh-56px)];
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-text {
+    @apply text-lg;
   }
 }
 </style>

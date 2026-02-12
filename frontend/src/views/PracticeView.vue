@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, Reading } from '@element-plus/icons-vue'
 import { useQuestionBankStore } from '@/stores/questionBank'
@@ -11,6 +11,7 @@ import { DifficultyLabels, DifficultyColors } from '@/types/question'
 import { extractErrorMessage } from '@/utils/errorHandler'
 
 const router = useRouter()
+const route = useRoute()
 const questionBankStore = useQuestionBankStore()
 const authStore = useAuthStore()
 
@@ -19,20 +20,30 @@ const startingBankId = ref<number | null>(null)
 const searchKeyword = ref('')
 const searchTimer = ref<number | null>(null)
 
+const selectedBankId = computed(() => {
+  const raw = route.query.bankId
+  const value = Array.isArray(raw) ? raw[0] : raw
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+})
+
 const normalizedSearchKeyword = computed(() => searchKeyword.value.trim().toLowerCase())
 const displayedQuestionBanks = computed(() => {
-  if (!normalizedSearchKeyword.value) {
-    return questionBankStore.questionBanks
-  }
-
-  return questionBankStore.questionBanks.filter(bank => {
+  const filteredByKeyword = questionBankStore.questionBanks.filter(bank => {
     const name = bank.name?.toLowerCase() ?? ''
     const description = bank.description?.toLowerCase() ?? ''
     return (
+      !normalizedSearchKeyword.value ||
       name.includes(normalizedSearchKeyword.value) ||
       description.includes(normalizedSearchKeyword.value)
     )
   })
+
+  if (!selectedBankId.value) {
+    return filteredByKeyword
+  }
+
+  return filteredByKeyword.filter(bank => bank.id === selectedBankId.value)
 })
 
 onMounted(async () => {

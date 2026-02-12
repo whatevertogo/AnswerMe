@@ -142,84 +142,126 @@ const getDifficultyLabel = (difficulty: string): string => {
 
     <!-- 题库表格 -->
     <div class="table-card scroll-reveal">
-      <el-table
-        v-loading="loading"
-        :data="questionBankStore.questionBanks"
-        style="width: 100%"
-        highlight-current-row
-      >
-        <el-table-column prop="name" label="题库名称" min-width="200">
-          <template #default="{ row }">
-            <div class="bank-name-cell">
-              <span class="bank-name" :title="row.name">{{ row.name }}</span>
-              <el-tag v-if="row.isDefault" size="small" type="primary">默认</el-tag>
+      <template v-if="questionBankStore.questionBanks.length > 0">
+        <div class="desktop-table">
+          <el-table
+            v-loading="loading"
+            :data="questionBankStore.questionBanks"
+            style="width: 100%"
+            highlight-current-row
+          >
+            <el-table-column prop="name" label="题库名称" min-width="200">
+              <template #default="{ row }">
+                <div class="bank-name-cell">
+                  <span class="bank-name" :title="row.name">{{ row.name }}</span>
+                  <el-tag v-if="row.isDefault" size="small" type="primary">默认</el-tag>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column prop="description" label="描述" min-width="300">
+              <template #default="{ row }">
+                <span class="bank-description" :title="row.description">
+                  {{ row.description || '暂无描述' }}
+                </span>
+              </template>
+            </el-table-column>
+
+            <el-table-column prop="questionCount" label="题目数量" width="120" align="center">
+              <template #default="{ row }">
+                <el-tag size="small" type="info">{{ row.questionCount }} 题</el-tag>
+              </template>
+            </el-table-column>
+
+            <el-table-column prop="difficulty" label="难度" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag
+                  v-if="row.difficulty"
+                  :type="getDifficultyColor(row.difficulty)"
+                  size="small"
+                >
+                  {{ getDifficultyLabel(row.difficulty) }}
+                </el-tag>
+                <span v-else class="text-muted">-</span>
+              </template>
+            </el-table-column>
+
+            <el-table-column prop="createdAt" label="创建时间" width="180">
+              <template #default="{ row }">
+                <span class="text-muted">{{ formatDate(row.createdAt) }}</span>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="操作" width="280">
+              <template #default="{ row }">
+                <div class="table-actions">
+                  <el-button
+                    type="primary"
+                    size="small"
+                    :icon="View"
+                    class="btn-hover"
+                    @click="handleView(row.id)"
+                  >
+                    查看
+                  </el-button>
+                  <el-button size="small" :icon="Edit" class="btn-hover" @click="handleEdit(row)">
+                    编辑
+                  </el-button>
+                  <el-button
+                    type="danger"
+                    size="small"
+                    :icon="Delete"
+                    class="btn-hover"
+                    @click="handleDelete(row)"
+                  >
+                    删除
+                  </el-button>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div class="mobile-bank-list">
+          <div
+            v-for="bank in questionBankStore.questionBanks"
+            :key="bank.id"
+            class="mobile-bank-card"
+          >
+            <div class="mobile-bank-header">
+              <div class="bank-name-cell">
+                <span class="bank-name" :title="bank.name">{{ bank.name }}</span>
+              </div>
             </div>
-          </template>
-        </el-table-column>
 
-        <el-table-column prop="description" label="描述" min-width="300">
-          <template #default="{ row }">
-            <span class="bank-description" :title="row.description">
-              {{ row.description || '暂无描述' }}
-            </span>
-          </template>
-        </el-table-column>
+            <p class="mobile-bank-desc">{{ bank.description || '暂无描述' }}</p>
 
-        <el-table-column prop="questionCount" label="题目数量" width="120" align="center">
-          <template #default="{ row }">
-            <el-tag size="small" type="info">{{ row.questionCount }} 题</el-tag>
-          </template>
-        </el-table-column>
+            <div class="mobile-bank-meta">
+              <span>{{ bank.questionCount }} 题</span>
+              <span>{{ formatDate(bank.createdAt) }}</span>
+            </div>
 
-        <el-table-column prop="difficulty" label="难度" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag v-if="row.difficulty" :type="getDifficultyColor(row.difficulty)" size="small">
-              {{ getDifficultyLabel(row.difficulty) }}
-            </el-tag>
-            <span v-else class="text-muted">-</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="createdAt" label="创建时间" width="180">
-          <template #default="{ row }">
-            <span class="text-muted">{{ formatDate(row.createdAt) }}</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="操作" width="280" fixed="right">
-          <template #default="{ row }">
-            <div class="table-actions">
+            <div class="mobile-bank-actions">
               <el-button
                 type="primary"
                 size="small"
                 :icon="View"
-                class="btn-hover"
-                @click="handleView(row.id)"
+                @click="handleView(String(bank.id))"
               >
                 查看
               </el-button>
-              <el-button size="small" :icon="Edit" class="btn-hover" @click="handleEdit(row)">
-                编辑
-              </el-button>
-              <el-button
-                type="danger"
-                size="small"
-                :icon="Delete"
-                class="btn-hover"
-                @click="handleDelete(row)"
-              >
+              <el-button size="small" :icon="Edit" @click="handleEdit(bank)">编辑</el-button>
+              <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(bank)">
                 删除
               </el-button>
             </div>
-          </template>
-        </el-table-column>
+          </div>
+        </div>
+      </template>
 
-        <template #empty>
-          <el-empty description="暂无题库" :image-size="120">
-            <el-button type="primary" @click="handleCreate">创建第一个题库</el-button>
-          </el-empty>
-        </template>
-      </el-table>
+      <el-empty v-else description="暂无题库" :image-size="120">
+        <el-button type="primary" @click="handleCreate">创建第一个题库</el-button>
+      </el-empty>
 
       <!-- 分页 -->
       <div v-if="questionBankStore.hasMore" class="pagination-wrapper">
@@ -311,6 +353,41 @@ const getDifficultyLabel = (difficulty: string): string => {
   @apply flex-shrink-0;
 }
 
+.desktop-table {
+  @apply block;
+}
+
+.mobile-bank-list {
+  @apply hidden;
+}
+
+.mobile-bank-card {
+  @apply rounded-xl p-4 m-3 border border-border bg-bg;
+}
+
+.mobile-bank-header {
+  @apply flex items-start justify-between gap-2 mb-2;
+}
+
+.mobile-bank-desc {
+  @apply text-sm m-0 mb-2;
+  color: var(--color-text-secondary);
+  word-break: break-word;
+}
+
+.mobile-bank-meta {
+  @apply text-xs flex items-center justify-between gap-2 mb-3;
+  color: var(--color-text-muted);
+}
+
+.mobile-bank-actions {
+  @apply grid grid-cols-3 gap-2;
+}
+
+.mobile-bank-actions .el-button {
+  @apply w-full;
+}
+
 /* 分页 */
 .pagination-wrapper {
   @apply flex justify-center px-4 py-4 border-t;
@@ -369,16 +446,20 @@ const getDifficultyLabel = (difficulty: string): string => {
 }
 
 @media (max-width: 768px) {
-  :deep(.el-table-column) {
-    @apply py-2;
+  .desktop-table {
+    @apply hidden;
   }
 
-  .table-actions {
-    @apply flex-col gap-1;
+  .mobile-bank-list {
+    @apply block;
   }
 
-  .table-actions .el-button {
-    @apply w-full;
+  .pagination-wrapper {
+    @apply pt-2;
+  }
+
+  .mobile-bank-actions {
+    @apply grid-cols-1;
   }
 }
 </style>

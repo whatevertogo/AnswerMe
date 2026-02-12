@@ -25,4 +25,37 @@ public interface IAttemptDetailRepository
     /// <param name="attemptIds">答题记录ID列表</param>
     /// <param name="cancellationToken">取消令牌</param>
     Task<List<AttemptDetail>> GetByAttemptIdsAsync(List<int> attemptIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取用户的所有错题
+    /// </summary>
+    Task<List<AttemptDetail>> GetWrongQuestionsAsync(
+        int userId,
+        int? questionBankId = null,
+        string? questionType = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取用户的学习统计数据
+    /// </summary>
+    Task<(int totalAttempts, int totalQuestions, int correctCount, int wrongCount, int totalTimeSpent)> GetLearningStatsAsync(
+        int userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取用户每周答题趋势
+    /// </summary>
+    Task<List<(DateTime weekStart, int attemptCount, int questionCount, int correctCount)>> GetWeeklyTrendAsync(
+        int userId,
+        int weeks = 12,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取用户各题库答题统计
+    /// </summary>
+    Task<List<(int questionBankId, string questionBankName, int attemptCount, int totalQuestions, int correctCount)>> GetBankStatsAsync(
+        int userId,
+        CancellationToken cancellationToken = default);
 }

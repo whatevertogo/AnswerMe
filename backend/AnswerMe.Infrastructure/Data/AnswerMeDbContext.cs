@@ -118,6 +118,7 @@ public class AnswerMeDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.AttemptId);
             entity.HasIndex(e => e.QuestionId);
+            entity.HasIndex(e => e.IsMastered);
 
             entity.HasOne(e => e.Attempt)
                 .WithMany(a => a.AttemptDetails)

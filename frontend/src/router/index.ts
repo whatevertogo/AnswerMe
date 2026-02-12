@@ -53,7 +53,14 @@ const routes: Array<RouteRecordRaw> = [
   authRoute('/quiz/:bankId/new', 'QuizNew', () => import('@/views/QuizView.vue')),
   // 已有答题会话路由
   authRoute('/quiz/:bankId/:sessionId', 'Quiz', () => import('@/views/QuizView.vue')),
-  authRoute('/result/:sessionId', 'Result', () => import('@/views/ResultView.vue'))
+  authRoute('/result/:sessionId', 'Result', () => import('@/views/ResultView.vue')),
+  // 错题本和学习分析
+  authRoute('/wrong-questions', 'WrongQuestions', () => import('@/views/WrongQuestionsView.vue')),
+  authRoute(
+    '/learning-insights',
+    'LearningInsights',
+    () => import('@/views/LearningInsightsView.vue')
+  )
 ]
 
 const router = createRouter({

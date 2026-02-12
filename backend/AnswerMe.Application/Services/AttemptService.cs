@@ -306,6 +306,145 @@ public class AttemptService : IAttemptService
         };
     }
 
+    public async Task<WrongQuestionListDto> GetWrongQuestionsAsync(int userId, WrongQuestionQueryDto query, CancellationToken cancellationToken = default)
+    {
+        var details = await _attemptDetailRepository.GetWrongQuestionsAsync(
+            userId,
+            query.QuestionBankId,
+            query.QuestionType,
+            query.StartDate,
+            query.EndDate,
+            cancellationToken);
+
+        // 过滤掉已掌握的错题
+        var unmasteredDetails = details.Where(d => !d.IsMastered).ToList();
+
+        var result = new List<WrongQuestionDto>();
+
+        foreach (var detail in unmasteredDetails)
+        {
+            var question = detail.Question;
+            string correctAnswer = string.Empty;
+            string? options = null;
+
+            if (question?.Data is ChoiceQuestionData choiceData)
+            {
+                options = string.Join(",", choiceData.Options);
+                correctAnswer = string.Join(",", choiceData.CorrectAnswers);
+            }
+            else if (question?.Data is BooleanQuestionData booleanData)
+            {
+                correctAnswer = booleanData.CorrectAnswer.ToString().ToLower();
+            }
+            else if (question?.Data is FillBlankQuestionData fillData)
+            {
+                correctAnswer = string.Join(",", fillData.AcceptableAnswers);
+            }
+            else if (question?.Data is ShortAnswerQuestionData shortData)
+            {
+                correctAnswer = shortData.ReferenceAnswer;
+            }
+#pragma warning disable CS0618
+            else if (question != null)
+            {
+                options = question.Options;
+                correctAnswer = question.CorrectAnswer ?? string.Empty;
+            }
+#pragma warning restore CS0618
+
+            result.Add(new WrongQuestionDto
+            {
+                Id = detail.Id,
+                QuestionId = detail.QuestionId,
+                QuestionText = question?.QuestionText ?? string.Empty,
+                QuestionType = question?.QuestionType ?? string.Empty,
+                Options = options,
+                UserAnswer = detail.UserAnswer ?? string.Empty,
+                CorrectAnswer = correctAnswer,
+                Explanation = question?.Explanation,
+                AttemptId = detail.AttemptId,
+                AnsweredAt = detail.Attempt?.StartedAt ?? DateTime.UtcNow,
+                QuestionBankId = detail.Attempt?.QuestionBankId ?? 0,
+                QuestionBankName = detail.Attempt?.QuestionBank?.Name ?? string.Empty,
+                IsMastered = detail.IsMastered
+            });
+        }
+
+        var bankGroupCount = result.GroupBy(q => q.QuestionBankId).Count();
+
+        return new WrongQuestionListDto
+        {
+            Questions = result,
+            TotalCount = result.Count,
+            BankGroupCount = bankGroupCount
+        };
+    }
+
+    public async Task<LearningStatsDto> GetLearningStatsAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var (totalAttempts, totalQuestions, correctCount, wrongCount, totalTimeSpent) =
+            await _attemptDetailRepository.GetLearningStatsAsync(userId, cancellationToken);
+
+        var weeklyTrend = await _attemptDetailRepository.GetWeeklyTrendAsync(userId, 12, cancellationToken);
+        var bankStats = await _attemptDetailRepository.GetBankStatsAsync(userId, cancellationToken);
+
+        var accuracyRate = totalQuestions > 0 ? Math.Round((decimal)correctCount / totalQuestions * 100, 2) : 0;
+        var averageTimePerQuestion = totalQuestions > 0 ? Math.Round((decimal)totalTimeSpent / totalQuestions, 1) : 0;
+
+        var weeklyTrendDto = weeklyTrend.Select(w => new WeeklyStatDto
+        {
+            WeekStart = w.weekStart,
+            AttemptCount = w.attemptCount,
+            QuestionCount = w.questionCount,
+            CorrectCount = w.correctCount,
+            AccuracyRate = w.questionCount > 0 ? Math.Round((decimal)w.correctCount / w.questionCount * 100, 2) : 0
+        }).ToList();
+
+        var bankStatsDto = bankStats.Select(b => new BankStatDto
+        {
+            QuestionBankId = b.questionBankId,
+            QuestionBankName = b.questionBankName,
+            AttemptCount = b.attemptCount,
+            TotalQuestions = b.totalQuestions,
+            CorrectCount = b.correctCount,
+            AccuracyRate = b.totalQuestions > 0 ? (int)Math.Round((decimal)b.correctCount / b.totalQuestions * 100) : 0
+        }).ToList();
+
+        return new LearningStatsDto
+        {
+            TotalAttempts = totalAttempts,
+            TotalQuestions = totalQuestions,
+            CorrectCount = correctCount,
+            WrongCount = wrongCount,
+            AccuracyRate = accuracyRate,
+            AverageTimePerQuestion = averageTimePerQuestion,
+            TotalTimeSpent = totalTimeSpent,
+            WeeklyTrend = weeklyTrendDto,
+            BankStats = bankStatsDto
+        };
+    }
+
+    public async Task MarkQuestionAsMasteredAsync(int userId, int attemptDetailId, CancellationToken cancellationToken = default)
+    {
+        var detail = await _attemptDetailRepository.GetByIdAsync(attemptDetailId, cancellationToken);
+        if (detail == null)
+        {
+            throw new InvalidOperationException("答题详情不存在");
+        }
+
+        // 验证权限
+        var attempt = await _attemptRepository.GetByIdAsync(detail.AttemptId, cancellationToken);
+        if (attempt == null || attempt.UserId != userId)
+        {
+            throw new InvalidOperationException("无权访问此答题记录");
+        }
+
+        detail.IsMastered = true;
+        detail.MasteredAt = DateTime.UtcNow;
+        await _attemptDetailRepository.UpdateAsync(detail, cancellationToken);
+        await _attemptDetailRepository.SaveChangesAsync(cancellationToken);
+    }
+
     /// <summary>
     /// 检查答案是否正确
     /// </summary>
