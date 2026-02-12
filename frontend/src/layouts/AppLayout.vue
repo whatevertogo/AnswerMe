@@ -236,7 +236,7 @@ const handleLogout = async () => {
 }
 
 .logo-text {
-  @apply text-2xl font-bold m-0 whitespace-nowrap;
+  @apply text-2xl font-bold m-1 whitespace-nowrap;
   background: var(--color-primary-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

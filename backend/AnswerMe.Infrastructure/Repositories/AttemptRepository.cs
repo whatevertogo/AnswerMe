@@ -55,6 +55,7 @@ public class AttemptRepository : IAttemptRepository
         return await _context.Attempts
             .Where(a => a.QuestionBankId == questionBankId && a.UserId == userId)
             .OrderByDescending(a => a.StartedAt)
+            .Include(a => a.QuestionBank)
             .Include(a => a.AttemptDetails)
             .ToListAsync(cancellationToken);
     }
@@ -64,6 +65,7 @@ public class AttemptRepository : IAttemptRepository
         return await _context.Attempts
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.StartedAt)
+            .Include(a => a.QuestionBank)
             .Include(a => a.AttemptDetails)
             .ToListAsync(cancellationToken);
     }

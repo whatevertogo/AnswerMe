@@ -18,6 +18,11 @@ import {
   getQuestionCorrectAnswers,
   getQuestionOptions
 } from '@/types/question'
+import {
+  buildSelectableChoiceOptions,
+  normalizeChoiceAnswer,
+  remapChoiceAnswerAfterOptionRemoved
+} from '@/utils/questionForm'
 
 interface Props {
   question?: Question | null
@@ -76,6 +81,7 @@ const needsOptions = computed(() => {
 const isMultipleChoice = computed(() => {
   return form.value.questionTypeEnum === QuestionTypeEnum.MultipleChoice
 })
+const selectableChoiceOptions = computed(() => buildSelectableChoiceOptions(form.value.options))
 
 const rules: FormRules = {
   questionBankId: [{ required: true, message: '请选择题库', trigger: 'change' }],
@@ -211,11 +217,12 @@ const handleAddOption = () => {
 
 const handleRemoveOption = (index: number) => {
   if (form.value.options && form.value.options.length > 2) {
+    form.value.correctAnswer = remapChoiceAnswerAfterOptionRemoved(
+      form.value.correctAnswer,
+      index,
+      isMultipleChoice.value
+    )
     form.value.options.splice(index, 1)
-    // 如果删除的是当前选中的答案,清空答案
-    if (form.value.correctAnswer === String.fromCharCode(65 + index)) {
-      form.value.correctAnswer = ''
-    }
   } else {
     ElMessage.warning('至少需要保留2个选项')
   }
@@ -316,13 +323,16 @@ function buildQuestionData(): QuestionData | undefined {
     form.value.questionTypeEnum === QuestionTypeEnum.SingleChoice ||
     form.value.questionTypeEnum === QuestionTypeEnum.MultipleChoice
   ) {
-    const options = (form.value.options || []).map(opt => opt.trim()).filter(Boolean)
-    const answers = Array.isArray(form.value.correctAnswer)
-      ? form.value.correctAnswer
-      : String(form.value.correctAnswer || '')
-          .split(',')
-          .map(value => value.trim())
-          .filter(Boolean)
+    const selectableOptions = buildSelectableChoiceOptions(form.value.options)
+    const options = selectableOptions.map(option => option.text.trim())
+    const normalizedAnswer = normalizeChoiceAnswer(
+      form.value.correctAnswer,
+      selectableOptions.map(option => option.label),
+      isMultipleChoice.value
+    )
+    const answers = (
+      Array.isArray(normalizedAnswer) ? normalizedAnswer : [normalizedAnswer]
+    ).filter(Boolean)
 
     return {
       type: 'choice',
@@ -434,10 +444,10 @@ function buildQuestionData(): QuestionData | undefined {
             style="width: 100%"
           >
             <el-option
-              v-for="(option, index) in form.options?.filter(opt => opt?.trim())"
-              :key="index"
-              :label="`${getOptionLabel(index)}. ${option}`"
-              :value="getOptionLabel(index)"
+              v-for="option in selectableChoiceOptions"
+              :key="option.index"
+              :label="`${option.label}. ${option.text}`"
+              :value="option.label"
             />
           </el-select>
         </el-form-item>
@@ -450,7 +460,7 @@ function buildQuestionData(): QuestionData | undefined {
         prop="correctAnswer"
       >
         <el-radio-group v-model="form.correctAnswer">
-          <el-radio v-for="option in trueFalseOptions" :key="option.value" :label="option.value">
+          <el-radio v-for="option in trueFalseOptions" :key="option.value" :value="option.value">
             {{ option.label }}
           </el-radio>
         </el-radio-group>
@@ -477,7 +487,7 @@ function buildQuestionData(): QuestionData | undefined {
 
       <el-form-item label="难度" prop="difficulty">
         <el-radio-group v-model="form.difficulty">
-          <el-radio v-for="option in difficultyOptions" :key="option.value" :label="option.value">
+          <el-radio v-for="option in difficultyOptions" :key="option.value" :value="option.value">
             {{ option.label }}
           </el-radio>
         </el-radio-group>

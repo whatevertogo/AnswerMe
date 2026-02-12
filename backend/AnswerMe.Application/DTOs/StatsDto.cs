@@ -25,3 +25,24 @@ public class HomeStatsDto
     /// </summary>
     public int DataSourcesCount { get; set; }
 }
+
+/// <summary>
+/// 首页最近活动DTO
+/// </summary>
+public class HomeRecentActivityDto
+{
+    /// <summary>
+    /// 活动类型：create_bank / generate_questions / complete_practice
+    /// </summary>
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 活动文案
+    /// </summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 活动发生时间（UTC）
+    /// </summary>
+    public DateTime OccurredAt { get; set; }
+}

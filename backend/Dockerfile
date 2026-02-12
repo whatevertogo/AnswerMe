@@ -34,8 +34,9 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # ✅ 创建Data Protection密钥目录（非root用户无法创建）
 RUN mkdir -p /app/keys
 
-# ✅ 安全改进: 创建非root用户
-RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser
+# ✅ 安全改进: 创建非root用户（兼容基础镜像已有 UID/GID）
+RUN if ! getent group appuser >/dev/null; then groupadd -r appuser; fi \
+    && if ! id -u appuser >/dev/null 2>&1; then useradd -r -g appuser appuser; fi
 
 # 复制发布的应用
 COPY --from=publish /app/publish .

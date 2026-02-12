@@ -41,4 +41,27 @@ public class StatsController : BaseApiController
             return InternalServerError("获取统计数据失败", "GET_STATS_FAILED");
         }
     }
+
+    /// <summary>
+    /// 获取首页最近活动
+    /// </summary>
+    [HttpGet("recent-activities")]
+    public async Task<ActionResult<List<HomeRecentActivityDto>>> GetHomeRecentActivities(
+        [FromQuery] int limit = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = GetCurrentUserId();
+        var safeLimit = Math.Clamp(limit, 1, 50);
+
+        try
+        {
+            var activities = await _statsService.GetHomeRecentActivitiesAsync(userId, safeLimit, cancellationToken);
+            return Ok(activities);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取最近活动失败");
+            return InternalServerError("获取最近活动失败", "GET_RECENT_ACTIVITIES_FAILED");
+        }
+    }
 }

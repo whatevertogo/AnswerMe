@@ -9,10 +9,13 @@ import {
   Plus,
   MagicStick,
   Download,
-  Refresh
+  Refresh,
+  Document,
+  Clock
 } from '@element-plus/icons-vue'
 import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionBankForm from '@/components/QuestionBankForm.vue'
+import QuestionForm from '@/components/QuestionForm.vue'
 import type { Question, QuestionBank } from '@/stores/questionBank'
 import {
   getQuestionTypeLabel,
@@ -26,6 +29,7 @@ const questionBankStore = useQuestionBankStore()
 
 const loading = ref(false)
 const formDialogVisible = ref(false)
+const questionFormDialogVisible = ref(false)
 const formMode = ref<'edit'>('edit')
 const currentBank = ref<QuestionBank | null>(null)
 
@@ -96,7 +100,7 @@ const handleGenerateQuestions = () => {
 }
 
 const handleAddQuestion = () => {
-  ElMessage.info('手动添加题目功能开发中...')
+  questionFormDialogVisible.value = true
 }
 
 const handleExport = async () => {
@@ -151,6 +155,16 @@ const handleFormSuccess = (_bank: QuestionBank) => {
 const handleFormClose = () => {
   formDialogVisible.value = false
   currentBank.value = null
+}
+
+const handleQuestionFormClose = () => {
+  questionFormDialogVisible.value = false
+}
+
+const handleQuestionFormSuccess = (_question: Question) => {
+  questionFormDialogVisible.value = false
+  ElMessage.success('添加题目成功')
+  fetchBankDetail()
 }
 
 // 题目类型标签颜色
@@ -321,19 +335,17 @@ const getOptionIndex = (index: number) => {
       @close="handleFormClose"
       @success="handleFormSuccess"
     />
+
+    <!-- 创建题目表单 -->
+    <QuestionForm
+      :visible="questionFormDialogVisible"
+      mode="create"
+      :question-bank-id="String(bankId)"
+      @close="handleQuestionFormClose"
+      @success="handleQuestionFormSuccess"
+    />
   </div>
 </template>
-
-<script lang="ts">
-// 为了使用 Element Plus 图标，需要导入
-import { Document, Clock } from '@element-plus/icons-vue'
-export default {
-  components: {
-    Document,
-    Clock
-  }
-}
-</script>
 
 <style scoped>
 .question-bank-detail {

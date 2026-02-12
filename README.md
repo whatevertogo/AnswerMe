@@ -337,18 +337,12 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 - [x] 核心功能开发
 - [x] Docker部署配置
 - [x] 基础文档编写
-- [ ] 测试覆盖
+- [x] 测试覆盖
 - [ ] 首次发布
 
 查看 [任务列表](openspec/changes/ai-questionbank-mvp/tasks.md) 了解详细开发计划。
 
 ## ⚠️ 已知问题
-
-当前 v0.1.0-alpha 版本存在以下已知问题:
-
-### 功能限制
-
-- **数据导入功能**: 暂未实现,仅支持导出。如需迁移数据,可直接备份SQLite数据库文件。
 
 ### Redis 配置（AI 异步生成）
 
@@ -364,7 +358,7 @@ docker-compose up -d redis
 ```
 
 **本地安装 Redis：**
-- Windows: 下载 [Redis for Windows](https://github.com/microsoftarchive/redis/releases) 或使用 WSL
+- Windows: 使用docker启动Redis
 - macOS: `brew install redis && brew services start redis`
 - Linux: `sudo systemctl start redis`
 

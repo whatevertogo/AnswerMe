@@ -1,5 +1,3 @@
-# CLAUDE.md
-
 **AnswerMe** - 自托管智能题库系统，支持 AI 生成题目、多题库管理、练习/测验模式。
 
 ## 技术栈
@@ -29,8 +27,6 @@ composables/   # 组合式函数
 router/        # 路由配置
 utils/         # 工具函数（request.ts 统一 HTTP）
 ```
-
-**前端** (frontend/src/): `api/`、`stores/`、`types/`、`views/`、`components/`、`composables/`、`router/`、`utils/`
 
 ## 快速启动
 
@@ -79,3 +75,7 @@ Question 迁移中：废弃 `Options`/`CorrectAnswer`，改用 `QuestionTypeEnum
 - EF 工具失效: `dotnet tool install --global dotnet-ef`
 - Windows 下 DLL 锁定: `taskkill /F /PID <pid>` 或 `Stop-Process -Force`
 - 数据迁移前备份: `cp answerme.db answerme.db.backup`
+
+## 重要
+完成对应任务之后跑一次对应测试比如type-check + 单测 + eslint 验证，确认这轮修复没有引入类型问题
+前端注意和风格问题要和其他内容一致，后端注意性能问题，尤其是数据迁移和一致性检查部分

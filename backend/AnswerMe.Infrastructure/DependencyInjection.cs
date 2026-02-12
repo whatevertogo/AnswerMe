@@ -55,6 +55,7 @@ public static class DependencyInjection
         services.AddHttpClient("AI", client => { client.Timeout = TimeSpan.FromSeconds(180); });
         services.AddSingleton<IAIProvider, OpenAIProvider>();
         services.AddSingleton<IAIProvider, DeepSeekProvider>();
+        services.AddSingleton<IAIProvider, AnthropicProvider>();
         services.AddSingleton<IAIProvider, QwenProvider>();
         services.AddSingleton<IAIProvider, ZhipuProvider>();
         services.AddSingleton<IAIProvider>(sp =>

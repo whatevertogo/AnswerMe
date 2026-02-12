@@ -13,7 +13,7 @@ import {
   Sugar,
   ArrowRight
 } from '@element-plus/icons-vue'
-import { getHomeStats, type HomeStatsResponse } from '@/api/stats'
+import { getHomeStats, getHomeRecentActivities } from '@/api/stats'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 
@@ -66,11 +66,16 @@ const isLoading = ref(true)
 async function loadStats() {
   try {
     isLoading.value = true
-    const data: HomeStatsResponse = await getHomeStats()
+    const [data, activities] = await Promise.all([getHomeStats(), getHomeRecentActivities(10)])
     stats.value[0] && (stats.value[0].value = data.questionBanksCount.toString())
     stats.value[1] && (stats.value[1].value = data.questionsCount.toString())
     stats.value[2] && (stats.value[2].value = data.monthlyAttempts.toString())
     stats.value[3] && (stats.value[3].value = data.dataSourcesCount.toString())
+    recentActivities.value = activities.map(item => ({
+      title: item.title,
+      time: formatRelativeTime(item.occurredAt),
+      type: item.type
+    }))
   } catch (error) {
     console.error('加载统计数据失败:', error)
     ElMessage.error('加载统计数据失败')
@@ -110,23 +115,42 @@ const quickActions = ref([
   }
 ])
 
-const recentActivities = ref([
-  {
-    title: '创建了"JavaScript基础"题库',
-    time: '2小时前',
-    type: 'create'
-  },
-  {
-    title: '生成了20道题目',
-    time: '5小时前',
-    type: 'generate'
-  },
-  {
-    title: '完成了"Vue 3入门"练习',
-    time: '昨天',
-    type: 'practice'
+type RecentActivityViewModel = {
+  title: string
+  time: string
+  type: string
+}
+
+const recentActivities = ref<RecentActivityViewModel[]>([])
+
+function formatRelativeTime(input: string): string {
+  const date = new Date(input)
+  const timestamp = date.getTime()
+
+  if (!Number.isFinite(timestamp)) {
+    return input
   }
-])
+
+  const now = Date.now()
+  const diffMs = now - timestamp
+  const minute = 60 * 1000
+  const hour = 60 * minute
+  const day = 24 * hour
+
+  if (diffMs < minute) return '刚刚'
+  if (diffMs < hour) return `${Math.floor(diffMs / minute)}分钟前`
+  if (diffMs < day) return `${Math.floor(diffMs / hour)}小时前`
+  if (diffMs < day * 2) return '昨天'
+  if (diffMs < day * 7) return `${Math.floor(diffMs / day)}天前`
+
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 </script>
 
 <template>

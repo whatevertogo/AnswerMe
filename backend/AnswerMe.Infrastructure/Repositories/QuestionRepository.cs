@@ -65,6 +65,24 @@ public class QuestionRepository : IQuestionRepository
             .ToDictionaryAsync(g => g.BankId, g => g.Count, cancellationToken);
     }
 
+    public async Task<List<Question>> GetRecentByQuestionBankIdsAsync(
+        List<int> bankIds,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        if (bankIds == null || bankIds.Count == 0 || take <= 0)
+        {
+            return new List<Question>();
+        }
+
+        return await _context.Questions
+            .Where(q => bankIds.Contains(q.QuestionBankId))
+            .Include(q => q.QuestionBank)
+            .OrderByDescending(q => q.CreatedAt)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<List<Question>> GetPagedFilteredAsync(
         int questionBankId,
         int pageSize,

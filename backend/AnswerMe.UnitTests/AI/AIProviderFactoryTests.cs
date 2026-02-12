@@ -30,7 +30,7 @@ public class AIProviderFactoryTests
         factory.GetProvider("OpenAI").Should().NotBeNull();
         factory.GetProvider("Qwen").Should().NotBeNull();
         factory.GetProvider("Zhipu").Should().NotBeNull();
+        factory.GetProvider("anthropic").Should().NotBeNull();
         factory.GetProvider("Minimax").Should().NotBeNull();
     }
 }
-

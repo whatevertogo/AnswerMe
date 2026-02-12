@@ -24,6 +24,13 @@ export const aiProviders: AIProviderOption[] = [
     description: 'V3.2 (128K context, 32K max output)'
   },
   {
+    label: 'Anthropic (Claude)',
+    value: 'anthropic',
+    defaultModel: 'claude-3-5-sonnet-latest',
+    defaultEndpoint: 'https://api.anthropic.com/v1/messages',
+    tagType: 'primary'
+  },
+  {
     label: '通义千问',
     value: 'qwen',
     defaultModel: 'qwen-turbo',

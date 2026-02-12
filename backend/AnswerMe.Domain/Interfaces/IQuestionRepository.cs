@@ -20,6 +20,14 @@ public interface IQuestionRepository
     Task<Dictionary<int, int>> CountByQuestionBankIdsAsync(List<int> bankIds, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 获取指定题库集合最近创建的题目（按创建时间降序）
+    /// </summary>
+    Task<List<Question>> GetRecentByQuestionBankIdsAsync(
+        List<int> bankIds,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 获取过滤后的分页题目列表（将过滤下推到数据库）
     /// </summary>
     Task<List<Question>> GetPagedFilteredAsync(
