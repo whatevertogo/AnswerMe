@@ -446,8 +446,8 @@ const getOptionIndex = (index: number) => {
 
 .question-answer {
   @apply mb-2 px-3 py-2 rounded-md;
-  background-color: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background-color: var(--color-success-light);
+  border: 1px solid var(--color-success);
   color: var(--color-text-primary);
 }
 
@@ -458,8 +458,8 @@ const getOptionIndex = (index: number) => {
 
 .question-explanation {
   @apply mb-3 px-3 py-2 rounded-md;
-  background-color: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background-color: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
   color: var(--color-text-primary);
 }
 
@@ -470,16 +470,6 @@ const getOptionIndex = (index: number) => {
 
 .question-tags {
   @apply flex gap-2 flex-wrap;
-}
-
-.dark .question-answer {
-  background-color: rgba(16, 185, 129, 0.22);
-  border-color: rgba(16, 185, 129, 0.55);
-}
-
-.dark .question-explanation {
-  background-color: rgba(245, 158, 11, 0.22);
-  border-color: rgba(245, 158, 11, 0.55);
 }
 
 /* 响应式 */

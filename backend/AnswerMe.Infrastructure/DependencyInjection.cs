@@ -7,7 +7,6 @@ using AnswerMe.Infrastructure.Data;
 using AnswerMe.Infrastructure.Repositories;
 using AnswerMe.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -44,8 +43,7 @@ public static class DependencyInjection
             }
 #endif
 
-            // Docker/开发环境下允许使用现有迁移启动，避免 PendingModelChangesWarning 中断自动迁移流程
-            options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
+            // EF Core 8 不提供 PendingModelChangesWarning 事件，保持默认警告行为以兼容 net8.0
         });
 
         services.AddScoped<IUserRepository, UserRepository>();

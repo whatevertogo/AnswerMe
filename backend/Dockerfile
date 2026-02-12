@@ -1,7 +1,7 @@
-# 多阶段构建 - .NET 10 Backend API
+# 多阶段构建 - .NET 8 Backend API
 
 # 阶段1: 构建
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # 复制csproj文件
@@ -25,7 +25,7 @@ FROM build AS publish
 RUN dotnet publish "AnswerMe.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # 阶段3: 运行
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
 # 安装curl用于健康检查

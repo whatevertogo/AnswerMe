@@ -16,6 +16,7 @@ const loginForm = ref({
 })
 
 const loading = ref(false)
+const rememberMe = ref(false)
 
 const handleLogin = async () => {
   if (!loginForm.value.email || !loginForm.value.password) {
@@ -86,7 +87,7 @@ const handleLocalLogin = async () => {
       </el-form-item>
 
       <div class="options-row">
-        <el-checkbox>记住我</el-checkbox>
+        <el-checkbox v-model="rememberMe">记住我</el-checkbox>
       </div>
 
       <el-button

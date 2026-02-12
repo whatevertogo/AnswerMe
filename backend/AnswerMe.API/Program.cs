@@ -14,6 +14,8 @@ using AnswerMe.Infrastructure.Data;
 using AnswerMe.API.BackgroundServices;
 using Serilog;
 using StackExchange.Redis;
+using Microsoft.Data.Sqlite;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -187,14 +189,15 @@ builder.Services.AddControllers(options =>
 
 // 添加API浏览器
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
 // 配置HTTP请求管道
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
     app.UseDeveloperExceptionPage();
 }
 
@@ -218,9 +221,8 @@ if (app.Environment.IsDevelopment())
     var db = scope.ServiceProvider.GetRequiredService<AnswerMeDbContext>();
     try
     {
-        // 等待数据库文件初始化
-        Thread.Sleep(500);
-        var pendingMigrations = db.Database.GetPendingMigrations();
+        // 使用异步重试等待数据库就绪，避免阻塞线程
+        var pendingMigrations = await GetPendingMigrationsWithRetryAsync(db);
         if (pendingMigrations.Any())
         {
             Log.Information("发现 {Count} 个待应用的迁移，开始应用...", pendingMigrations.Count());
@@ -357,4 +359,39 @@ static JwtSettings CreateJwtSettings(IConfiguration configuration, string jwtSec
         jwtSecret,
         configuration.GetValue<int>("JWT:ExpiryDays", 30)
     );
+}
+
+static async Task<IEnumerable<string>> GetPendingMigrationsWithRetryAsync(
+    AnswerMeDbContext db,
+    int maxRetries = 5,
+    int initialDelayMs = 300)
+{
+    for (var attempt = 1; attempt <= maxRetries; attempt++)
+    {
+        try
+        {
+            return db.Database.GetPendingMigrations();
+        }
+        catch (Exception ex) when (
+            ex is SqliteException ||
+            ex is PostgresException ||
+            ex is InvalidOperationException)
+        {
+            if (attempt == maxRetries)
+            {
+                throw;
+            }
+
+            var delayMs = initialDelayMs * attempt;
+            Log.Warning(
+                ex,
+                "数据库尚未就绪，第 {Attempt}/{MaxRetries} 次重试，{Delay}ms 后继续",
+                attempt,
+                maxRetries,
+                delayMs);
+            await Task.Delay(delayMs);
+        }
+    }
+
+    return Enumerable.Empty<string>();
 }
