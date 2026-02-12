@@ -6,18 +6,26 @@ import ElementPlus from 'element-plus'
 import ResultView from '../ResultView.vue'
 import type { AttemptAISuggestion } from '@/api/quiz'
 
-const { mockGetQuizResult, mockGetQuizDetails, mockGenerateAttemptAISuggestions } = vi.hoisted(
-  () => ({
-    mockGetQuizResult: vi.fn(),
-    mockGetQuizDetails: vi.fn(),
-    mockGenerateAttemptAISuggestions: vi.fn()
-  })
-)
+const {
+  mockGetQuizResult,
+  mockGetQuizDetails,
+  mockGenerateAttemptAISuggestions,
+  mockGetQuestions
+} = vi.hoisted(() => ({
+  mockGetQuizResult: vi.fn(),
+  mockGetQuizDetails: vi.fn(),
+  mockGenerateAttemptAISuggestions: vi.fn(),
+  mockGetQuestions: vi.fn()
+}))
 
 vi.mock('@/api/quiz', () => ({
   getQuizResult: mockGetQuizResult,
   getQuizDetails: mockGetQuizDetails,
   generateAttemptAISuggestions: mockGenerateAttemptAISuggestions
+}))
+
+vi.mock('@/api/question', () => ({
+  getQuestions: mockGetQuestions
 }))
 
 const createRouterForResult = () =>
@@ -61,6 +69,40 @@ describe('ResultView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     setActivePinia(createPinia())
+    mockGetQuestions.mockResolvedValue({
+      data: [
+        {
+          id: 11,
+          questionText: 'Q1',
+          questionTypeEnum: 'SingleChoice',
+          data: { type: 'choice', options: ['A', 'B'], correctAnswers: ['A'] },
+          correctAnswer: 'A',
+          explanation: '',
+          createdAt: '2026-02-12T08:00:00.000Z',
+          updatedAt: '2026-02-12T08:00:00.000Z'
+        },
+        {
+          id: 12,
+          questionText: 'Q2',
+          questionTypeEnum: 'SingleChoice',
+          data: { type: 'choice', options: ['A', 'B'], correctAnswers: ['A'] },
+          correctAnswer: 'A',
+          explanation: '',
+          createdAt: '2026-02-12T08:00:00.000Z',
+          updatedAt: '2026-02-12T08:00:00.000Z'
+        },
+        {
+          id: 13,
+          questionText: 'Q3',
+          questionTypeEnum: 'SingleChoice',
+          data: { type: 'choice', options: ['A', 'B'], correctAnswers: ['C'] },
+          correctAnswer: 'C',
+          explanation: '',
+          createdAt: '2026-02-12T08:00:00.000Z',
+          updatedAt: '2026-02-12T08:00:00.000Z'
+        }
+      ]
+    })
   })
 
   it('应支持按错题筛选详情列表', async () => {
@@ -128,12 +170,30 @@ describe('ResultView', () => {
       expect(thirdDetail.text()).not.toContain('错误')
     }
 
+    const answeredFilterInput = wrapper.find('input[value="answered"]')
+    expect(answeredFilterInput.exists()).toBe(true)
+    await answeredFilterInput.setValue(true)
+    await flushPromises()
+    expect(wrapper.findAll('.detail-item').length).toBe(2)
+
+    const allFilterInput = wrapper.find('input[value="all"]')
+    expect(allFilterInput.exists()).toBe(true)
+    await allFilterInput.setValue(true)
+    await flushPromises()
+    expect(wrapper.findAll('.detail-item').length).toBe(3)
+
     const incorrectFilterInput = wrapper.find('input[value="incorrect"]')
     expect(incorrectFilterInput.exists()).toBe(true)
 
     await incorrectFilterInput.setValue(true)
     await flushPromises()
 
+    expect(wrapper.findAll('.detail-item').length).toBe(1)
+
+    const unansweredFilterInput = wrapper.find('input[value="unanswered"]')
+    expect(unansweredFilterInput.exists()).toBe(true)
+    await unansweredFilterInput.setValue(true)
+    await flushPromises()
     expect(wrapper.findAll('.detail-item').length).toBe(1)
   })
 
@@ -149,6 +209,7 @@ describe('ResultView', () => {
       completedAt: '2026-02-12T08:00:00.000Z'
     })
     mockGetQuizDetails.mockResolvedValue([])
+    mockGetQuestions.mockResolvedValue({ data: [] })
     mockGenerateAttemptAISuggestions.mockResolvedValue(buildSuggestion())
 
     const router = createRouterForResult()
@@ -188,6 +249,7 @@ describe('ResultView', () => {
       completedAt: '2026-02-12T08:00:00.000Z'
     })
     mockGetQuizDetails.mockResolvedValue([])
+    mockGetQuestions.mockResolvedValue({ data: [] })
     mockGenerateAttemptAISuggestions
       .mockResolvedValueOnce(buildSuggestion())
       .mockRejectedValueOnce(new Error('AI服务异常'))
@@ -271,6 +333,40 @@ describe('ResultView', () => {
         timeSpent: 0
       }
     ])
+    mockGetQuestions.mockResolvedValue({
+      data: [
+        {
+          id: 21,
+          questionText: 'Q1',
+          questionTypeEnum: 'SingleChoice',
+          data: { type: 'choice', options: ['A', 'B'], correctAnswers: ['A'] },
+          correctAnswer: 'A',
+          explanation: '',
+          createdAt: '2026-02-12T08:00:00.000Z',
+          updatedAt: '2026-02-12T08:00:00.000Z'
+        },
+        {
+          id: 22,
+          questionText: 'Q2',
+          questionTypeEnum: 'SingleChoice',
+          data: { type: 'choice', options: ['A', 'B'], correctAnswers: ['A'] },
+          correctAnswer: 'A',
+          explanation: '',
+          createdAt: '2026-02-12T08:00:00.000Z',
+          updatedAt: '2026-02-12T08:00:00.000Z'
+        },
+        {
+          id: 23,
+          questionText: 'Q3',
+          questionTypeEnum: 'SingleChoice',
+          data: { type: 'choice', options: ['A', 'B'], correctAnswers: ['C'] },
+          correctAnswer: 'C',
+          explanation: '',
+          createdAt: '2026-02-12T08:00:00.000Z',
+          updatedAt: '2026-02-12T08:00:00.000Z'
+        }
+      ]
+    })
 
     const router = createRouterForResult()
     await router.push('/result/101')

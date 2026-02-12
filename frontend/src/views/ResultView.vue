@@ -16,7 +16,9 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getQuizResult, getQuizDetails, generateAttemptAISuggestions } from '@/api/quiz'
+import { getQuestions } from '@/api/question'
 import type { QuizResult, QuizDetail, AttemptAISuggestion } from '@/api/quiz'
+import type { Question, QuestionQueryParams } from '@/types'
 import { extractErrorMessage } from '@/utils/errorHandler'
 
 const route = useRoute()
@@ -28,8 +30,10 @@ const details = ref<QuizDetail[]>([])
 const generatingSuggestion = ref(false)
 const suggestion = ref<AttemptAISuggestion | null>(null)
 const suggestionError = ref('')
-const detailFilter = ref<'all' | 'incorrect' | 'unanswered' | 'slow'>('all')
+const detailFilter = ref<'all' | 'answered' | 'incorrect' | 'unanswered' | 'slow'>('all')
 const detailSearchKeyword = ref('')
+const allQuestions = ref<Question[]>([])
+const allQuestionsLoaded = ref(false)
 
 const sessionId = computed(() => route.params.sessionId as string)
 const attemptId = computed(() => parseInt(sessionId.value))
@@ -48,20 +52,27 @@ const hasAnsweredString = (answer: string | string[] | undefined): boolean => {
   return typeof answer === 'string' && answer.trim().length > 0
 }
 
-// 统计数据
-const correctCount = computed(() => details.value.filter(d => d.isCorrect).length)
-const answeredCount = computed(() => details.value.filter(hasUserAnswer).length)
-const incorrectCount = computed(() => Math.max(answeredCount.value - correctCount.value, 0))
-const unansweredCount = computed(() =>
-  Math.max((result.value?.totalQuestions || 0) - answeredCount.value, 0)
-)
+const isAnsweredDetail = (detail: QuizDetail): boolean => hasUserAnswer(detail)
+
+const isIncorrectDetail = (detail: QuizDetail): boolean =>
+  isAnsweredDetail(detail) && detail.isCorrect === false
+
+const isUnansweredDetail = (detail: QuizDetail): boolean => !isAnsweredDetail(detail)
+
+const isSlowDetail = (detail: QuizDetail): boolean =>
+  isAnsweredDetail(detail) && typeof detail.timeSpent === 'number' && detail.timeSpent > 30
+
+// 统计数据 - 使用 mergedDetails 以包含所有题目
+const correctCount = computed(() => mergedDetails.value.filter(d => d.isCorrect === true).length)
+const incorrectCount = computed(() => mergedDetails.value.filter(isIncorrectDetail).length)
+const unansweredCount = computed(() => mergedDetails.value.filter(isUnansweredDetail).length)
 const accuracyRate = computed(() => {
-  const total = result.value?.totalQuestions || 0
+  const total = mergedDetails.value.length
   if (!total) return 0
   return Number(((correctCount.value / total) * 100).toFixed(2))
 })
 const averageTimePerAnswered = computed(() => {
-  const timeValues = details.value
+  const timeValues = mergedDetails.value
     .filter(
       detail =>
         hasUserAnswer(detail) && typeof detail.timeSpent === 'number' && detail.timeSpent > 0
@@ -71,39 +82,54 @@ const averageTimePerAnswered = computed(() => {
   if (!timeValues.length) return 0
   return Math.round(timeValues.reduce((sum, sec) => sum + sec, 0) / timeValues.length)
 })
-const slowQuestionCount = computed(
-  () =>
-    details.value.filter(
-      detail =>
-        hasUserAnswer(detail) &&
-        typeof detail.timeSpent === 'number' &&
-        (detail.timeSpent as number) > 30
-    ).length
-)
+const slowQuestionCount = computed(() => mergedDetails.value.filter(isSlowDetail).length)
 
 const normalizedDetailSearch = computed(() => detailSearchKeyword.value.trim().toLowerCase())
 
+// 创建已答题的映射，便于快速查找
+const answeredDetailMap = computed(() => {
+  const map = new Map<number, QuizDetail>()
+  details.value.forEach(detail => {
+    map.set(detail.questionId, detail)
+  })
+  return map
+})
+
+// 合并所有题目（已答题+未答题）
+const mergedDetails = computed(() => {
+  if (allQuestionsLoaded.value && allQuestions.value.length > 0) {
+    // 使用题库的所有题目
+    return allQuestions.value.map(question => {
+      const answeredDetail = answeredDetailMap.value.get(question.id)
+      if (answeredDetail) {
+        return answeredDetail
+      }
+      // 未答题：构建一个详情对象
+      return {
+        id: 0,
+        attemptId: attemptId.value,
+        questionId: question.id,
+        questionText: question.questionText,
+        questionType: question.questionTypeEnum || '',
+        options: extractQuestionOptionsString(question),
+        userAnswer: undefined,
+        correctAnswer: extractQuestionCorrectAnswer(question),
+        isCorrect: undefined,
+        timeSpent: undefined,
+        explanation: question.explanation
+      } as QuizDetail
+    })
+  }
+  // 如果题目列表还没加载，暂时只显示已答题
+  return details.value
+})
+
 const filteredDetails = computed(() => {
-  return details.value.filter(detail => {
-    if (
-      detailFilter.value === 'incorrect' &&
-      (!hasAnsweredString(detail.userAnswer) || detail.isCorrect !== false)
-    ) {
-      return false
-    }
-
-    if (detailFilter.value === 'unanswered' && hasAnsweredString(detail.userAnswer)) {
-      return false
-    }
-
-    if (
-      detailFilter.value === 'slow' &&
-      (!hasAnsweredString(detail.userAnswer) ||
-        typeof detail.timeSpent !== 'number' ||
-        detail.timeSpent <= 30)
-    ) {
-      return false
-    }
+  return mergedDetails.value.filter(detail => {
+    if (detailFilter.value === 'answered' && !isAnsweredDetail(detail)) return false
+    if (detailFilter.value === 'incorrect' && !isIncorrectDetail(detail)) return false
+    if (detailFilter.value === 'unanswered' && !isUnansweredDetail(detail)) return false
+    if (detailFilter.value === 'slow' && !isSlowDetail(detail)) return false
 
     if (!normalizedDetailSearch.value) {
       return true
@@ -120,6 +146,56 @@ const filteredDetails = computed(() => {
     )
   })
 })
+
+// 从 Question 对象中提取选项字符串
+function extractQuestionOptionsString(question: Question): string | undefined {
+  const data = question.data
+  if (!data) return undefined
+
+  if ('options' in data && Array.isArray(data.options)) {
+    return data.options.join(',')
+  }
+  if ('options' in question && Array.isArray(question.options)) {
+    return question.options.join(',')
+  }
+  return undefined
+}
+
+// 从 Question 对象中提取正确答案
+function extractQuestionCorrectAnswer(question: Question): string {
+  const normalizeAnswer = (value: unknown): string => {
+    if (Array.isArray(value)) {
+      return value.map(item => String(item)).join(',')
+    }
+    if (typeof value === 'boolean') {
+      return value.toString().toLowerCase()
+    }
+    if (typeof value === 'string') {
+      return value
+    }
+    return ''
+  }
+
+  const data = question.data
+  if (!data) return normalizeAnswer(question.correctAnswer)
+
+  if ('correctAnswers' in data && Array.isArray(data.correctAnswers)) {
+    return data.correctAnswers.join(',')
+  }
+  if ('correctAnswer' in data && typeof data.correctAnswer === 'boolean') {
+    return data.correctAnswer.toString().toLowerCase()
+  }
+  if ('correctAnswer' in data && typeof data.correctAnswer === 'string') {
+    return data.correctAnswer
+  }
+  if ('acceptableAnswers' in data && Array.isArray(data.acceptableAnswers)) {
+    return data.acceptableAnswers.join(',')
+  }
+  if ('referenceAnswer' in data) {
+    return data.referenceAnswer || ''
+  }
+  return normalizeAnswer(question.correctAnswer)
+}
 
 // 格式化时间
 const formatDuration = (seconds: number) => {
@@ -208,7 +284,7 @@ function exportResultReport() {
     `题库：${result.value.questionBankName || '未知'}`,
     `尝试ID：${result.value.id}`,
     `完成时间：${formatDate(result.value.completedAt)}`,
-    `总题数：${result.value.totalQuestions}`,
+    `总题数：${mergedDetails.value.length}`,
     `答对：${correctCount.value}`,
     `答错：${incorrectCount.value}`,
     `未作答：${unansweredCount.value}`,
@@ -228,7 +304,7 @@ function exportResultReport() {
   lines.push('题目详情')
   lines.push('--------------------')
 
-  details.value.forEach((detail, index) => {
+  mergedDetails.value.forEach((detail, index) => {
     const status = hasAnsweredString(detail.userAnswer)
       ? detail.isCorrect
         ? '正确'
@@ -302,6 +378,7 @@ function resetDetailFilters() {
 async function loadResult() {
   try {
     loading.value = true
+    allQuestionsLoaded.value = false
 
     const [resultRes, detailsRes] = await Promise.all([
       getQuizResult(attemptId.value),
@@ -310,6 +387,25 @@ async function loadResult() {
 
     result.value = resultRes
     details.value = detailsRes
+
+    // 加载题库的所有题目，以便显示未答题
+    if (resultRes.questionBankId) {
+      try {
+        const params: QuestionQueryParams = {
+          questionBankId: resultRes.questionBankId,
+          pageSize: 1000 // 获取足够多的题目
+        }
+        const questionsRes = await getQuestions(params)
+        allQuestions.value = questionsRes.data
+        allQuestionsLoaded.value = true
+      } catch (error) {
+        // 加载题目列表失败不影响主要功能，只记录错误
+        console.error('加载题库题目列表失败:', error)
+        allQuestionsLoaded.value = false
+      }
+    } else {
+      allQuestionsLoaded.value = false
+    }
   } catch (error: unknown) {
     ElMessage.error('加载结果失败: ' + extractErrorMessage(error, '未知错误'))
     console.error('加载结果失败:', error)
@@ -410,7 +506,7 @@ onMounted(() => {
         <div class="stat-item total">
           <el-icon :size="24"><TrendCharts /></el-icon>
           <div class="stat-content">
-            <div class="stat-value">{{ result.totalQuestions }}</div>
+            <div class="stat-value">{{ mergedDetails.length }}</div>
             <div class="stat-label">总题数</div>
           </div>
         </div>
@@ -522,11 +618,12 @@ onMounted(() => {
         <div class="section-header">
           <h3 class="section-title">题目详情</h3>
           <span class="detail-count"
-            >已显示 {{ filteredDetails.length }} / {{ details.length }} 题</span
+            >已显示 {{ filteredDetails.length }} / {{ mergedDetails.length }} 题</span
           >
         </div>
         <div class="detail-toolbar">
           <el-radio-group v-model="detailFilter" size="small">
+            <el-radio-button value="answered">仅已答</el-radio-button>
             <el-radio-button value="all">全部</el-radio-button>
             <el-radio-button value="incorrect">仅错题</el-radio-button>
             <el-radio-button value="unanswered">仅未作答</el-radio-button>
@@ -865,31 +962,28 @@ onMounted(() => {
 }
 
 .detail-item {
-  @apply px-5 py-5 border-b border-border
+  @apply px-5 py-5 mb-3 border border-border rounded-md bg-bg
          transition-all duration-300 ease-in-out
          hover:bg-bg-secondary;
 }
 
 .detail-item:last-child {
-  @apply border-b-0;
+  @apply mb-0;
 }
 
 .detail-item.correct {
-  background-color: var(--color-success-light);
   border-left-width: 4px;
   border-left-style: solid;
   border-left-color: var(--color-success);
 }
 
 .detail-item.incorrect {
-  background-color: var(--color-danger-light);
   border-left-width: 4px;
   border-left-style: solid;
   border-left-color: var(--color-danger);
 }
 
 .detail-item.unanswered {
-  background-color: var(--color-bg-secondary);
   border-left-width: 4px;
   border-left-style: solid;
   border-left-color: var(--color-text-muted);
