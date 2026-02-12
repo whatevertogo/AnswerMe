@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, View, Edit, Delete, Search, Refresh, ArrowLeft } from '@element-plus/icons-vue'
 import { useQuestionStore } from '@/stores/question'
@@ -17,6 +17,7 @@ import {
 } from '@/types/question'
 
 const route = useRoute()
+const router = useRouter()
 const questionStore = useQuestionStore()
 const questionBankStore = useQuestionBankStore()
 
@@ -38,13 +39,23 @@ const currentBankId = computed(
 
 onMounted(async () => {
   if (currentBankId.value) {
-    // 先加载题库信息
     await questionBankStore.fetchQuestionBank(Number(currentBankId.value))
   }
   await fetchQuestions()
 })
 
 const fetchQuestions = async (options?: { append?: boolean }) => {
+  if (!currentBankId.value) {
+    questionStore.questions = []
+    questionStore.pagination = {
+      pageSize: 20,
+      hasMore: false,
+      nextCursor: null,
+      totalCount: 0
+    }
+    return
+  }
+
   loading.value = true
   try {
     const lastId = options?.append ? (questionStore.pagination.nextCursor ?? undefined) : undefined
@@ -77,6 +88,11 @@ watch([searchKeyword, selectedType, selectedDifficulty], () => {
 })
 
 const handleCreate = () => {
+  if (!currentBankId.value) {
+    ElMessage.warning('请先进入某个题库，再创建题目')
+    return
+  }
+
   formMode.value = 'create'
   currentQuestion.value = null
   formDialogVisible.value = true
@@ -135,7 +151,10 @@ const handleFormClose = () => {
 const handleBackToBank = () => {
   if (currentBankId.value) {
     window.history.back()
+    return
   }
+
+  router.push('/question-banks')
 }
 
 // 题型颜色映射（与标签不同，保留在本地）
@@ -316,8 +335,16 @@ const formatCorrectAnswer = (question: Question) => {
         </el-table-column>
 
         <template #empty>
-          <el-empty description="暂无题目" :image-size="120">
-            <el-button type="primary" @click="handleCreate">创建第一道题目</el-button>
+          <el-empty
+            :description="currentBankId ? '暂无题目' : '请先从题库详情页进入题目管理'"
+            :image-size="120"
+          >
+            <el-button v-if="currentBankId" type="primary" @click="handleCreate">
+              创建第一道题目
+            </el-button>
+            <el-button v-else type="primary" @click="router.push('/question-banks')">
+              前往题库管理
+            </el-button>
           </el-empty>
         </template>
       </el-table>

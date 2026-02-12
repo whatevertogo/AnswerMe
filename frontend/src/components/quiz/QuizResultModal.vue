@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { CircleCheck, Clock, Aim, RefreshRight, ArrowUp } from '@element-plus/icons-vue'
+import { parseAnswerToArray } from '@/utils/answerFormatter'
+import { compareChoiceAnswers } from '@/utils/quizAnswer'
 
 interface Question {
   id: number
   content: string
   type: 'single' | 'multiple' | 'boolean' | 'fill' | 'essay'
+  options: string[]
   difficulty: string
   tags: string[]
   correctAnswer?: string
@@ -23,11 +26,43 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
+  retry: []
+  home: []
 }>()
 
 const activeTab = ref('overview')
 
 const answeredCount = computed(() => Object.keys(props.answers).length)
+
+function isChoiceType(type: Question['type']): boolean {
+  return type === 'single' || type === 'multiple'
+}
+
+function normalizeTextAnswer(answer: string | string[]): string {
+  if (Array.isArray(answer)) {
+    return answer.join(',').trim().toLowerCase()
+  }
+  return answer.trim().toLowerCase()
+}
+
+function isAnswerCorrect(question: Question, userAnswer: string | string[]): boolean {
+  if (isChoiceType(question.type)) {
+    return compareChoiceAnswers(userAnswer, question.correctAnswer || '', question.options || [])
+  }
+
+  if (question.type === 'fill' || question.type === 'essay') {
+    const userText = normalizeTextAnswer(userAnswer)
+    const correctList = parseAnswerToArray(question.correctAnswer || '')
+      .map(answer => answer.trim().toLowerCase())
+      .filter(Boolean)
+    if (!userText || correctList.length === 0) {
+      return false
+    }
+    return correctList.some(answer => userText.includes(answer) || answer.includes(userText))
+  }
+
+  return normalizeTextAnswer(userAnswer) === normalizeTextAnswer(question.correctAnswer || '')
+}
 
 // 计算实际答对的题目数量
 const correctCount = computed(() => {
@@ -35,19 +70,7 @@ const correctCount = computed(() => {
   props.questions.forEach(question => {
     const userAnswer = props.answers[question.id]
     if (!userAnswer) return
-
-    // 将用户答案和正确答案标准化后比较
-    const normalizeAnswer = (answer: string | string[]): string => {
-      if (Array.isArray(answer)) {
-        return answer.sort().join(',')
-      }
-      return answer.trim().toLowerCase()
-    }
-
-    const userAnswerStr = normalizeAnswer(userAnswer)
-    const correctAnswerStr = normalizeAnswer(question.correctAnswer || '')
-
-    if (userAnswerStr === correctAnswerStr) {
+    if (isAnswerCorrect(question, userAnswer)) {
       count++
     }
   })
@@ -159,8 +182,8 @@ const getDifficultyColor = (difficulty: string) => {
 
         <!-- 操作按钮 -->
         <div class="action-buttons">
-          <el-button :icon="RefreshRight">再做一次</el-button>
-          <el-button type="primary">返回首页</el-button>
+          <el-button :icon="RefreshRight" @click="emit('retry')">再做一次</el-button>
+          <el-button type="primary" @click="emit('home')">返回首页</el-button>
         </div>
       </el-tab-pane>
 

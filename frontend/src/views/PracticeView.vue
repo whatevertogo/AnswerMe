@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, Reading } from '@element-plus/icons-vue'
 import { useQuestionBankStore } from '@/stores/questionBank'
 import { useAuthStore } from '@/stores/auth'
+import { getQuestionBankDetail } from '@/api/questionBank'
 import type { QuestionBank } from '@/stores/questionBank'
 import { DifficultyLabels, DifficultyColors } from '@/types/question'
 import { extractErrorMessage } from '@/utils/errorHandler'
@@ -13,28 +14,59 @@ const router = useRouter()
 const questionBankStore = useQuestionBankStore()
 const authStore = useAuthStore()
 
-const loading = ref(false)
+const listLoading = ref(false)
+const startingBankId = ref<number | null>(null)
 const searchKeyword = ref('')
 const searchTimer = ref<number | null>(null)
+
+const normalizedSearchKeyword = computed(() => searchKeyword.value.trim().toLowerCase())
+const displayedQuestionBanks = computed(() => {
+  if (!normalizedSearchKeyword.value) {
+    return questionBankStore.questionBanks
+  }
+
+  return questionBankStore.questionBanks.filter(bank => {
+    const name = bank.name?.toLowerCase() ?? ''
+    const description = bank.description?.toLowerCase() ?? ''
+    return (
+      name.includes(normalizedSearchKeyword.value) ||
+      description.includes(normalizedSearchKeyword.value)
+    )
+  })
+})
 
 onMounted(async () => {
   await fetchQuestionBanks()
 })
 
-const fetchQuestionBanks = async (reset = false) => {
+const fetchQuestionBanks = async (reset = false, loadMore = false) => {
+  if (listLoading.value) {
+    return
+  }
+
+  const lastId = loadMore ? questionBankStore.nextCursor : undefined
+  if (loadMore && (!questionBankStore.hasMore || !lastId)) {
+    return
+  }
+
   if (reset) {
     questionBankStore.questionBanks = []
+    questionBankStore.hasMore = false
+    questionBankStore.nextCursor = undefined
   }
-  loading.value = true
+
+  listLoading.value = true
+
   try {
     await questionBankStore.fetchQuestionBanks({
-      search: searchKeyword.value || undefined,
+      search: normalizedSearchKeyword.value || undefined,
+      lastId,
       pageSize: 100
     })
   } catch {
     ElMessage.error('获取题库列表失败')
   } finally {
-    loading.value = false
+    listLoading.value = false
   }
 }
 
@@ -43,11 +75,40 @@ watch(searchKeyword, () => {
     clearTimeout(searchTimer.value)
   }
   searchTimer.value = window.setTimeout(() => {
-    fetchQuestionBanks(true)
+    fetchQuestionBanks(true, false)
   }, 300)
 })
 
+onBeforeUnmount(() => {
+  if (searchTimer.value) {
+    clearTimeout(searchTimer.value)
+    searchTimer.value = null
+  }
+})
+
+const handleSearchNow = async () => {
+  if (searchTimer.value) {
+    clearTimeout(searchTimer.value)
+    searchTimer.value = null
+  }
+
+  await fetchQuestionBanks(true, false)
+}
+
+const handleLoadMore = async () => {
+  await fetchQuestionBanks(false, true)
+}
+
+const handleResetSearch = async () => {
+  searchKeyword.value = ''
+  await fetchQuestionBanks(true, false)
+}
+
 const handleStartPractice = async (bank: QuestionBank) => {
+  if (startingBankId.value === bank.id) {
+    return
+  }
+
   // 1. 验证题库 ID 有效性
   if (!bank.id || bank.id <= 0) {
     ElMessage.error('题库信息无效')
@@ -56,7 +117,7 @@ const handleStartPractice = async (bank: QuestionBank) => {
 
   // 2. 验证用户权限
   const currentUserId = authStore.userInfo?.id
-  if (bank.userId && bank.userId !== currentUserId) {
+  if (currentUserId != null && bank.userId && bank.userId !== currentUserId) {
     ElMessage.error('您没有权限访问此题库')
     return
   }
@@ -69,37 +130,26 @@ const handleStartPractice = async (bank: QuestionBank) => {
 
   // 4. 实时验证题库是否有题目（防止缓存数据不准确）
   try {
-    loading.value = true
-    // 重新获取题库列表以获取最新数据
-    await questionBankStore.fetchQuestionBanks({
-      search: searchKeyword.value || undefined,
-      pageSize: 100
-    })
+    startingBankId.value = bank.id
+    const latestBank = await getQuestionBankDetail(bank.id)
 
-    // 查找更新后的题库
-    const updatedBank = questionBankStore.questionBanks.find(b => b.id === bank.id)
-    if (!updatedBank) {
-      ElMessage.error('题库不存在或已被删除')
-      return
-    }
-
-    if (!updatedBank.questionCount || updatedBank.questionCount <= 0) {
+    if (!latestBank.questionCount || latestBank.questionCount <= 0) {
       ElMessage.warning('题库暂无题目，无法开始练习')
       return
     }
 
     // 5. 再次验证用户权限（使用最新数据）
-    if (updatedBank.userId && updatedBank.userId !== currentUserId) {
+    if (currentUserId != null && latestBank.userId && latestBank.userId !== currentUserId) {
       ElMessage.error('您没有权限访问此题库')
       return
     }
 
-    router.push(`/quiz/${bank.id}/new`)
+    await router.push({ name: 'QuizNew', params: { bankId: bank.id } })
   } catch (error: unknown) {
     const errorMessage = extractErrorMessage(error, '验证题库失败，请重试')
     ElMessage.error(errorMessage)
   } finally {
-    loading.value = false
+    startingBankId.value = null
   }
 }
 
@@ -140,15 +190,18 @@ const formatDate = (dateString: string) => {
         :prefix-icon="Search"
         clearable
         class="search-input"
-        @clear="fetchQuestionBanks(true)"
+        @clear="handleResetSearch"
+        @keyup.enter="handleSearchNow"
       />
-      <el-button :icon="Refresh" @click="fetchQuestionBanks(true)">刷新</el-button>
+      <el-button :icon="Refresh" :loading="listLoading" @click="fetchQuestionBanks(true, false)">
+        刷新
+      </el-button>
     </div>
 
     <div class="table-card">
       <el-table
-        v-loading="loading"
-        :data="questionBankStore.questionBanks"
+        v-loading="listLoading"
+        :data="displayedQuestionBanks"
         style="width: 100%"
         highlight-current-row
       >
@@ -197,7 +250,7 @@ const formatDate = (dateString: string) => {
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-tooltip
-              v-if="!row.questionCount"
+              v-if="!row.questionCount || row.questionCount <= 0"
               content="题库暂无题目，无法开始练习"
               placement="top"
             >
@@ -212,6 +265,8 @@ const formatDate = (dateString: string) => {
               type="primary"
               :icon="Reading"
               size="small"
+              :loading="startingBankId === row.id"
+              :disabled="startingBankId !== null && startingBankId !== row.id"
               @click="handleStartPractice(row)"
             >
               开始练习
@@ -220,7 +275,13 @@ const formatDate = (dateString: string) => {
         </el-table-column>
 
         <template #empty>
-          <el-empty description="暂无题库" :image-size="120">
+          <el-empty
+            :description="normalizedSearchKeyword ? '未找到匹配题库' : '暂无题库'"
+            :image-size="120"
+          >
+            <el-button v-if="normalizedSearchKeyword" @click="handleResetSearch"
+              >清空搜索</el-button
+            >
             <el-button type="primary" @click="handleCreateBank">创建题库</el-button>
             <el-button @click="handleGenerateQuestions">生成题目</el-button>
           </el-empty>
@@ -228,7 +289,13 @@ const formatDate = (dateString: string) => {
       </el-table>
 
       <div v-if="questionBankStore.hasMore" class="pagination-wrapper">
-        <el-button :loading="loading" @click="fetchQuestionBanks()"> 加载更多 </el-button>
+        <el-button
+          :loading="listLoading"
+          :disabled="!questionBankStore.nextCursor || startingBankId !== null"
+          @click="handleLoadMore"
+        >
+          加载更多
+        </el-button>
       </div>
     </div>
   </div>

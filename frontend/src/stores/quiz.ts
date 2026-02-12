@@ -122,7 +122,8 @@ export const useQuizStore = defineStore('quiz', () => {
   async function submitAnswer(
     questionId: number,
     userAnswer: string | string[],
-    timeSpent?: number
+    timeSpent?: number,
+    submitPayload: string | string[] = userAnswer
   ) {
     if (!currentAttemptId.value) {
       throw new Error('答题未开始')
@@ -149,7 +150,7 @@ export const useQuizStore = defineStore('quiz', () => {
       }
 
       // 使用统一的答案格式化函数
-      const answerString = formatAnswerForSubmit(userAnswer)
+      const answerString = formatAnswerForSubmit(submitPayload)
 
       await quizApi.submitAnswer({
         attemptId: currentAttemptId.value,

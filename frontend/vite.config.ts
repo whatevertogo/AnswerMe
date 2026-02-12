@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: parseInt(env.VITE_APP_PORT || '5173'),
+      strictPort: true,
       proxy: {
         '/api': {
           target: env.VITE_API_BASE_URL || 'http://localhost:5000',

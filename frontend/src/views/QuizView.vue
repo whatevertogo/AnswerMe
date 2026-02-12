@@ -16,7 +16,6 @@ import { ElMessage } from 'element-plus'
 import QuizQuestionList from '@/components/quiz/QuizQuestionList.vue'
 import QuizQuestionPanel from '@/components/quiz/QuizQuestionPanel.vue'
 import QuizAnswerPanel from '@/components/quiz/QuizAnswerPanel.vue'
-import QuizResultModal from '@/components/quiz/QuizResultModal.vue'
 import { useQuizStore } from '@/stores/quiz'
 import { useTheme } from '@/composables/useTheme'
 import { getQuestionDetail } from '@/api/question'
@@ -26,6 +25,12 @@ import type { Question } from '@/types/question'
 import { getQuestionOptions, getQuestionCorrectAnswers } from '@/types/question'
 import { extractErrorMessage } from '@/utils/errorHandler'
 import { parseAnswerToArray } from '@/utils/answerFormatter'
+import {
+  compareChoiceAnswers,
+  inferChoiceAnswerMode,
+  mapChoiceAnswerForDisplay,
+  mapChoiceAnswerForSubmit
+} from '@/utils/quizAnswer'
 
 const router = useRouter()
 const route = useRoute()
@@ -43,7 +48,6 @@ const questions = ref<QuizQuestion[]>([])
 const questionMap = ref<Map<number, QuizQuestion>>(new Map())
 const markedQuestions = ref<Set<number>>(new Set())
 const timeElapsed = ref(0)
-const showResult = ref(false)
 const loading = ref(true)
 const initializing = ref(true)
 
@@ -105,7 +109,6 @@ watch(
 async function initializeQuiz() {
   initializing.value = true
   loading.value = true
-  showResult.value = false
   timeElapsed.value = 0
   questions.value = []
   questionMap.value = new Map()
@@ -152,7 +155,10 @@ async function loadExistingQuiz() {
 
   // 先获取答题会话状态，避免已完成会话继续提交导致 400
   const attemptResult = await quizStore.fetchQuizResult(attemptId)
-  showResult.value = Boolean(attemptResult.completedAt)
+  if (attemptResult.completedAt) {
+    await router.replace(`/result/${attemptId}`)
+    return
+  }
 
   // 加载答题详情
   const details = await quizStore.fetchQuizDetails(attemptId)
@@ -176,10 +182,9 @@ async function loadExistingQuiz() {
     details.forEach((detail: QuizDetail) => {
       const question = questionMap.value.get(detail.questionId)
       if (typeof detail.userAnswer === 'string' && question) {
-        if (question.type === 'multiple') {
-          quizStore.answers[detail.questionId] = parseAnswerToArray(detail.userAnswer)
-        } else {
-          quizStore.answers[detail.questionId] = detail.userAnswer
+        const restoredAnswer = restoreAnswerForDisplay(question, detail.userAnswer)
+        if (restoredAnswer !== undefined) {
+          quizStore.answers[detail.questionId] = restoredAnswer
         }
       }
       if (typeof detail.timeSpent === 'number' && detail.timeSpent > 0) {
@@ -256,6 +261,36 @@ function convertQuestionType(type: string | undefined): QuizQuestion['type'] {
   return typeMap[type] || 'single'
 }
 
+function isChoiceType(type: QuizQuestion['type']): boolean {
+  return type === 'single' || type === 'multiple'
+}
+
+function restoreAnswerForDisplay(
+  question: QuizQuestion,
+  rawAnswer: string
+): string | string[] | undefined {
+  if (!rawAnswer.trim()) {
+    return undefined
+  }
+
+  if (!isChoiceType(question.type)) {
+    return rawAnswer
+  }
+
+  const multiple = question.type === 'multiple'
+  return mapChoiceAnswerForDisplay(rawAnswer, question.options, multiple)
+}
+
+function mapAnswerForSubmit(question: QuizQuestion, answer: string | string[]): string | string[] {
+  if (!isChoiceType(question.type)) {
+    return answer
+  }
+
+  const mode = inferChoiceAnswerMode(question.correctAnswer, question.options)
+  const multiple = question.type === 'multiple'
+  return mapChoiceAnswerForSubmit(answer, question.options, mode, multiple)
+}
+
 function startTimer() {
   timer = window.setInterval(() => {
     timeElapsed.value++
@@ -277,13 +312,33 @@ const formatTime = (seconds: number) => {
 }
 
 const handleAnswer = async (questionId: number, answer: string | string[]) => {
-  if (questionId <= 0 || !quizStore.questionIds.includes(questionId) || showResult.value) {
+  if (questionId <= 0 || !quizStore.questionIds.includes(questionId)) {
     return
   }
 
   try {
-    // 直接传递原始格式，store 内部会按题型格式化
-    await quizStore.submitAnswer(questionId, answer, timeElapsed.value)
+    const question = questionMap.value.get(questionId)
+    if (!question) {
+      return
+    }
+
+    const normalizedAnswer =
+      question.type === 'multiple'
+        ? Array.from(new Set(parseAnswerToArray(answer).filter(Boolean)))
+        : answer
+
+    // 本地答案和提交口径分离：UI 用选项文本，提交按题目口径映射为 A/B 或文本
+    const submitPayload = mapAnswerForSubmit(question, normalizedAnswer)
+
+    // 选择题按映射后的语义去重，避免文本/A-B 形式不同导致重复请求
+    if (
+      isChoiceType(question.type) &&
+      compareChoiceAnswers(quizStore.answers[questionId], submitPayload, question.options)
+    ) {
+      return
+    }
+
+    await quizStore.submitAnswer(questionId, normalizedAnswer, timeElapsed.value, submitPayload)
   } catch (error: unknown) {
     ElMessage.error('提交答案失败: ' + extractErrorMessage(error, '未知错误'))
     console.error('提交答案失败:', error)
@@ -358,11 +413,11 @@ const goToPrevious = () => {
 const handleSubmit = async () => {
   try {
     loading.value = true
-    await quizStore.completeQuiz()
+    const completed = await quizStore.completeQuiz()
     // 清除标记状态
     clearMarkedQuestions()
-    showResult.value = true
     ElMessage.success('交卷成功！')
+    await router.push(`/result/${completed.id}`)
   } catch (error: unknown) {
     ElMessage.error('交卷失败: ' + extractErrorMessage(error, '未知错误'))
     console.error('交卷失败:', error)
@@ -448,7 +503,7 @@ const goHome = () => {
             <QuizAnswerPanel
               :question="safeCurrentQuestion"
               :answer="quizStore.answers[safeCurrentQuestion.id]"
-              :disabled="quizStore.loading || showResult"
+              :disabled="quizStore.loading"
               @update:answer="ans => handleAnswer(safeCurrentQuestion.id, ans)"
             />
           </div>
@@ -486,7 +541,7 @@ const goHome = () => {
 
           <el-button
             type="primary"
-            :disabled="answeredCount === 0 || showResult"
+            :disabled="answeredCount === 0"
             :loading="loading"
             @click="handleSubmit"
           >
@@ -494,15 +549,6 @@ const goHome = () => {
           </el-button>
         </div>
       </footer>
-
-      <!-- 结果弹窗 -->
-      <QuizResultModal
-        v-model:visible="showResult"
-        :questions="questions"
-        :answers="quizStore.answers"
-        :time-elapsed="timeElapsed"
-        :attempt-id="quizStore.currentAttemptId"
-      />
     </template>
 
     <!-- 空状态 -->

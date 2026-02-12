@@ -14,13 +14,16 @@ namespace AnswerMe.API.Controllers;
 public class AttemptsController : BaseApiController
 {
     private readonly IAttemptService _attemptService;
+    private readonly IAttemptInsightService _attemptInsightService;
     private readonly ILogger<AttemptsController> _logger;
 
     public AttemptsController(
         IAttemptService attemptService,
+        IAttemptInsightService attemptInsightService,
         ILogger<AttemptsController> logger)
     {
         _attemptService = attemptService;
+        _attemptInsightService = attemptInsightService;
         _logger = logger;
     }
 
@@ -170,6 +173,30 @@ public class AttemptsController : BaseApiController
         {
             _logger.LogError(ex, "获取答题统计失败");
             return InternalServerError("获取答题统计失败", "GET_STATISTICS_FAILED");
+        }
+    }
+
+    /// <summary>
+    /// 生成答题 AI 学习建议（使用用户默认 AI 配置）
+    /// </summary>
+    [HttpPost("{id}/ai-suggestions")]
+    public async Task<ActionResult<AttemptAiSuggestionDto>> GenerateAiSuggestions(int id, CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+
+        try
+        {
+            var suggestion = await _attemptInsightService.GenerateAiSuggestionAsync(userId, id, cancellationToken);
+            return Ok(suggestion);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestWithError(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "生成答题 AI 建议失败");
+            return InternalServerError("生成答题 AI 建议失败", "GENERATE_AI_SUGGESTIONS_FAILED");
         }
     }
 }
