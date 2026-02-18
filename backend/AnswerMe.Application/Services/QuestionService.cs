@@ -29,8 +29,7 @@ public class QuestionService : IQuestionService
     public async Task<QuestionDto> CreateAsync(int userId, CreateQuestionDto dto, CancellationToken cancellationToken = default)
     {
         // 验证题库是否存在且属于当前用户
-        var questionBank = await _questionBankRepository.GetByIdAsync(dto.QuestionBankId, cancellationToken);
-        if (questionBank == null || questionBank.UserId != userId)
+        if (!await HasQuestionBankAccessAsync(dto.QuestionBankId, userId, cancellationToken))
         {
             throw new InvalidOperationException("题库不存在或无权访问");
         }
@@ -66,8 +65,7 @@ public class QuestionService : IQuestionService
     public async Task<QuestionListDto> GetListAsync(int userId, QuestionListQueryDto query, CancellationToken cancellationToken = default)
     {
         // 验证题库是否存在且属于当前用户
-        var questionBank = await _questionBankRepository.GetByIdAsync(query.QuestionBankId, cancellationToken);
-        if (questionBank == null || questionBank.UserId != userId)
+        if (!await HasQuestionBankAccessAsync(query.QuestionBankId, userId, cancellationToken))
         {
             throw new InvalidOperationException("题库不存在或无权访问");
         }
@@ -134,8 +132,7 @@ public class QuestionService : IQuestionService
         }
 
         // 验证题库是否属于当前用户
-        var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
-        if (questionBank == null || questionBank.UserId != userId)
+        if (!await HasQuestionAccessAsync(question, userId, cancellationToken))
         {
             return null;
         }
@@ -152,8 +149,7 @@ public class QuestionService : IQuestionService
         }
 
         // 验证题库是否属于当前用户
-        var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
-        if (questionBank == null || questionBank.UserId != userId)
+        if (!await HasQuestionAccessAsync(question, userId, cancellationToken))
         {
             return null;
         }
@@ -214,8 +210,7 @@ public class QuestionService : IQuestionService
         }
 
         // 验证题库是否属于当前用户
-        var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
-        if (questionBank == null || questionBank.UserId != userId)
+        if (!await HasQuestionAccessAsync(question, userId, cancellationToken))
         {
             return false;
         }
@@ -227,8 +222,7 @@ public class QuestionService : IQuestionService
     public async Task<List<QuestionDto>> SearchAsync(int questionBankId, int userId, string searchTerm, CancellationToken cancellationToken = default)
     {
         // 验证题库是否存在且属于当前用户
-        var questionBank = await _questionBankRepository.GetByIdAsync(questionBankId, cancellationToken);
-        if (questionBank == null || questionBank.UserId != userId)
+        if (!await HasQuestionBankAccessAsync(questionBankId, userId, cancellationToken))
         {
             throw new InvalidOperationException("题库不存在或无权访问");
         }
@@ -246,10 +240,12 @@ public class QuestionService : IQuestionService
 
         // 验证所有题库是否存在且属于当前用户
         var questionBankIds = dtos.Select(d => d.QuestionBankId).Distinct().ToList();
+        var userQuestionBanks = await _questionBankRepository.GetByUserIdAsync(userId, cancellationToken);
+        var userQuestionBankIds = userQuestionBanks.Select(qb => qb.Id).ToHashSet();
+
         foreach (var questionBankId in questionBankIds)
         {
-            var questionBank = await _questionBankRepository.GetByIdAsync(questionBankId, cancellationToken);
-            if (questionBank == null || questionBank.UserId != userId)
+            if (!userQuestionBankIds.Contains(questionBankId))
             {
                 throw new InvalidOperationException($"题库 {questionBankId} 不存在或无权访问");
             }
@@ -294,31 +290,35 @@ public class QuestionService : IQuestionService
             return (0, 0);
         }
 
-        var successCount = 0;
-        var notFoundCount = 0;
+        // 批量获取所有题目及其题库信息
+        var questions = await _questionRepository.GetByIdsAsync(ids, cancellationToken);
 
-        foreach (var id in ids)
+        if (questions.Count == 0)
         {
-            var question = await _questionRepository.GetByIdAsync(id, cancellationToken);
-            if (question == null)
-            {
-                notFoundCount++;
-                continue;
-            }
-
-            // 验证题库是否属于当前用户
-            var questionBank = await _questionBankRepository.GetByIdAsync(question.QuestionBankId, cancellationToken);
-            if (questionBank == null || questionBank.UserId != userId)
-            {
-                notFoundCount++;
-                continue;
-            }
-
-            await _questionRepository.DeleteAsync(id, cancellationToken);
-            successCount++;
+            return (0, ids.Count);
         }
 
-        return (successCount, notFoundCount);
+        // 获取所有涉及的题库ID
+        var questionBankIds = questions.Select(q => q.QuestionBankId).Distinct().ToList();
+
+        // 批量验证用户权限
+        var userQuestionBanks = await _questionBankRepository.GetByIdsAndUserIdAsync(questionBankIds, userId, cancellationToken);
+        var authorizedBankIds = userQuestionBanks.Select(qb => qb.Id).ToHashSet();
+
+        // 筛选有权限删除的题目ID
+        var authorizedIds = questions
+            .Where(q => authorizedBankIds.Contains(q.QuestionBankId))
+            .Select(q => q.Id)
+            .ToList();
+
+        // 批量删除
+        var deletedCount = authorizedIds.Count > 0
+            ? await _questionRepository.DeleteRangeAsync(authorizedIds, cancellationToken)
+            : 0;
+
+        var notFoundCount = ids.Count - deletedCount;
+
+        return (deletedCount, notFoundCount);
     }
 
     private static QuestionType? ResolveQuestionType(QuestionType? requestedType, QuestionData? data)
@@ -492,5 +492,27 @@ public class QuestionService : IQuestionService
     private static List<string> ParseLegacyAnswers(string? legacyAnswers)
     {
         return LegacyFieldParser.ParseCorrectAnswers(legacyAnswers);
+    }
+
+    private async Task<bool> HasQuestionBankAccessAsync(
+        int questionBankId,
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        var questionBank = await _questionBankRepository.GetByIdAsync(questionBankId, cancellationToken);
+        return questionBank != null && questionBank.UserId == userId;
+    }
+
+    private async Task<bool> HasQuestionAccessAsync(
+        Domain.Entities.Question question,
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        if (question.QuestionBank != null)
+        {
+            return question.QuestionBank.UserId == userId;
+        }
+
+        return await HasQuestionBankAccessAsync(question.QuestionBankId, userId, cancellationToken);
     }
 }

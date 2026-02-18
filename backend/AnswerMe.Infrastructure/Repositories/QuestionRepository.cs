@@ -1,3 +1,5 @@
+using AnswerMe.Application.Common;
+using AnswerMe.Domain.Common;
 using AnswerMe.Domain.Entities;
 using AnswerMe.Domain.Interfaces;
 using AnswerMe.Infrastructure.Data;
@@ -15,19 +17,6 @@ public class QuestionRepository : IQuestionRepository
     public QuestionRepository(AnswerMeDbContext context)
     {
         _context = context;
-    }
-
-    /// <summary>
-    /// 转义 LIKE 模式中的特殊字符，防止 SQL 注入和通配符误匹配
-    /// </summary>
-    private static string EscapeLikePattern(string pattern)
-    {
-        if (string.IsNullOrEmpty(pattern))
-            return "";
-
-        return "%" + pattern.Replace("%", "[%]")
-                            .Replace("_", "[_]")
-                            .Replace("[", "[[]");
     }
 
     public async Task<Question?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -159,16 +148,17 @@ public class QuestionRepository : IQuestionRepository
 
     public async Task<List<Question>> SearchAsync(int questionBankId, string? searchTerm, CancellationToken cancellationToken = default)
     {
-        // 空搜索词时返回该题库所有题目
+        // 空搜索词时返回该题库所有题目（限制最大数量）
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
             return await _context.Questions
                 .Where(q => q.QuestionBankId == questionBankId)
                 .OrderBy(q => q.OrderIndex)
+                .Take(BatchLimits.MaxSearchResults)
                 .ToListAsync(cancellationToken);
         }
 
-        var escapedPattern = EscapeLikePattern(searchTerm);
+        var escapedPattern = LikePatternHelper.EscapeLikePattern(searchTerm);
 
         return await _context.Questions
             .Where(q =>
@@ -179,6 +169,7 @@ public class QuestionRepository : IQuestionRepository
 #pragma warning restore CS0618
                  EF.Functions.Like(q.Explanation ?? "", escapedPattern)))
             .OrderBy(q => q.OrderIndex)
+            .Take(BatchLimits.MaxSearchResults)
             .ToListAsync(cancellationToken);
     }
 
@@ -218,5 +209,33 @@ public class QuestionRepository : IQuestionRepository
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<List<Question>> GetByIdsAsync(List<int> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids == null || ids.Count == 0)
+        {
+            return new List<Question>();
+        }
+
+        return await _context.Questions
+            .Include(q => q.QuestionBank)
+            .Where(q => ids.Contains(q.Id))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> DeleteRangeAsync(List<int> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids == null || ids.Count == 0)
+        {
+            return 0;
+        }
+
+        // 使用 ExecuteDeleteAsync 进行批量删除（EF Core 7+）
+        var deletedCount = await _context.Questions
+            .Where(q => ids.Contains(q.Id))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return deletedCount;
     }
 }

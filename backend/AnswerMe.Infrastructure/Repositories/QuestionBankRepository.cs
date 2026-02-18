@@ -1,3 +1,5 @@
+using AnswerMe.Application.Common;
+using AnswerMe.Domain.Common;
 using AnswerMe.Domain.Entities;
 using AnswerMe.Domain.Interfaces;
 using AnswerMe.Infrastructure.Data;
@@ -52,13 +54,16 @@ public class QuestionBankRepository : IQuestionBankRepository
 
     public async Task<List<QuestionBank>> SearchAsync(int userId, string searchTerm, CancellationToken cancellationToken = default)
     {
+        var escapedPattern = LikePatternHelper.EscapeLikePattern(searchTerm);
+
         return await _context.QuestionBanks
             .Include(qb => qb.DataSource)
             .Where(qb =>
                 qb.UserId == userId &&
-                (EF.Functions.Like(qb.Name, $"%{searchTerm}%") ||
-                 EF.Functions.Like(qb.Description ?? "", $"%{searchTerm}%")))
+                (EF.Functions.Like(qb.Name, escapedPattern) ||
+                 EF.Functions.Like(qb.Description ?? "", escapedPattern)))
             .OrderByDescending(qb => qb.UpdatedAt)
+            .Take(BatchLimits.MaxSearchResults)
             .ToListAsync(cancellationToken);
     }
 
@@ -88,5 +93,17 @@ public class QuestionBankRepository : IQuestionBankRepository
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<List<QuestionBank>> GetByIdsAndUserIdAsync(List<int> ids, int userId, CancellationToken cancellationToken = default)
+    {
+        if (ids == null || ids.Count == 0)
+        {
+            return new List<QuestionBank>();
+        }
+
+        return await _context.QuestionBanks
+            .Where(qb => ids.Contains(qb.Id) && qb.UserId == userId)
+            .ToListAsync(cancellationToken);
     }
 }

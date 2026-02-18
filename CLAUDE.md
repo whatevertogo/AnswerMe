@@ -54,6 +54,10 @@ cd frontend && npm run dev
 - Element Plus v3+: `el-radio`/`el-checkbox` 用 `value` 非 `label`
 - **深色模式**: 禁止硬编码颜色，用 `styles/theme.css` 中的 CSS 变量
 
+**测试**:
+- 后端: xUnit + Moq，测试项目 `AnswerMe.Tests`
+- 测试驱动开发
+
 ## 数据模型
 
 Question 迁移中：废弃 `Options`/`CorrectAnswer`，改用 `QuestionTypeEnum`/`QuestionDataJson`/`Data`
@@ -76,23 +80,8 @@ Question 迁移中：废弃 `Options`/`CorrectAnswer`，改用 `QuestionTypeEnum
 - Windows 下 DLL 锁定: `taskkill /F /PID <pid>` 或 `Stop-Process -Force`
 - 数据迁移前备份: `cp answerme.db answerme.db.backup`
 
-## 常见问题模式 (审查中发现，需避免)
-
-**安全**:
-- 禁止硬编码密钥 → 必须使用环境变量
-- LIKE 查询必须参数化 → 防止 SQL 注入
-- JWT 过期时间建议 ≤30 分钟
-
-**性能**:
-- 批量操作禁止循环单条 → 使用 bulk/batch API
-- 大数据加载必须分页 → 禁止全量加载
-- 批量请求添加限流 (如并发控制常量)
-
-**前端**:
-- 禁止硬编码颜色 → 必须使用 CSS 变量
-- 组件函数过长 (>50行) → 拆分
-- watch 搜索需防抖
-
 ## 重要
-完成对应任务之后跑一次对应测试比如type-check + 单测 + eslint 验证，确认这轮修复没有引入类型问题
-前端注意和风格问题要和其他内容一致，后端注意性能问题，尤其是数据迁移和一致性检查部分
+
+- 完成对应任务之后跑一次对应测试比如type-check + 单测 + eslint 验证，确认这轮修复没有引入类型问题
+- 前端注意和风格问题要和其他内容一致，后端注意性能问题，尤其是数据迁移和一致性检查部分
+- 测试驱动开发，开发功能后要补充对应的单元测试和集成测试，确保功能正确且不引入回归

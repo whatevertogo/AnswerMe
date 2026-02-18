@@ -9,6 +9,7 @@ import { getQuestionBankDetail } from '@/api/questionBank'
 import type { QuestionBank } from '@/stores/questionBank'
 import { DifficultyLabels, DifficultyColors } from '@/types/question'
 import { extractErrorMessage } from '@/utils/errorHandler'
+import { formatDate } from '@/composables/useFormatting'
 
 const router = useRouter()
 const route = useRoute()
@@ -156,16 +157,6 @@ const handleCreateBank = () => {
 
 const handleGenerateQuestions = () => {
   router.push('/generate')
-}
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
 }
 
 // 使用共享的难度颜色

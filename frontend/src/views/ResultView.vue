@@ -20,6 +20,7 @@ import { getQuestions } from '@/api/question'
 import type { QuizResult, QuizDetail, AttemptAISuggestion } from '@/api/quiz'
 import type { Question, QuestionQueryParams } from '@/types'
 import { extractErrorMessage } from '@/utils/errorHandler'
+import { formatDate, formatDuration } from '@/composables/useFormatting'
 
 const route = useRoute()
 const router = useRouter()
@@ -192,23 +193,6 @@ function extractQuestionCorrectAnswer(question: Question): string {
 }
 
 // 格式化时间
-const formatDuration = (seconds: number) => {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins} 分 ${secs} 秒`
-}
-
-// 格式化日期
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
 // 获取答案显示文本
 const formatAnswer = (answer: string | undefined): string => {
   if (!answer) return '未作答'

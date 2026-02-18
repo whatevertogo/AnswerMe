@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, View, Edit, Delete, Search, Refresh, ArrowLeft } from '@element-plus/icons-vue'
@@ -85,6 +85,14 @@ watch([searchKeyword, selectedType, selectedDifficulty], () => {
   searchTimer.value = window.setTimeout(() => {
     fetchQuestions()
   }, 300)
+})
+
+// 组件卸载时清理 timer
+onUnmounted(() => {
+  if (searchTimer.value) {
+    clearTimeout(searchTimer.value)
+    searchTimer.value = null
+  }
 })
 
 const handleCreate = () => {

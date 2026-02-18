@@ -37,12 +37,8 @@ public class StatsService : IStatsService
 
         // 获取题目总数
         var questionBankIds = questionBanks.Select(qb => qb.Id).ToList();
-        int questionsCount = 0;
-        foreach (var bankId in questionBankIds)
-        {
-            var count = await _questionRepository.CountByQuestionBankIdAsync(bankId, cancellationToken);
-            questionsCount += count;
-        }
+        var questionCountMap = await _questionRepository.CountByQuestionBankIdsAsync(questionBankIds, cancellationToken);
+        var questionsCount = questionCountMap.Values.Sum();
 
         // 获取本月练习次数
         var now = DateTime.UtcNow;

@@ -3,4 +3,5 @@
   <Project Path="AnswerMe.Application/AnswerMe.Application.csproj" />
   <Project Path="AnswerMe.Domain/AnswerMe.Domain.csproj" />
   <Project Path="AnswerMe.Infrastructure/AnswerMe.Infrastructure.csproj" />
+  <Project Path="AnswerMe.Tests/AnswerMe.Tests.csproj" />
 </Solution>

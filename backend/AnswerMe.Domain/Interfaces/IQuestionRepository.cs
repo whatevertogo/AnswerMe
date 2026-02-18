@@ -62,4 +62,20 @@ public interface IQuestionRepository
     Task<Question> UpdateAsync(Question question, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 批量获取题目（优化 N+1 查询）
+    /// </summary>
+    /// <param name="ids">题目ID列表</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>题目列表</returns>
+    Task<List<Question>> GetByIdsAsync(List<int> ids, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 批量删除题目（单次 SQL）
+    /// </summary>
+    /// <param name="ids">题目ID列表</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>删除的题目数量</returns>
+    Task<int> DeleteRangeAsync(List<int> ids, CancellationToken cancellationToken = default);
 }

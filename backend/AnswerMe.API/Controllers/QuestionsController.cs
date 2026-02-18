@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using AnswerMe.Application.Common;
 using AnswerMe.Application.DTOs;
 using AnswerMe.Application.Interfaces;
 using System.Security.Claims;
@@ -124,6 +125,11 @@ public class QuestionsController : BaseApiController
             return BadRequestWithError("题目列表不能为空");
         }
 
+        if (dtos.Count > BatchLimits.MaxBatchCreateSize)
+        {
+            return BadRequestWithError($"单次最多创建 {BatchLimits.MaxBatchCreateSize} 道题目，当前: {dtos.Count}");
+        }
+
         var userId = GetCurrentUserId();
         var questions = await _questionService.CreateBatchAsync(userId, dtos, cancellationToken);
         return Ok(questions);
@@ -138,6 +144,11 @@ public class QuestionsController : BaseApiController
         if (ids == null || ids.Count == 0)
         {
             return BadRequestWithError("题目ID列表不能为空");
+        }
+
+        if (ids.Count > BatchLimits.MaxBatchDeleteSize)
+        {
+            return BadRequestWithError($"单次最多删除 {BatchLimits.MaxBatchDeleteSize} 道题目，当前: {ids.Count}");
         }
 
         var userId = GetCurrentUserId();

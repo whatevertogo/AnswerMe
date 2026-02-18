@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, View, Edit, Delete, Search, Refresh } from '@element-plus/icons-vue'
@@ -7,6 +7,7 @@ import { useQuestionBankStore } from '@/stores/questionBank'
 import QuestionBankForm from '@/components/QuestionBankForm.vue'
 import type { QuestionBank } from '@/stores/questionBank'
 import { DifficultyLabels, DifficultyColors } from '@/types/question'
+import { formatDate } from '@/composables/useFormatting'
 
 const router = useRouter()
 const questionBankStore = useQuestionBankStore()
@@ -49,6 +50,14 @@ watch(searchKeyword, () => {
   searchTimer.value = window.setTimeout(() => {
     fetchQuestionBanks(true)
   }, 300)
+})
+
+// 组件卸载时清理 timer
+onUnmounted(() => {
+  if (searchTimer.value) {
+    clearTimeout(searchTimer.value)
+    searchTimer.value = null
+  }
 })
 
 const handleCreate = () => {
@@ -95,16 +104,6 @@ const handleFormSuccess = (_bank: QuestionBank) => {
 const handleFormClose = () => {
   formDialogVisible.value = false
   currentBank.value = null
-}
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
 }
 
 const getDifficultyColor = (difficulty: string): 'success' | 'warning' | 'danger' | 'info' => {
