@@ -29,7 +29,6 @@
 - **🔒 API密钥安全** - AES-256加密存储,密钥永不泄露给前端
 - **📦 一键部署** - Docker Compose 5分钟快速部署
 
-![Uploading image.png…]()
 
 
 ### 技术亮点
