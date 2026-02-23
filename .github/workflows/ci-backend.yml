@@ -1,0 +1,71 @@
+# 后端 CI - 构建和测试
+name: Backend CI
+
+on:
+  push:
+    branches: [ master, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
+  pull_request:
+    branches: [ master, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  build:
+    name: 构建与测试
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 缓存 NuGet 包
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('backend/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: 还原依赖
+        run: dotnet restore backend/AnswerMe.slnx
+
+      - name: 构建
+        run: dotnet build backend/AnswerMe.slnx --no-restore -c Release
+
+      - name: 运行测试
+        run: |
+          dotnet test backend/AnswerMe.slnx \
+            --no-build \
+            -c Release \
+            --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: 上传测试结果
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: TestResults/**/*.trx
+          retention-days: 7
+
+      - name: 上传覆盖率到 Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: TestResults/**/coverage.cobertura.xml
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
