@@ -56,6 +56,6 @@ public interface IAIGenerationService
         string taskId,
         int userId,
         AIGenerateRequestDto dto,
-        Func<string, int, int, string, Task> progressCallback,
+        Func<string, int, int, string, IReadOnlyList<GeneratedQuestionDto>?, Task> progressCallback,
         CancellationToken cancellationToken = default);
 }

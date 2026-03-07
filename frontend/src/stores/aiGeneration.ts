@@ -121,14 +121,14 @@ export const useAIGenerationStore = defineStore('aiGeneration', () => {
       const response = await getGenerationProgressApi(taskId)
       progress.value = response
 
+      // 处理中如果后端已经返回部分题目，立即渲染到结果区
+      if (response.questions && response.questions.length > 0) {
+        generatedQuestions.value = response.questions.map(normalizeGeneratedQuestion)
+      }
+
       // 如果任务完成，停止轮询
       if (isCompleted.value) {
         stopProgressPolling()
-
-        // 如果有生成的题目，保存到结果中
-        if (response.questions && response.questions.length > 0) {
-          generatedQuestions.value = response.questions.map(normalizeGeneratedQuestion)
-        }
 
         // 如果失败，设置错误信息
         if (response.status === 'failed' && response.errorMessage) {

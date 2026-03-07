@@ -126,7 +126,7 @@ public class AIGenerationService : IAIGenerationService
         string taskId,
         int userId,
         AIGenerateRequestDto dto,
-        Func<string, int, int, string, Task> progressCallback,
+        Func<string, int, int, string, IReadOnlyList<GeneratedQuestionDto>?, Task> progressCallback,
         CancellationToken cancellationToken = default)
     {
         try
@@ -137,9 +137,9 @@ public class AIGenerationService : IAIGenerationService
             var response = await GenerateQuestionsInternalAsync(
                 userId,
                 dto,
-                (generatedCount, totalCount) =>
+                (generatedCount, totalCount, questions) =>
                 {
-                    return progressCallback(taskId, generatedCount, totalCount, "processing");
+                    return progressCallback(taskId, generatedCount, totalCount, "processing", questions);
                 },
                 cancellationToken);
 
@@ -195,7 +195,7 @@ public class AIGenerationService : IAIGenerationService
     private async Task<AIGenerateResponseDto> GenerateQuestionsInternalAsync(
         int userId,
         AIGenerateRequestDto dto,
-        Func<int, int, Task>? onProgress,
+        Func<int, int, IReadOnlyList<GeneratedQuestionDto>, Task>? onProgress,
         CancellationToken cancellationToken)
     {
         // 验证请求参数
@@ -405,6 +405,14 @@ public class AIGenerationService : IAIGenerationService
                 };
                 resultDto.PopulateLegacyFieldsFromData();
                 savedQuestions.Add(resultDto);
+
+                if (onProgress != null)
+                {
+                    await onProgress(
+                        savedQuestions.Count,
+                        totalRequested,
+                        savedQuestions.ToList());
+                }
             }
 
             if (savedQuestions.Count == savedBeforeBatch)
@@ -419,13 +427,7 @@ public class AIGenerationService : IAIGenerationService
                     TokensUsed = hasTokens ? tokensUsedTotal : null
                 };
             }
-
             remaining -= batchSize;
-
-            if (onProgress != null)
-            {
-                await onProgress(savedQuestions.Count, totalRequested);
-            }
         }
 
         if (savedQuestions.Count == 0)

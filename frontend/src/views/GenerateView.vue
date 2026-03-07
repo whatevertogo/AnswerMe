@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Delete, MagicStick, DocumentCopy, ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAIGenerationStore } from '@/stores/aiGeneration'
@@ -22,6 +22,7 @@ import {
 import { formatQuestionForCopy } from '@/composables/useQuestionDisplay'
 
 const router = useRouter()
+const route = useRoute()
 const aiGenerationStore = useAIGenerationStore()
 const dataSourceStore = useDataSourceStore()
 
@@ -118,11 +119,29 @@ async function loadQuestionBanks() {
   try {
     const response = await getQuestionBanks({ pageSize: 100 })
     questionBanks.value = response.data || []
+    applyRouteQuestionBank()
   } catch (error) {
     console.error('加载题库列表失败:', error)
   } finally {
     loadingQuestionBanks.value = false
   }
+}
+
+function applyRouteQuestionBank() {
+  const rawBankId = route.query.bankId
+  const parsedBankId = typeof rawBankId === 'string' ? Number.parseInt(rawBankId, 10) : NaN
+
+  if (!Number.isInteger(parsedBankId)) {
+    return
+  }
+
+  const matchedBank = questionBanks.value.find(bank => bank.id === parsedBankId)
+  if (!matchedBank) {
+    return
+  }
+
+  selectedQuestionBank.value = matchedBank
+  formData.value.questionBankId = matchedBank.id
 }
 
 // 数据源选择变更

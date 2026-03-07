@@ -196,13 +196,20 @@ public class AIGenerationWorker : BackgroundService
         }
     }
 
-    private async Task UpdateProgressAsync(string taskId, int generatedCount, int totalCount, string status)
+    private async Task UpdateProgressAsync(
+        string taskId,
+        int generatedCount,
+        int totalCount,
+        string status,
+        IReadOnlyList<GeneratedQuestionDto>? questions)
     {
         try
         {
             await _progressStore.UpdateAsync(taskId, progress =>
             {
                 progress.GeneratedCount = generatedCount;
+                progress.TotalCount = totalCount;
+                progress.Questions = questions?.ToList();
                 if (!string.IsNullOrEmpty(status))
                 {
                     progress.Status = status;
